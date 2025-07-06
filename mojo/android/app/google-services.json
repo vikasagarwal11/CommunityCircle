@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "264754676317",
+    "project_id": "mojo-b4260",
+    "storage_bucket": "mojo-b4260.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:264754676317:android:ccf2b1659d3915dac783b4",
+        "android_client_info": {
+          "package_name": "com.example.mojo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD_-Od2f5PbbehTeFbs7H9dMOvgELTSoi4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
