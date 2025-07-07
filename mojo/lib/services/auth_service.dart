@@ -120,11 +120,16 @@ class AuthService {
       final userModel = UserModel(
         id: user.uid,
         phoneNumber: user.phoneNumber ?? '',
-        displayName: user.displayName,
+        displayName: user.displayName ?? 'User_${user.uid.substring(0, 8)}',
         email: user.email,
+        role: 'member', // Default role for phone-authenticated users
         createdAt: now,
         lastSeen: now,
         isOnline: true,
+        communityIds: [],
+        communityRoles: {},
+        badges: [],
+        totalPoints: 0,
       );
 
       await _firestore
@@ -190,6 +195,129 @@ class AuthService {
     } catch (e) {
       _logger.e('Error updating profile: $e');
       throw Exception('Failed to update profile');
+    }
+  }
+
+  // Sign in anonymously
+  Future<UserModel?> signInAnonymously() async {
+    try {
+      _logger.i('Signing in anonymously');
+      
+      UserCredential userCredential = await _auth.signInAnonymously();
+      User? user = userCredential.user;
+      
+      if (user != null) {
+        _logger.i('Anonymous user created: ${user.uid}');
+        return await _createAnonymousUser(user);
+      }
+      
+      return null;
+    } catch (e) {
+      _logger.e('Error signing in anonymously: $e');
+      return null;
+    }
+  }
+
+  // Create anonymous user
+  Future<UserModel?> _createAnonymousUser(User user) async {
+    try {
+      final now = DateTime.now();
+      final userModel = UserModel(
+        id: user.uid,
+        phoneNumber: '', // Anonymous users don't have phone numbers
+        displayName: 'Guest',
+        email: null,
+        role: 'anonymous', // Set role to anonymous
+        createdAt: now,
+        lastSeen: now,
+        isOnline: true,
+        communityIds: [],
+        communityRoles: {},
+        badges: [],
+        totalPoints: 0,
+      );
+
+      await _firestore
+          .collection(AppConstants.usersCollection)
+          .doc(user.uid)
+          .set(userModel.toMap());
+
+      _logger.i('Anonymous user created successfully');
+      return userModel;
+    } catch (e) {
+      _logger.e('Error creating anonymous user: $e');
+      return null;
+    }
+  }
+
+  // Get user role
+  Future<String> getUserRole() async {
+    try {
+      User? user = _auth.currentUser;
+      if (user != null) {
+        DocumentSnapshot doc = await _firestore
+            .collection(AppConstants.usersCollection)
+            .doc(user.uid)
+            .get();
+        
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          return data['role'] ?? 'member';
+        }
+      }
+      return 'anonymous';
+    } catch (e) {
+      _logger.e('Error getting user role: $e');
+      return 'anonymous';
+    }
+  }
+
+  // Check if user is business
+  Future<bool> isBusinessUser() async {
+    try {
+      User? user = _auth.currentUser;
+      if (user != null) {
+        DocumentSnapshot doc = await _firestore
+            .collection(AppConstants.usersCollection)
+            .doc(user.uid)
+            .get();
+        
+        if (doc.exists) {
+          final data = doc.data() as Map<String, dynamic>;
+          return data['isBusiness'] ?? false;
+        }
+      }
+      return false;
+    } catch (e) {
+      _logger.e('Error checking business user: $e');
+      return false;
+    }
+  }
+
+  // Get initial route based on role
+  Future<String> getInitialRoute() async {
+    User? user = _auth.currentUser;
+    if (user == null) return AppRoutes.phoneAuth;
+    
+    String role = await getUserRole();
+    return role == 'anonymous' ? AppRoutes.publicHome : AppRoutes.home;
+  }
+
+  // Delete account
+  Future<void> deleteAccount() async {
+    try {
+      User? user = _auth.currentUser;
+      if (user != null) {
+        await _firestore
+            .collection(AppConstants.usersCollection)
+            .doc(user.uid)
+            .delete();
+        await user.delete();
+        _logger.i('Account deleted successfully');
+      }
+    } catch (e) {
+      _logger.e('Error deleting account: $e');
+      throw Exception('Failed to delete account');
     }
   }
 } 

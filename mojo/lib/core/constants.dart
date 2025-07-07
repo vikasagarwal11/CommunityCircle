@@ -36,4 +36,25 @@ class AppConstants {
   static const String generalError = 'Something went wrong. Please try again.';
   static const String invalidPhoneNumber = 'Please enter a valid phone number.';
   static const String invalidOtp = 'Please enter a valid OTP.';
+}
+
+// App Routes
+class AppRoutes {
+  static const String phoneAuth = '/phone_auth';
+  static const String home = '/home';
+  static const String publicHome = '/public_home';
+  static const String createCommunity = '/create_community';
+  static const String communityDetails = '/community_details';
+  static const String adminManagement = '/admin_management';
+  static const String profile = '/profile';
+  static const String settings = '/settings';
+}
+
+// App Colors
+class AppColors {
+  static const int primaryGreen = 0xFF4CAF50;
+  static const int primaryBlue = 0xFF2196F3;
+  static const int primaryOrange = 0xFFFF9800;
+  static const int primaryRed = 0xFFF44336;
+  static const int primaryPurple = 0xFF9C27B0;
 } 
