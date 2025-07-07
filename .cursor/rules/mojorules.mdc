@@ -1,0 +1,53 @@
+---
+description: Project rules for the Flutter + Firebase-based Community Builder App to disrupt Meetup, WhatsApp, Meta, Slack, and Circle.
+alwaysApply: false
+---
+## 🔹 State Management
+- Use `Riverpod` and `hooks_riverpod` for state management, leveraging `StreamProvider` for real-time Firebase updates and caching providers to optimize performance for ~1,000 users.
+- Do not use Provider, Bloc, or GetX.
+
+## 🔹 Architecture and Folder Structure
+- Follow clean architecture:
+  - `lib/core/`: constants (`constants.dart`: colors, typography), theme (`theme.dart`), utilities, navigation (`navigation.dart`)
+  - `lib/models/`: data models (e.g., `User`, `Community`, `Event`, `Moment`)
+  - `lib/services/`: Firebase service classes (e.g., `AuthService`, `FirestoreService`, `MomentService`)
+  - `lib/views/`: UI screens (e.g., `phone_auth_screen.dart`, `chat_screen.dart`, `moments_screen.dart`)
+  - `lib/widgets/`: reusable components (e.g., `chat_bubble_widget.dart`, `event_card_widget.dart`, `moment_card_widget.dart`)
+  - `lib/routes/`: named routes
+  - `lib/providers/`: Riverpod providers
+
+## 🔹 UI/UX Guidelines
+- Use Material 3 design system with playful minimalism (clean layouts, 1–2 buttons per screen, vibrant colors: blue #2196F3, green #4CAF50, orange #FF9800, neutral backgrounds: white #FFFFFF, light gray #F5F5F5).
+- Use centralized theming from `/lib/core/theme.dart` with Google Fonts (Roboto, 16–24pt, bold for headings) and rounded corners/soft shadows.
+- Optimize UI for fast rendering: lazy-load lists (`ListView.builder`), cache Firestore queries, compress images/videos (max 5MB posters, 10MB Moments).
+- Prioritize accessibility: large text, high-contrast colors, screen reader support, 48dp tap targets.
+
+## 🔹 File & Naming Conventions
+- Use `snake_case` for file names (e.g., `phone_auth_screen.dart`, `chat_bubble_widget.dart`, `moment_card_widget.dart`).
+- Use `PascalCase` for classes (e.g., `ChatBubbleWidget`, `MomentService`) and `camelCase` for variables/functions.
+
+## 🔹 Dependencies
+- Include `lottie` for micro-interactions.
+- Include `table_calendar` for event calendar.
+- Include `flutter_riverpod` and `hooks_riverpod` for state management.
+- Include `logger` for debugging.
+- Include Firebase packages (`firebase_core`, `firebase_auth`, `cloud_firestore`, `firebase_storage`, `firebase_analytics`, `firebase_crashlytics`, `firebase_messaging`, `cloud_functions`).
+
+## 🔹 Logging & Debugging
+- Use the `logger` package instead of `print()` for debugging.
+- Log all service-level events, errors, and API actions.
+
+## 🔹 Testing
+- Place all tests in `/test` folder.
+- Write unit tests for Firebase service classes and Riverpod providers using mocks.
+- Write widget tests for key UI components (e.g., `ChatBubbleWidget`, `EventCardWidget`, `MomentCardWidget`).
+- Use Firebase Emulators for local testing of real-time features.
+
+## 🔹 Reusability Rules
+- All Firebase interactions must be in service classes (e.g., `AuthService`, `FirestoreService`, `MomentService`) and not inside widgets.
+- Use Riverpod providers to inject services into the UI.
+- Create reusable widgets for chat (`ChatBubbleWidget`), events (`EventCardWidget`), and Live Moments (`MomentCardWidget`).
+
+## 🔹 Performance
+- Optimize for fast rendering: lazy-load lists (`ListView.builder`), cache Firestore queries, compress images/videos (max 5MB posters, 10MB Moments).
+- Test on low-end devices to ensure smooth animations and real-time updates.

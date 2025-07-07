@@ -1,0 +1,59 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    match /communities/{community_id} {
+      allow read: if resource.data.visibility == "public" || request.auth.uid in resource.data.members;
+      allow write: if request.auth != null && (request.auth.uid == resource.data.admin_uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ["admin", "business"]);
+      match /requests/{request_id} {
+        allow read, write: if request.auth.uid == resource.data.user_id || request.auth.uid == get(/databases/$(database)/documents/communities/$(community_id)).data.admin_uid;
+      }
+      match /polls/{poll_id} {
+        allow read, write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/communities/$(community_id)).data.members && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != "anonymous";
+      }
+      match /gallery/{media_id} {
+        allow read: if request.auth.uid in get(/databases/$(database)/documents/communities/$(community_id)).data.members;
+        allow write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/communities/$(community_id)).data.members && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != "anonymous";
+      }
+      match /announcements/{announcement_id} {
+        allow read: if request.auth.uid in get(/databases/$(database)/documents/communities/$(community_id)).data.members;
+        allow write: if request.auth.uid == get(/databases/$(database)/documents/communities/$(community_id)).data.admin_uid;
+      }
+      match /challenges/{challenge_id} {
+        allow read: if request.auth.uid in get(/databases/$(database)/documents/communities/$(community_id)).data.members;
+        allow write: if request.auth != null && (request.auth.uid == get(/databases/$(database)/documents/communities/$(community_id)).data.admin_uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == "business");
+      }
+      match /moments/{moment_id} {
+        allow read: if request.auth.uid in get(/databases/$(database)/documents/communities/$(community_id)).data.members;
+        allow write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/communities/$(community_id)).data.members && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != "anonymous";
+      }
+    }
+    match /events/{event_id} {
+      allow read: if resource.data.visibility == "public" || request.auth.uid in get(/databases/$(database)/documents/communities/$(resource.data.community_id)).data.members;
+      allow write: if request.auth != null && (request.auth.uid == resource.data.creator_uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ["admin", "business"]);
+      match /{subcollection=**} {
+        allow read, write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/communities/$(get(/databases/$(database)/documents/events/$(event_id)).data.community_id)).data.members && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != "anonymous";
+      }
+    }
+    match /messages/{message_id} {
+      allow read, write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/communities/$(resource.data.community_id)).data.members && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != "anonymous";
+    }
+    match /private_chats/{chat_id} {
+      allow read: if request.auth != null && (request.auth.uid in resource.data.user_ids || request.auth.uid == get(/databases/$(database)/documents/communities/$(resource.data.community_id)).data.admin_uid);
+      allow write: if request.auth != null && request.auth.uid in resource.data.user_ids && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != "anonymous";
+      match /messages/{message_id} {
+        allow read: if request.auth != null && (request.auth.uid in get(/databases/$(database)/documents/private_chats/$(chat_id)).data.user_ids || request.auth.uid == get(/databases/$(database)/documents/communities/$(get(/databases/$(database)/documents/private_chats/$(chat_id)).data.community_id)).data.admin_uid);
+        allow write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/private_chats/$(chat_id)).data.user_ids && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != "anonymous";
+      }
+    }
+    match /reports/{report_id} {
+      allow read, write: if request.auth != null && (request.auth.uid == get(/databases/$(database)/documents/communities/$(resource.data.community_id)).data.admin_uid || request.auth.uid == resource.data.user_id);
+    }
+    match /config/inappropriate_keywords {
+      allow read: if true;
+      allow write: if false;
+    }
+  }
+}
