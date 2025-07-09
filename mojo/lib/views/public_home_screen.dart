@@ -263,9 +263,7 @@ class PublicHomeScreen extends ConsumerWidget {
           child: communitiesAsync.when(
             data: (communities) {
               if (communities.isEmpty) {
-                return const Center(
-                  child: Text('No communities available'),
-                );
+                return _buildEmptyCommunitiesState(context);
               }
               
               return ListView.builder(
@@ -378,6 +376,74 @@ class PublicHomeScreen extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildEmptyCommunitiesState(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: AppTheme.primaryBlue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(50),
+            ),
+            child: Icon(
+              Icons.group_add,
+              size: 48,
+              color: AppTheme.primaryBlue,
+            ),
+          ),
+          const SizedBox(height: AppConstants.defaultPadding),
+          Text(
+            'No communities yet',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: AppTheme.onSurfaceColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: AppConstants.smallPadding),
+          Text(
+            'Be the first to create a community and start connecting with others!',
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: AppTheme.onSurfaceColor.withOpacity(0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppConstants.largePadding),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                onPressed: () {
+                  NavigationService.navigateToPhoneAuth();
+                },
+                icon: const Icon(Icons.login, size: 18),
+                label: const Text('Sign Up'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryBlue,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+              const SizedBox(width: 12),
+              OutlinedButton.icon(
+                onPressed: () {
+                  NavigationService.navigateToPhoneAuth();
+                },
+                icon: const Icon(Icons.explore, size: 18),
+                label: const Text('Learn More'),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.primaryBlue,
+                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

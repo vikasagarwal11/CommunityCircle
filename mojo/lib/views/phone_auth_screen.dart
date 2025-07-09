@@ -4,7 +4,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../providers/auth_providers.dart';
 import '../core/constants.dart';
 import '../core/theme.dart';
-import '../core/navigation.dart';
+import '../core/navigation_service.dart';
 
 class PhoneAuthScreen extends HookConsumerWidget {
   const PhoneAuthScreen({super.key});
@@ -22,7 +22,7 @@ class PhoneAuthScreen extends HookConsumerWidget {
       next.whenData((user) {
         if (user != null) {
           // Navigate to home screen when authenticated
-          AppNavigation.navigateToHome(context);
+          NavigationService.navigateToHome(role: user.role);
         }
       });
     });
