@@ -6,9 +6,11 @@ class AppTheme {
   static const Color primaryBlue = Color(0xFF2196F3);
   static const Color primaryGreen = Color(0xFF4CAF50);
   static const Color primaryOrange = Color(0xFFFF9800);
+  static const Color primaryPurple = Color(0xFF9C27B0);
   static const Color neutralWhite = Color(0xFFFFFFFF);
   static const Color neutralLightGray = Color(0xFFF5F5F5);
   static const Color errorColor = Color(0xFFBA1A1A);
+  static const Color primaryRed = Color(0xFFF44336);
   
   // Legacy colors for backward compatibility
   static const Color primaryColor = primaryBlue;

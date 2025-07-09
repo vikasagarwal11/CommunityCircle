@@ -95,9 +95,9 @@ class ChallengeModel {
   }
 
   // Helper methods
-  bool get isCreator(String userId) => creatorUid == userId;
-  bool get isParticipant(String userId) => participants.containsKey(userId);
-  bool get isActive => this.isActive && DateTime.now().isAfter(startDate) && DateTime.now().isBefore(endDate);
+  bool isCreator(String userId) => creatorUid == userId;
+  bool isParticipant(String userId) => participants.containsKey(userId);
+  bool get isActiveAndInDateRange => isActive && DateTime.now().isAfter(startDate) && DateTime.now().isBefore(endDate);
   bool get isUpcoming => DateTime.now().isBefore(startDate);
   bool get isPast => DateTime.now().isAfter(endDate);
   bool get isOngoing => DateTime.now().isAfter(startDate) && DateTime.now().isBefore(endDate);

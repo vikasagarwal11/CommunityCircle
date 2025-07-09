@@ -86,10 +86,10 @@ class PollModel {
 
   // Helper methods
   bool get isExpired => expiresAt != null && DateTime.now().isAfter(expiresAt!);
-  bool get isActive => this.isActive && !isExpired;
-  bool get isCreator(String userId) => creatorUid == userId;
-  bool get hasVoted(String userId) => votes.containsKey(userId);
-  String? get userVote(String userId) => votes[userId];
+  bool get isActiveAndNotExpired => isActive && !isExpired;
+  bool isCreator(String userId) => creatorUid == userId;
+  bool hasVoted(String userId) => votes.containsKey(userId);
+  String? userVote(String userId) => votes[userId];
   int get totalVotes => votes.length;
 
   // Vote helpers

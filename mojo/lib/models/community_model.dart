@@ -4,23 +4,23 @@ class CommunityModel {
   final String id;
   final String name;
   final String description;
-  final String? coverImage;
+  final String coverImage;
   final String adminUid;
-  final String visibility; // "public", "private_open", "private_invite"
+  final String visibility; // 'public', 'private_open', 'private_invite'
   final bool approvalRequired;
   final bool isBusiness;
   final List<String> members;
   final List<String> bannedUsers;
   final List<String> pinnedItems;
   final DateTime createdAt;
-  final Map<String, dynamic>? theme;
-  final Map<String, dynamic>? metadata;
+  final Map<String, String> theme;
+  final Map<String, dynamic> metadata;
 
-  CommunityModel({
+  const CommunityModel({
     required this.id,
     required this.name,
     required this.description,
-    this.coverImage,
+    required this.coverImage,
     required this.adminUid,
     required this.visibility,
     required this.approvalRequired,
@@ -29,26 +29,26 @@ class CommunityModel {
     required this.bannedUsers,
     required this.pinnedItems,
     required this.createdAt,
-    this.theme,
-    this.metadata,
+    required this.theme,
+    required this.metadata,
   });
 
-  factory CommunityModel.fromMap(Map<String, dynamic> map, String id) {
+  factory CommunityModel.fromMap(Map<String, dynamic> data, String id) {
     return CommunityModel(
       id: id,
-      name: map['name'] ?? '',
-      description: map['description'] ?? '',
-      coverImage: map['coverImage'],
-      adminUid: map['adminUid'] ?? '',
-      visibility: map['visibility'] ?? 'public',
-      approvalRequired: map['approvalRequired'] ?? false,
-      isBusiness: map['isBusiness'] ?? false,
-      members: List<String>.from(map['members'] ?? []),
-      bannedUsers: List<String>.from(map['bannedUsers'] ?? []),
-      pinnedItems: List<String>.from(map['pinnedItems'] ?? []),
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      theme: map['theme'],
-      metadata: map['metadata'],
+      name: data['name'] ?? '',
+      description: data['description'] ?? '',
+      coverImage: data['cover_image'] ?? '',
+      adminUid: data['admin_uid'] ?? '',
+      visibility: data['visibility'] ?? 'public',
+      approvalRequired: data['approval_required'] ?? false,
+      isBusiness: data['is_business'] ?? false,
+      members: List<String>.from(data['members'] ?? []),
+      bannedUsers: List<String>.from(data['banned_users'] ?? []),
+      pinnedItems: List<String>.from(data['pinned_items'] ?? []),
+      createdAt: (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      theme: Map<String, String>.from(data['theme'] ?? {}),
+      metadata: Map<String, dynamic>.from(data['metadata'] ?? {}),
     );
   }
 
@@ -56,15 +56,15 @@ class CommunityModel {
     return {
       'name': name,
       'description': description,
-      'coverImage': coverImage,
-      'adminUid': adminUid,
+      'cover_image': coverImage,
+      'admin_uid': adminUid,
       'visibility': visibility,
-      'approvalRequired': approvalRequired,
-      'isBusiness': isBusiness,
+      'approval_required': approvalRequired,
+      'is_business': isBusiness,
       'members': members,
-      'bannedUsers': bannedUsers,
-      'pinnedItems': pinnedItems,
-      'createdAt': createdAt,
+      'banned_users': bannedUsers,
+      'pinned_items': pinnedItems,
+      'created_at': Timestamp.fromDate(createdAt),
       'theme': theme,
       'metadata': metadata,
     };
@@ -83,7 +83,7 @@ class CommunityModel {
     List<String>? bannedUsers,
     List<String>? pinnedItems,
     DateTime? createdAt,
-    Map<String, dynamic>? theme,
+    Map<String, String>? theme,
     Map<String, dynamic>? metadata,
   }) {
     return CommunityModel(
@@ -106,15 +106,45 @@ class CommunityModel {
 
   // Helper methods
   bool get isPublic => visibility == 'public';
-  bool get isPrivateOpen => visibility == 'private_open';
-  bool get isPrivateInvite => visibility == 'private_invite';
-  bool get isMember(String userId) => members.contains(userId);
-  bool get isBanned(String userId) => bannedUsers.contains(userId);
-  bool get isAdmin(String userId) => adminUid == userId;
+  bool get isPrivate => visibility == 'private_open' || visibility == 'private_invite';
+  bool get requiresInvite => visibility == 'private_invite';
+  int get memberCount => members.length;
+  bool get hasMembers => members.isNotEmpty;
+  bool get hasPinnedItems => pinnedItems.isNotEmpty;
+
+  // Check if user is member
+  bool isMember(String userId) {
+    return members.contains(userId);
+  }
+
+  // Check if user is banned
+  bool isBanned(String userId) {
+    return bannedUsers.contains(userId);
+  }
+
+  // Check if user is admin
+  bool isAdmin(String userId) {
+    return adminUid == userId;
+  }
+
+  // Check if user can join
+  bool canJoin(String userId) {
+    return !isBanned(userId) && !isMember(userId) && !isAdmin(userId);
+  }
+
+  // Check if user can view (for private communities)
+  bool canView(String userId) {
+    if (isPublic) return true;
+    return isMember(userId) || isAdmin(userId);
+  }
+
+  // Get theme color
+  String get themeColor => theme['color'] ?? '#2196F3';
+  String get bannerUrl => theme['banner_url'] ?? '';
 
   @override
   String toString() {
-    return 'CommunityModel(id: $id, name: $name, adminUid: $adminUid, visibility: $visibility)';
+    return 'CommunityModel(id: $id, name: $name, visibility: $visibility, members: $memberCount)';
   }
 
   @override

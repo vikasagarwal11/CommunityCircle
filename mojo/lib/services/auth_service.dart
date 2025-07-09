@@ -294,13 +294,18 @@ class AuthService {
     }
   }
 
-  // Get initial route based on role
+  // Get initial route based on user state
   Future<String> getInitialRoute() async {
-    User? user = _auth.currentUser;
-    if (user == null) return AppRoutes.phoneAuth;
+    final user = currentUser;
+    if (user == null) return '/phone-auth';
     
-    String role = await getUserRole();
-    return role == 'anonymous' ? AppRoutes.publicHome : AppRoutes.home;
+    // Get user role from Firestore
+    final userDoc = await _firestore.collection(AppConstants.usersCollection).doc(user.uid).get();
+    
+    if (!userDoc.exists) return '/phone-auth';
+    
+    final role = userDoc.data()?['role'] ?? 'member';
+    return role == 'anonymous' ? '/public-home' : '/home';
   }
 
   // Delete account

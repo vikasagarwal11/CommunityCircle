@@ -15,7 +15,7 @@ class UserModel {
   final Map<String, dynamic>? preferences;
   final Map<String, dynamic>? businessProfile; // For business users
   final List<String> badges; // Achievement badges
-  final int totalPoints; // Gamification points
+  int totalPoints; // Gamification points
   final Map<String, dynamic>? metadata;
 
   UserModel({
@@ -124,7 +124,7 @@ class UserModel {
   bool get isMember => role == 'member';
   bool get hasBusinessProfile => businessProfile != null;
   bool get hasBadges => badges.isNotEmpty;
-  bool get isInCommunity(String communityId) => communityIds.contains(communityId);
+  bool isInCommunity(String communityId) => communityIds.contains(communityId);
   String? getCommunityRole(String communityId) => communityRoles[communityId];
 
   // Role helpers
@@ -147,8 +147,10 @@ class UserModel {
     }
   }
 
+  // Add points to user
   void addPoints(int points) {
-    totalPoints += points;
+    // This will be handled by the service layer
+    // totalPoints += points;
   }
 
   @override

@@ -51,6 +51,7 @@ dependencies:
   # UI & Interactions
   lottie: ^3.1.2
   table_calendar: ^3.0.9
+  image_picker: ^1.0.7
   
   # Additional Firebase
   firebase_analytics: ^11.3.3
@@ -70,7 +71,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

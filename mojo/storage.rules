@@ -1,0 +1,61 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Allow users to upload their own profile pictures
+    match /users/{userId}/profile_pictures/{fileName} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Allow community admins to upload cover images
+    match /communities/{communityId}/covers/{fileName} {
+      allow read: if true; // Public read access for community covers
+      allow write: if request.auth != null && 
+        exists(/databases/$(database)/documents/communities/$(communityId)) &&
+        get(/databases/$(database)/documents/communities/$(communityId)).data.admin_uid == request.auth.uid;
+    }
+    
+    // Allow event creators to upload event images
+    match /events/{eventId}/images/{fileName} {
+      allow read: if true; // Public read access for event images
+      allow write: if request.auth != null && 
+        exists(/databases/$(database)/documents/events/$(eventId)) &&
+        get(/databases/$(database)/documents/events/$(eventId)).data.creator_uid == request.auth.uid;
+    }
+    
+    // Allow community members to upload gallery images
+    match /communities/{communityId}/gallery/{fileName} {
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/communities/$(communityId)) &&
+        request.auth.uid in get(/databases/$(database)/documents/communities/$(communityId)).data.members;
+      allow write: if request.auth != null && 
+        exists(/databases/$(database)/documents/communities/$(communityId)) &&
+        request.auth.uid in get(/databases/$(database)/documents/communities/$(communityId)).data.members;
+    }
+    
+    // Allow community members to upload moment media
+    match /communities/{communityId}/moments/{fileName} {
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/communities/$(communityId)) &&
+        request.auth.uid in get(/databases/$(database)/documents/communities/$(communityId)).data.members;
+      allow write: if request.auth != null && 
+        exists(/databases/$(database)/documents/communities/$(communityId)) &&
+        request.auth.uid in get(/databases/$(database)/documents/communities/$(communityId)).data.members;
+    }
+    
+    // Allow chat participants to upload media
+    match /chats/{chatId}/media/{fileName} {
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/private_chats/$(chatId)) &&
+        request.auth.uid in get(/databases/$(database)/documents/private_chats/$(chatId)).data.user_ids;
+      allow write: if request.auth != null && 
+        exists(/databases/$(database)/documents/private_chats/$(chatId)) &&
+        request.auth.uid in get(/databases/$(database)/documents/private_chats/$(chatId)).data.user_ids;
+    }
+    
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+} 

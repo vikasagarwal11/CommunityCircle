@@ -169,6 +169,23 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
       _ref.read(authErrorProvider.notifier).state = e.toString();
     }
   }
+
+  Future<void> signInAnonymously() async {
+    _ref.read(authLoadingProvider.notifier).state = true;
+    _ref.read(authErrorProvider.notifier).state = null;
+
+    try {
+      final userModel = await _authService.signInAnonymously();
+      if (userModel != null) {
+        state = AsyncValue.data(userModel);
+        _ref.read(authLoadingProvider.notifier).state = false;
+      }
+    } catch (e) {
+      _ref.read(authErrorProvider.notifier).state = e.toString();
+      _ref.read(authLoadingProvider.notifier).state = false;
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
 }
 
 // Auth notifier provider

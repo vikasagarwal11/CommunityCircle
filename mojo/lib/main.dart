@@ -5,10 +5,12 @@ import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'core/theme.dart';
+import 'core/navigation_service.dart';
 import 'providers/auth_providers.dart';
 import 'routes/app_routes.dart';
 import 'views/phone_auth_screen.dart';
 import 'views/home_screen.dart';
+import 'views/public_home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -44,6 +46,7 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
+      navigatorKey: NavigationService.navigatorKey,
       onGenerateRoute: AppRoutes.generateRoute,
       home: const AuthWrapper(),
     );
@@ -56,12 +59,37 @@ class AuthWrapper extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authStateProvider);
+    final userAsync = ref.watch(authNotifierProvider);
     
     return authState.when(
       data: (state) {
         switch (state) {
           case AuthState.authenticated:
-            return const HomeScreen();
+            return userAsync.when(
+              data: (user) {
+                if (user == null) {
+                  return const PhoneAuthScreen();
+                }
+                
+                // Role-based routing
+                switch (user.role) {
+                  case 'anonymous':
+                    return const PublicHomeScreen();
+                  case 'member':
+                  case 'admin':
+                  case 'business':
+                    return const HomeScreen();
+                  default:
+                    return const PhoneAuthScreen();
+                }
+              },
+              loading: () => const Scaffold(
+                body: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+              error: (_, __) => const PhoneAuthScreen(),
+            );
           case AuthState.unauthenticated:
             return const PhoneAuthScreen();
           case AuthState.loading:

@@ -17,8 +17,7 @@ final databaseServiceProvider = Provider<DatabaseService>((ref) {
 
 // Community Service Provider
 final communityServiceProvider = Provider<CommunityService>((ref) {
-  final databaseService = ref.watch(databaseServiceProvider);
-  return CommunityService(databaseService);
+  return CommunityService();
 });
 
 // User Providers
@@ -35,24 +34,37 @@ final communityProvider = FutureProvider.family<CommunityModel?, String>((ref, c
   return await databaseService.getCommunity(communityId);
 });
 
-final publicCommunitiesProvider = FutureProvider<List<CommunityModel>>((ref) async {
+// Public communities provider
+final publicCommunitiesProvider = StreamProvider<List<CommunityModel>>((ref) {
   final communityService = ref.watch(communityServiceProvider);
-  return await communityService.getPublicCommunities();
+  return communityService.getPublicCommunities();
 });
 
-final userCommunitiesProvider = FutureProvider.family<List<CommunityModel>, String>((ref, userId) async {
+// User's communities provider
+final userCommunitiesProvider = StreamProvider.family<List<CommunityModel>, String>((ref, userId) {
   final communityService = ref.watch(communityServiceProvider);
-  return await communityService.getUserCommunities(userId);
+  return communityService.getUserCommunities(userId);
 });
 
-final businessCommunitiesProvider = FutureProvider<List<CommunityModel>>((ref) async {
-  final communityService = ref.watch(communityServiceProvider);
-  return await communityService.getBusinessCommunities();
+// Business communities provider - create a method for this
+final businessCommunitiesProvider = StreamProvider<List<CommunityModel>>((ref) {
+  return FirebaseFirestore.instance
+      .collection('communities')
+      .where('is_business', isEqualTo: true)
+      .where('visibility', isEqualTo: 'public')
+      .orderBy('created_at', descending: true)
+      .snapshots()
+      .map((snapshot) {
+        return snapshot.docs.map((doc) {
+          return CommunityModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+        }).toList();
+      });
 });
 
-final communitySearchProvider = FutureProvider.family<List<CommunityModel>, String>((ref, query) async {
+// Search communities provider
+final searchCommunitiesProvider = StreamProvider.family<List<CommunityModel>, String>((ref, query) {
   final communityService = ref.watch(communityServiceProvider);
-  return await communityService.searchCommunities(query);
+  return communityService.searchCommunities(query: query);
 });
 
 // Event Providers
@@ -81,7 +93,7 @@ final upcomingEventsProvider = FutureProvider.family<List<EventModel>, String>((
       .collection('events')
       .where('communityId', isEqualTo: communityId)
       .where('date', isGreaterThan: DateTime.now())
-      .orderBy('date', ascending: true)
+      .orderBy('date', descending: false)
       .get();
 
   return querySnapshot.docs.map((doc) {
@@ -190,7 +202,7 @@ final activeChallengesProvider = FutureProvider.family<List<ChallengeModel>, Str
       .where('isActive', isEqualTo: true)
       .where('startDate', isLessThanOrEqualTo: DateTime.now())
       .where('endDate', isGreaterThan: DateTime.now())
-      .orderBy('endDate', ascending: true)
+      .orderBy('endDate', descending: false)
       .get();
 
   return querySnapshot.docs.map((doc) {
@@ -216,7 +228,8 @@ class CommunityNotifier extends StateNotifier<AsyncValue<List<CommunityModel>>> 
   Future<void> loadPublicCommunities() async {
     state = const AsyncValue.loading();
     try {
-      final communities = await _communityService.getPublicCommunities();
+      final communitiesStream = _communityService.getPublicCommunities();
+      final communities = await communitiesStream.first;
       state = AsyncValue.data(communities);
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
@@ -226,7 +239,8 @@ class CommunityNotifier extends StateNotifier<AsyncValue<List<CommunityModel>>> 
   Future<void> loadUserCommunities(String userId) async {
     state = const AsyncValue.loading();
     try {
-      final communities = await _communityService.getUserCommunities(userId);
+      final communitiesStream = _communityService.getUserCommunities(userId);
+      final communities = await communitiesStream.first;
       state = AsyncValue.data(communities);
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);
@@ -236,7 +250,8 @@ class CommunityNotifier extends StateNotifier<AsyncValue<List<CommunityModel>>> 
   Future<void> searchCommunities(String query) async {
     state = const AsyncValue.loading();
     try {
-      final communities = await _communityService.searchCommunities(query);
+      final communitiesStream = _communityService.searchCommunities(query: query);
+      final communities = await communitiesStream.first;
       state = AsyncValue.data(communities);
     } catch (error, stackTrace) {
       state = AsyncValue.error(error, stackTrace);

@@ -189,6 +189,48 @@ class PhoneAuthScreen extends HookConsumerWidget {
                 child: const Text('Change Phone Number'),
               ),
             ],
+            
+            // Anonymous Login Section
+            const SizedBox(height: AppConstants.largePadding),
+            const Divider(),
+            const SizedBox(height: AppConstants.defaultPadding),
+            
+            Text(
+              'Or continue as guest',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: AppTheme.onSurfaceColor.withOpacity(0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppConstants.defaultPadding),
+            
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: isLoading
+                    ? null
+                    : () async {
+                        try {
+                          await ref.read(authNotifierProvider.notifier).signInAnonymously();
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Failed to sign in as guest: $e'),
+                              backgroundColor: AppTheme.errorColor,
+                            ),
+                          );
+                        }
+                      },
+                icon: const Icon(Icons.person_outline),
+                label: const Text('Continue as Guest'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
           ],
         ),
       ),

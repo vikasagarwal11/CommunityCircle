@@ -109,10 +109,10 @@ class EventModel {
   // Helper methods
   bool get isPublic => visibility == 'public';
   bool get isPrivate => visibility == 'private';
-  bool get isCreator(String userId) => creatorUid == userId;
-  bool get isRsvped(String userId) => rsvps.containsKey(userId);
-  bool get isCheckedIn(String userId) => checkIns.containsKey(userId);
-  String? get rsvpStatus(String userId) => rsvps[userId];
+  bool isCreator(String userId) => creatorUid == userId;
+  bool isRsvped(String userId) => rsvps.containsKey(userId);
+  bool isCheckedIn(String userId) => checkIns.containsKey(userId);
+  String? rsvpStatus(String userId) => rsvps[userId];
   int get rsvpCount => rsvps.length;
   int get checkInCount => checkIns.length;
   bool get isPast => date.isBefore(DateTime.now());

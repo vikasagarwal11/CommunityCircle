@@ -38,17 +38,7 @@ class AppConstants {
   static const String invalidOtp = 'Please enter a valid OTP.';
 }
 
-// App Routes
-class AppRoutes {
-  static const String phoneAuth = '/phone_auth';
-  static const String home = '/home';
-  static const String publicHome = '/public_home';
-  static const String createCommunity = '/create_community';
-  static const String communityDetails = '/community_details';
-  static const String adminManagement = '/admin_management';
-  static const String profile = '/profile';
-  static const String settings = '/settings';
-}
+
 
 // App Colors
 class AppColors {

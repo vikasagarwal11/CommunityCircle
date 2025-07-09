@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import '../core/theme.dart';
+import '../core/constants.dart';
 
 class LoadingWidget extends StatelessWidget {
   final String? message;
+  final double size;
   
   const LoadingWidget({
     super.key,
     this.message,
+    this.size = 40.0,
   });
 
   @override
@@ -15,11 +18,16 @@ class LoadingWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(
-            color: AppTheme.primaryColor,
+          SizedBox(
+            width: size,
+            height: size,
+            child: CircularProgressIndicator(
+              strokeWidth: 3,
+              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+            ),
           ),
           if (message != null) ...[
-            const SizedBox(height: 16),
+            const SizedBox(height: AppConstants.defaultPadding),
             Text(
               message!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
