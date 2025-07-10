@@ -132,7 +132,7 @@ class CommunityService {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) {
-        return CommunityModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+        return CommunityModel.fromMap(doc.data(), doc.id);
       }).toList();
     });
   }
@@ -146,7 +146,7 @@ class CommunityService {
         .snapshots()
         .map((snapshot) {
       return snapshot.docs.map((doc) {
-        return CommunityModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+        return CommunityModel.fromMap(doc.data(), doc.id);
       }).toList();
     });
   }

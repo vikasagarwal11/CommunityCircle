@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/chat_service.dart';
 import '../models/message_model.dart';
-import '../models/user_model.dart';
 import '../providers/auth_providers.dart';
 
 // Chat service provider

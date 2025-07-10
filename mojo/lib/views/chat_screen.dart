@@ -3,9 +3,7 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../providers/chat_providers.dart';
 import '../providers/auth_providers.dart';
-import '../providers/community_providers.dart';
 import '../models/message_model.dart';
-import '../models/community_model.dart';
 import '../core/constants.dart';
 import '../core/theme.dart';
 import '../core/navigation_service.dart';
@@ -82,7 +80,7 @@ class ChatScreen extends HookConsumerWidget {
               CircleAvatar(
                 backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
                 child: Text(
-                  community?.name?.substring(0, 1).toUpperCase() ?? 'C',
+                  community?.name.substring(0, 1).toUpperCase() ?? 'C',
                   style: TextStyle(
                     color: AppTheme.primaryBlue,
                     fontWeight: FontWeight.bold,
@@ -269,7 +267,7 @@ class ChatScreen extends HookConsumerWidget {
               radius: 16,
               backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
               child: Text(
-                message.userId?.substring(0, 1).toUpperCase() ?? '',
+                message.userId.substring(0, 1).toUpperCase() ?? '',
                 style: TextStyle(
                   fontSize: 12,
                   color: AppTheme.primaryBlue,

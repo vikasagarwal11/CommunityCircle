@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:io' show Platform;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'core/theme.dart';
@@ -12,7 +13,7 @@ import 'views/phone_auth_screen.dart';
 import 'views/home_screen.dart';
 import 'views/public_home_screen.dart';
 
-void main() async {
+/*void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   if (kIsWeb) {
     await Firebase.initializeApp(
@@ -34,8 +35,18 @@ void main() async {
       child: MyApp(),
     ),
   );
+}*/
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(
+    const ProviderScope(
+      child: MyApp(),
+    ),
+  );
 }
-
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 

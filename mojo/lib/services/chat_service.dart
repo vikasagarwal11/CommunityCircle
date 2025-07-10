@@ -1,7 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:logger/logger.dart';
 import '../models/message_model.dart';
-import '../models/user_model.dart';
 import '../core/constants.dart';
 
 class ChatService {
@@ -298,7 +297,7 @@ class ChatService {
         .snapshots()
         .map((doc) {
       if (!doc.exists) return [];
-      final data = doc.data() as Map<String, dynamic>?;
+      final data = doc.data();
       if (data == null) return [];
       
       final now = DateTime.now();

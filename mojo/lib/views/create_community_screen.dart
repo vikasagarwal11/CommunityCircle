@@ -2,13 +2,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/community_providers.dart';
-import '../services/storage_service.dart';
 import '../core/constants.dart';
 import '../core/theme.dart';
 import '../core/navigation_service.dart';
-import '../models/community_model.dart';
 
 class CreateCommunityScreen extends HookConsumerWidget {
   const CreateCommunityScreen({super.key});

@@ -56,7 +56,7 @@ final businessCommunitiesProvider = StreamProvider<List<CommunityModel>>((ref) {
       .snapshots()
       .map((snapshot) {
         return snapshot.docs.map((doc) {
-          return CommunityModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+          return CommunityModel.fromMap(doc.data(), doc.id);
         }).toList();
       });
 });
@@ -82,7 +82,7 @@ final communityEventsProvider = FutureProvider.family<List<EventModel>, String>(
 
   return querySnapshot.docs.map((doc) {
     return EventModel.fromMap(
-      doc.data() as Map<String, dynamic>,
+      doc.data(),
       doc.id,
     );
   }).toList();
@@ -98,7 +98,7 @@ final upcomingEventsProvider = FutureProvider.family<List<EventModel>, String>((
 
   return querySnapshot.docs.map((doc) {
     return EventModel.fromMap(
-      doc.data() as Map<String, dynamic>,
+      doc.data(),
       doc.id,
     );
   }).toList();
@@ -120,7 +120,7 @@ final communityMessagesProvider = StreamProvider.family<List<MessageModel>, Stri
       .map((snapshot) {
         return snapshot.docs.map((doc) {
           return MessageModel.fromMap(
-            doc.data() as Map<String, dynamic>,
+            doc.data(),
             doc.id,
           );
         }).toList();
@@ -143,7 +143,7 @@ final communityMomentsProvider = StreamProvider.family<List<MomentModel>, String
       .map((snapshot) {
         return snapshot.docs.map((doc) {
           return MomentModel.fromMap(
-            doc.data() as Map<String, dynamic>,
+            doc.data(),
             doc.id,
           );
         }).toList();
@@ -166,7 +166,7 @@ final communityPollsProvider = FutureProvider.family<List<PollModel>, String>((r
 
   return querySnapshot.docs.map((doc) {
     return PollModel.fromMap(
-      doc.data() as Map<String, dynamic>,
+      doc.data(),
       doc.id,
     );
   }).toList();
@@ -188,7 +188,7 @@ final communityChallengesProvider = FutureProvider.family<List<ChallengeModel>, 
 
   return querySnapshot.docs.map((doc) {
     return ChallengeModel.fromMap(
-      doc.data() as Map<String, dynamic>,
+      doc.data(),
       doc.id,
     );
   }).toList();
@@ -207,7 +207,7 @@ final activeChallengesProvider = FutureProvider.family<List<ChallengeModel>, Str
 
   return querySnapshot.docs.map((doc) {
     return ChallengeModel.fromMap(
-      doc.data() as Map<String, dynamic>,
+      doc.data(),
       doc.id,
     );
   }).toList();
@@ -312,7 +312,7 @@ class EventNotifier extends StateNotifier<AsyncValue<List<EventModel>>> {
 
       final events = querySnapshot.docs.map((doc) {
         return EventModel.fromMap(
-          doc.data() as Map<String, dynamic>,
+          doc.data(),
           doc.id,
         );
       }).toList();

@@ -33,7 +33,7 @@ class PhoneAuthScreen extends HookConsumerWidget {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text(error!),
+              content: Text(error),
               backgroundColor: AppTheme.errorColor,
             ),
           );

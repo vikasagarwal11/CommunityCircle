@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../providers/auth_providers.dart';
 import '../providers/community_providers.dart';
-import '../services/auth_service.dart';
 import '../core/constants.dart';
 import '../core/theme.dart';
 import '../core/navigation_service.dart';
