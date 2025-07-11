@@ -11,12 +11,12 @@ class PublicHomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final publicCommunitiesAsync = ref.watch(publicCommunitiesProvider({'limit': 6}));
+    final publicCommunitiesAsync = ref.watch(publicCommunitiesProvider(const CommunityQueryParams(limit: 6)));
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('MOJO'),
-        backgroundColor: AppTheme.neutralWhite,
+        backgroundColor: Theme.of(context).colorScheme.background,
         elevation: 0,
         actions: [
           IconButton(
@@ -64,8 +64,8 @@ class PublicHomeScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppTheme.primaryBlue.withOpacity(0.1),
-            AppTheme.primaryGreen.withOpacity(0.1),
+            Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            Theme.of(context).colorScheme.secondary.withOpacity(0.1),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -77,13 +77,13 @@ class PublicHomeScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AppTheme.primaryBlue.withOpacity(0.1),
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(50),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.people,
               size: 60,
-              color: AppTheme.primaryBlue,
+              color: Theme.of(context).colorScheme.primary,
             ),
           ),
           const SizedBox(height: AppConstants.defaultPadding),
@@ -91,7 +91,7 @@ class PublicHomeScreen extends ConsumerWidget {
             'Join the MOJO Community',
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
               fontWeight: FontWeight.bold,
-              color: AppTheme.onSurfaceColor,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
             textAlign: TextAlign.center,
           ),
@@ -99,7 +99,7 @@ class PublicHomeScreen extends ConsumerWidget {
           Text(
             'Discover amazing communities, connect with like-minded people, and create meaningful experiences together.',
             style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: AppTheme.onSurfaceColor.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -111,7 +111,7 @@ class PublicHomeScreen extends ConsumerWidget {
                 NavigationService.navigateToPhoneAuth();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppTheme.primaryBlue,
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -147,19 +147,21 @@ class PublicHomeScreen extends ConsumerWidget {
           children: [
             Expanded(
               child: _buildFeatureCard(
+                context,
                 icon: Icons.chat_bubble,
                 title: 'Real-time Chat',
                 description: 'Connect instantly with community members',
-                color: AppTheme.primaryBlue,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(width: AppConstants.smallPadding),
             Expanded(
               child: _buildFeatureCard(
+                context,
                 icon: Icons.event,
                 title: 'Event Management',
                 description: 'Create and join amazing events',
-                color: AppTheme.primaryGreen,
+                color: Theme.of(context).colorScheme.secondary,
               ),
             ),
           ],
@@ -169,19 +171,21 @@ class PublicHomeScreen extends ConsumerWidget {
           children: [
             Expanded(
               child: _buildFeatureCard(
+                context,
                 icon: Icons.photo_camera,
                 title: 'Live Moments',
                 description: 'Share ephemeral content with your community',
-                color: AppTheme.primaryOrange,
+                color: Theme.of(context).colorScheme.tertiary,
               ),
             ),
             const SizedBox(width: AppConstants.smallPadding),
             Expanded(
               child: _buildFeatureCard(
+                context,
                 icon: Icons.emoji_events,
                 title: 'Challenges',
                 description: 'Participate in fun community challenges',
-                color: AppTheme.primaryPurple,
+                color: Theme.of(context).colorScheme.error,
               ),
             ),
           ],
@@ -190,7 +194,8 @@ class PublicHomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildFeatureCard({
+  Widget _buildFeatureCard(
+    BuildContext context, {
     required IconData icon,
     required String title,
     required String description,
@@ -227,7 +232,7 @@ class PublicHomeScreen extends ConsumerWidget {
             description,
             style: TextStyle(
               fontSize: 12,
-              color: AppTheme.onSurfaceColor.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -291,7 +296,7 @@ class PublicHomeScreen extends ConsumerWidget {
                                     width: 40,
                                     height: 40,
                                     decoration: BoxDecoration(
-                                      color: AppTheme.primaryBlue.withOpacity(0.1),
+                                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Center(
@@ -300,7 +305,7 @@ class PublicHomeScreen extends ConsumerWidget {
                                         style: TextStyle(
                                           fontSize: 18,
                                           fontWeight: FontWeight.bold,
-                                          color: AppTheme.primaryBlue,
+                                          color: Theme.of(context).colorScheme.primary,
                                         ),
                                       ),
                                     ),
@@ -322,7 +327,7 @@ class PublicHomeScreen extends ConsumerWidget {
                                           '${community.memberCount} members',
                                           style: TextStyle(
                                             fontSize: 12,
-                                            color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                           ),
                                         ),
                                       ],
@@ -335,7 +340,7 @@ class PublicHomeScreen extends ConsumerWidget {
                                 community.description,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                 ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
@@ -345,15 +350,15 @@ class PublicHomeScreen extends ConsumerWidget {
                                 width: double.infinity,
                                 padding: const EdgeInsets.symmetric(vertical: 8),
                                 decoration: BoxDecoration(
-                                  color: AppTheme.primaryBlue.withOpacity(0.1),
+                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Text(
+                                child: Text(
                                   'Sign up to join',
                                   style: TextStyle(
                                     fontSize: 12,
                                     fontWeight: FontWeight.bold,
-                                    color: AppTheme.primaryBlue,
+                                    color: Theme.of(context).colorScheme.primary,
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
@@ -380,69 +385,75 @@ class PublicHomeScreen extends ConsumerWidget {
   }
 
   Widget _buildEmptyCommunitiesState(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppTheme.primaryBlue.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(50),
-            ),
-            child: Icon(
-              Icons.group_add,
-              size: 48,
-              color: AppTheme.primaryBlue,
-            ),
-          ),
-          const SizedBox(height: AppConstants.defaultPadding),
-          Text(
-            'No communities yet',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: AppTheme.onSurfaceColor,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: AppConstants.smallPadding),
-          Text(
-            'Be the first to create a community and start connecting with others!',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.onSurfaceColor.withOpacity(0.7),
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: AppConstants.largePadding),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              ElevatedButton.icon(
-                onPressed: () {
-                  NavigationService.navigateToPhoneAuth();
-                },
-                icon: const Icon(Icons.login, size: 18),
-                label: const Text('Sign Up'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlue,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
+    return SingleChildScrollView(
+      child: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(50),
               ),
-              const SizedBox(width: 12),
-              OutlinedButton.icon(
-                onPressed: () {
-                  NavigationService.navigateToPhoneAuth();
-                },
-                icon: const Icon(Icons.explore, size: 18),
-                label: const Text('Learn More'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppTheme.primaryBlue,
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                ),
+              child: Icon(
+                Icons.group_add,
+                size: 40,
+                color: Theme.of(context).colorScheme.primary,
               ),
-            ],
-          ),
-        ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'No communities yet',
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Be the first to create a community and start connecting with others!',
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      NavigationService.navigateToPhoneAuth();
+                    },
+                    icon: const Icon(Icons.login, size: 18),
+                    label: const Text('Sign Up'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      NavigationService.navigateToPhoneAuth();
+                    },
+                    icon: const Icon(Icons.explore, size: 18),
+                    label: const Text('Learn More'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Theme.of(context).colorScheme.primary,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -453,8 +464,8 @@ class PublicHomeScreen extends ConsumerWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppTheme.primaryGreen.withOpacity(0.1),
-            AppTheme.primaryBlue.withOpacity(0.1),
+            Theme.of(context).colorScheme.secondary.withOpacity(0.1),
+            Theme.of(context).colorScheme.primary.withOpacity(0.1),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -474,7 +485,7 @@ class PublicHomeScreen extends ConsumerWidget {
           Text(
             'Join thousands of people who are already building amazing communities on MOJO.',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.onSurfaceColor.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -508,7 +519,7 @@ class PublicHomeScreen extends ConsumerWidget {
                     NavigationService.navigateToPhoneAuth();
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppTheme.primaryGreen,
+                    backgroundColor: Theme.of(context).colorScheme.secondary,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),

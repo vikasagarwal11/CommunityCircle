@@ -145,8 +145,7 @@ class ChatNotifier extends StateNotifier<AsyncValue<void>> {
         userId: user.id,
       );
     } catch (e) {
-      // Don't update state for reactions, just log error
-      print('Error adding reaction: $e');
+      // Don't update state for reactions, just log error silently
     }
   }
 
@@ -166,8 +165,7 @@ class ChatNotifier extends StateNotifier<AsyncValue<void>> {
         userId: user.id,
       );
     } catch (e) {
-      // Don't update state for reactions, just log error
-      print('Error removing reaction: $e');
+      // Don't update state for reactions, just log error silently
     }
   }
 
@@ -183,8 +181,7 @@ class ChatNotifier extends StateNotifier<AsyncValue<void>> {
         userId: user.id,
       );
     } catch (e) {
-      // Don't update state for read status, just log error
-      print('Error marking message as read: $e');
+      // Don't update state for read status, just log error silently
     }
   }
 
@@ -204,8 +201,7 @@ class ChatNotifier extends StateNotifier<AsyncValue<void>> {
         isTyping: isTyping,
       );
     } catch (e) {
-      // Don't update state for typing indicators, just log error
-      print('Error setting typing indicator: $e');
+      // Don't update state for typing indicators, just log error silently
     }
   }
 
@@ -222,7 +218,7 @@ class ChatNotifier extends StateNotifier<AsyncValue<void>> {
         mediaType: mediaType,
       );
     } catch (e) {
-      print('Error uploading media: $e');
+      // Return null on upload failure
       return null;
     }
   }

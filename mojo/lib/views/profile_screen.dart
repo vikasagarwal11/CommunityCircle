@@ -28,7 +28,7 @@ class ProfileScreen extends HookConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
-        backgroundColor: AppTheme.neutralWhite,
+        backgroundColor: Theme.of(context).colorScheme.background,
         elevation: 0,
         actions: [
           IconButton(
@@ -127,8 +127,8 @@ class ProfileScreen extends HookConsumerWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppTheme.primaryBlue.withOpacity(0.1),
-            AppTheme.primaryGreen.withOpacity(0.1),
+            Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            Theme.of(context).colorScheme.secondary.withOpacity(0.1),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -146,10 +146,10 @@ class ProfileScreen extends HookConsumerWidget {
                   width: 100,
                   height: 100,
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryBlue.withOpacity(0.1),
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(50),
                     border: Border.all(
-                      color: AppTheme.primaryBlue,
+                      color: Theme.of(context).colorScheme.primary,
                       width: 3,
                     ),
                   ),
@@ -167,7 +167,7 @@ class ProfileScreen extends HookConsumerWidget {
                             style: TextStyle(
                               fontSize: 36,
                               fontWeight: FontWeight.bold,
-                              color: AppTheme.primaryBlue,
+                              color: Theme.of(context).colorScheme.primary,
                             ),
                           ),
                         ),
@@ -179,7 +179,7 @@ class ProfileScreen extends HookConsumerWidget {
                     child: Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: AppTheme.primaryBlue,
+                        color: Theme.of(context).colorScheme.primary,
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: const Icon(
@@ -210,7 +210,7 @@ class ProfileScreen extends HookConsumerWidget {
             Text(
               user.email ?? user.phoneNumber,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
           ],
@@ -224,10 +224,10 @@ class ProfileScreen extends HookConsumerWidget {
               vertical: 4,
             ),
             decoration: BoxDecoration(
-              color: _getRoleColor(user.role).withOpacity(0.1),
+              color: _getRoleColor(context, user.role).withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: _getRoleColor(user.role),
+                color: _getRoleColor(context, user.role),
                 width: 1,
               ),
             ),
@@ -236,7 +236,7 @@ class ProfileScreen extends HookConsumerWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.bold,
-                color: _getRoleColor(user.role),
+                color: _getRoleColor(context, user.role),
               ),
             ),
           ),
@@ -267,7 +267,7 @@ class ProfileScreen extends HookConsumerWidget {
     return TextField(
       controller: emailController,
       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-        color: AppTheme.onSurfaceColor.withOpacity(0.7),
+        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
       ),
       textAlign: TextAlign.center,
       decoration: const InputDecoration(
@@ -287,7 +287,7 @@ class ProfileScreen extends HookConsumerWidget {
             'Communities',
             '${user.communityIds.length}',
             Icons.people,
-            AppTheme.primaryBlue,
+            Theme.of(context).colorScheme.primary,
           ),
         ),
         const SizedBox(width: AppConstants.smallPadding),
@@ -297,7 +297,7 @@ class ProfileScreen extends HookConsumerWidget {
             'Points',
             '${user.totalPoints}',
             Icons.emoji_events,
-            AppTheme.primaryOrange,
+            Theme.of(context).colorScheme.secondary,
           ),
         ),
         const SizedBox(width: AppConstants.smallPadding),
@@ -307,7 +307,7 @@ class ProfileScreen extends HookConsumerWidget {
             'Badges',
             '${user.badges.length}',
             Icons.workspace_premium,
-            AppTheme.primaryGreen,
+            Theme.of(context).colorScheme.tertiary,
           ),
         ),
       ],
@@ -345,7 +345,7 @@ class ProfileScreen extends HookConsumerWidget {
             title,
             style: TextStyle(
               fontSize: 12,
-              color: AppTheme.onSurfaceColor.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
         ],
@@ -406,7 +406,7 @@ class ProfileScreen extends HookConsumerWidget {
                                 community.description,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                 ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
@@ -417,14 +417,14 @@ class ProfileScreen extends HookConsumerWidget {
                                   Icon(
                                     Icons.people,
                                     size: 12,
-                                    color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
                                     '${community.memberCount} members',
                                     style: TextStyle(
                                       fontSize: 10,
-                                      color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                     ),
                                   ),
                                 ],
@@ -508,7 +508,7 @@ class ProfileScreen extends HookConsumerWidget {
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color: AppTheme.primaryGreen.withOpacity(0.1),
+                                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -516,7 +516,7 @@ class ProfileScreen extends HookConsumerWidget {
                                       style: TextStyle(
                                         fontSize: 8,
                                         fontWeight: FontWeight.bold,
-                                        color: AppTheme.primaryGreen,
+                                        color: Theme.of(context).colorScheme.secondary,
                                       ),
                                     ),
                                   ),
@@ -527,7 +527,7 @@ class ProfileScreen extends HookConsumerWidget {
                                 community.description,
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                 ),
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
@@ -538,14 +538,14 @@ class ProfileScreen extends HookConsumerWidget {
                                   Icon(
                                     Icons.people,
                                     size: 12,
-                                    color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
                                     '${community.memberCount} members',
                                     style: TextStyle(
                                       fontSize: 10,
-                                      color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                     ),
                                   ),
                                 ],
@@ -587,7 +587,7 @@ class ProfileScreen extends HookConsumerWidget {
             children: [
               if (user.role == 'anonymous') ...[
                 ListTile(
-                  leading: const Icon(Icons.login, color: AppTheme.primaryOrange),
+                  leading: Icon(Icons.login, color: Theme.of(context).colorScheme.secondary),
                   title: const Text('Sign Up for Full Access'),
                   subtitle: const Text('Unlock all features and communities'),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -606,15 +606,15 @@ class ProfileScreen extends HookConsumerWidget {
                       vertical: 4,
                     ),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryOrange.withOpacity(0.1),
+                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Text(
+                    child: Text(
                       'GUEST',
                       style: TextStyle(
                         fontSize: 10,
                         fontWeight: FontWeight.bold,
-                        color: AppTheme.primaryOrange,
+                        color: Theme.of(context).colorScheme.secondary,
                       ),
                     ),
                   ),
@@ -668,18 +668,18 @@ class ProfileScreen extends HookConsumerWidget {
     );
   }
 
-  Color _getRoleColor(String role) {
-    switch (role.toLowerCase()) {
+  Color _getRoleColor(BuildContext context, String role) {
+    switch (role) {
       case 'admin':
-        return AppTheme.primaryRed;
-      case 'business':
-        return AppTheme.primaryGreen;
+        return Theme.of(context).colorScheme.error;
+      case 'moderator':
+        return Theme.of(context).colorScheme.tertiary;
       case 'member':
-        return AppTheme.primaryBlue;
-      case 'anonymous':
-        return AppTheme.primaryOrange;
+        return Theme.of(context).colorScheme.primary;
+      case 'business':
+        return Theme.of(context).colorScheme.secondary;
       default:
-        return AppTheme.primaryBlue;
+        return Theme.of(context).colorScheme.primary;
     }
   }
 
@@ -699,12 +699,12 @@ class ProfileScreen extends HookConsumerWidget {
       
       NavigationService.showSnackBar(
         message: 'Profile updated successfully!',
-        backgroundColor: AppTheme.primaryGreen,
+        backgroundColor: Theme.of(context).colorScheme.tertiary,
       );
     } catch (e) {
       NavigationService.showSnackBar(
         message: 'Failed to update profile: $e',
-        backgroundColor: AppTheme.errorColor,
+        backgroundColor: Theme.of(context).colorScheme.error,
       );
     } finally {
       isLoading.value = false;
@@ -719,17 +719,17 @@ class ProfileScreen extends HookConsumerWidget {
         content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => NavigationService.goBack(),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () async {
-              Navigator.pop(context);
+              NavigationService.goBack();
               await ref.read(authNotifierProvider.notifier).signOut();
               NavigationService.navigateToPhoneAuth();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorColor,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
             child: const Text(
               'Logout',

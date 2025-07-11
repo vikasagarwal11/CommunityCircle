@@ -14,6 +14,7 @@ class LoadingWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -23,7 +24,7 @@ class LoadingWidget extends StatelessWidget {
             height: size,
             child: CircularProgressIndicator(
               strokeWidth: 3,
-              valueColor: AlwaysStoppedAnimation<Color>(AppTheme.primaryBlue),
+              valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
             ),
           ),
           if (message != null) ...[
@@ -31,7 +32,7 @@ class LoadingWidget extends StatelessWidget {
             Text(
               message!,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                color: colorScheme.onSurface.withOpacity(0.7),
               ),
               textAlign: TextAlign.center,
             ),

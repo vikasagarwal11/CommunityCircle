@@ -5,6 +5,14 @@ import '../services/storage_service.dart';
 import '../models/community_model.dart';
 import '../models/user_model.dart';
 import '../providers/auth_providers.dart';
+import 'package:equatable/equatable.dart';
+
+class CommunityQueryParams extends Equatable {
+  final int limit;
+  const CommunityQueryParams({required this.limit});
+  @override
+  List<Object?> get props => [limit];
+}
 
 // Community service provider
 final communityServiceProvider = Provider<CommunityService>((ref) {
@@ -17,14 +25,10 @@ final storageServiceProvider = Provider<StorageService>((ref) {
 });
 
 // Public communities provider with pagination
-final publicCommunitiesProvider = StreamProvider.family<List<CommunityModel>, Map<String, dynamic>>((ref, params) {
+final publicCommunitiesProvider = StreamProvider.family<List<CommunityModel>, CommunityQueryParams>((ref, params) {
   final communityService = ref.watch(communityServiceProvider);
-  final limit = params['limit'] as int? ?? 10;
-  final lastDocument = params['lastDocument'] as DocumentSnapshot?;
-  
   return communityService.getPublicCommunities(
-    limit: limit,
-    lastDocument: lastDocument,
+    limit: params.limit,
   );
 });
 

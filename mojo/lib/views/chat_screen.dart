@@ -78,11 +78,11 @@ class ChatScreen extends HookConsumerWidget {
           data: (community) => Row(
             children: [
               CircleAvatar(
-                backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
+                backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                 child: Text(
                   community?.name.substring(0, 1).toUpperCase() ?? 'C',
                   style: TextStyle(
-                    color: AppTheme.primaryBlue,
+                    color: Theme.of(context).colorScheme.primary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -100,7 +100,7 @@ class ChatScreen extends HookConsumerWidget {
                       '${community?.memberCount ?? 0} members',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       ),
                     ),
                   ],
@@ -111,7 +111,7 @@ class ChatScreen extends HookConsumerWidget {
           loading: () => const Text('Loading...'),
           error: (_, __) => const Text('Community'),
         ),
-        backgroundColor: AppTheme.neutralWhite,
+        backgroundColor: Theme.of(context).colorScheme.background,
         elevation: 0,
         actions: [
           IconButton(
@@ -171,7 +171,7 @@ class ChatScreen extends HookConsumerWidget {
           typingUsersAsync.when(
             data: (typingUsers) {
               if (typingUsers.isEmpty) return const SizedBox();
-              
+              final colorScheme = Theme.of(context).colorScheme;
               return Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppConstants.defaultPadding,
@@ -189,7 +189,7 @@ class ChatScreen extends HookConsumerWidget {
                       '${typingUsers.length} ${typingUsers.length == 1 ? 'person' : 'people'} typing...',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                        color: colorScheme.onSurface.withOpacity(0.7),
                       ),
                     ),
                   ],
@@ -214,6 +214,7 @@ class ChatScreen extends HookConsumerWidget {
   }
 
   Widget _buildEmptyState(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -221,27 +222,27 @@ class ChatScreen extends HookConsumerWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: AppTheme.primaryBlue.withOpacity(0.1),
+              color: colorScheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(50),
             ),
             child: Icon(
               Icons.chat_bubble_outline,
               size: 60,
-              color: AppTheme.primaryBlue,
+              color: colorScheme.primary,
             ),
           ),
           const SizedBox(height: AppConstants.largePadding),
           Text(
             'No messages yet',
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-              color: AppTheme.onSurfaceColor,
+              color: colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: AppConstants.smallPadding),
           Text(
             'Start the conversation by sending a message!',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.onSurfaceColor.withOpacity(0.7),
+              color: colorScheme.onSurface.withOpacity(0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -256,6 +257,7 @@ class ChatScreen extends HookConsumerWidget {
     bool isOwnMessage,
     WidgetRef ref,
   ) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppConstants.smallPadding),
       child: Row(
@@ -265,12 +267,12 @@ class ChatScreen extends HookConsumerWidget {
           if (!isOwnMessage) ...[
             CircleAvatar(
               radius: 16,
-              backgroundColor: AppTheme.primaryBlue.withOpacity(0.1),
+              backgroundColor: colorScheme.primary.withOpacity(0.1),
               child: Text(
                 message.userId.substring(0, 1).toUpperCase() ?? '',
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppTheme.primaryBlue,
+                  color: colorScheme.primary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -288,7 +290,7 @@ class ChatScreen extends HookConsumerWidget {
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                      color: colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -301,11 +303,11 @@ class ChatScreen extends HookConsumerWidget {
                   ),
                   decoration: BoxDecoration(
                     color: isOwnMessage 
-                        ? AppTheme.primaryBlue 
-                        : AppTheme.neutralWhite,
+                        ? Theme.of(context).colorScheme.primary 
+                        : Theme.of(context).colorScheme.background,
                     borderRadius: BorderRadius.circular(16),
                     border: !isOwnMessage ? Border.all(
-                      color: AppTheme.onSurfaceColor.withOpacity(0.1),
+                      color: colorScheme.onSurface.withOpacity(0.1),
                     ) : null,
                     boxShadow: [
                       BoxShadow(
@@ -324,14 +326,14 @@ class ChatScreen extends HookConsumerWidget {
                           padding: const EdgeInsets.all(8),
                           margin: const EdgeInsets.only(bottom: 8),
                           decoration: BoxDecoration(
-                            color: AppTheme.onSurfaceColor.withOpacity(0.05),
+                            color: colorScheme.onSurface.withOpacity(0.05),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             'Replying to message...',
                             style: TextStyle(
                               fontSize: 12,
-                              color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                              color: colorScheme.onSurface.withOpacity(0.7),
                             ),
                           ),
                         ),
@@ -341,7 +343,7 @@ class ChatScreen extends HookConsumerWidget {
                       Text(
                         message.text ?? '',
                         style: TextStyle(
-                          color: isOwnMessage ? Colors.white : AppTheme.onSurfaceColor,
+                          color: isOwnMessage ? Colors.white : colorScheme.onSurface,
                         ),
                       ),
                       
@@ -352,14 +354,14 @@ class ChatScreen extends HookConsumerWidget {
                           width: 200,
                           height: 150,
                           decoration: BoxDecoration(
-                            color: AppTheme.onSurfaceColor.withOpacity(0.1),
+                            color: colorScheme.onSurface.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Center(
                             child: Icon(
                               _getMediaIcon(message.mediaType),
                               size: 40,
-                              color: AppTheme.onSurfaceColor.withOpacity(0.5),
+                              color: colorScheme.onSurface.withOpacity(0.5),
                             ),
                           ),
                         ),
@@ -377,7 +379,7 @@ class ChatScreen extends HookConsumerWidget {
                                 vertical: 2,
                               ),
                               decoration: BoxDecoration(
-                                color: AppTheme.onSurfaceColor.withOpacity(0.1),
+                                color: colorScheme.onSurface.withOpacity(0.1),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Row(
@@ -389,7 +391,7 @@ class ChatScreen extends HookConsumerWidget {
                                     '${entry.value.length}',
                                     style: TextStyle(
                                       fontSize: 10,
-                                      color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                                      color: colorScheme.onSurface.withOpacity(0.7),
                                     ),
                                   ),
                                 ],
@@ -412,7 +414,7 @@ class ChatScreen extends HookConsumerWidget {
                       _formatTime(message.timestamp),
                       style: TextStyle(
                         fontSize: 10,
-                        color: AppTheme.onSurfaceColor.withOpacity(0.5),
+                        color: colorScheme.onSurface.withOpacity(0.5),
                       ),
                     ),
                     if (message.metadata?['edited'] == true) ...[
@@ -421,7 +423,7 @@ class ChatScreen extends HookConsumerWidget {
                         'edited',
                         style: TextStyle(
                           fontSize: 10,
-                          color: AppTheme.onSurfaceColor.withOpacity(0.5),
+                          color: colorScheme.onSurface.withOpacity(0.5),
                         ),
                       ),
                     ],
@@ -435,12 +437,12 @@ class ChatScreen extends HookConsumerWidget {
             const SizedBox(width: AppConstants.smallPadding),
             CircleAvatar(
               radius: 16,
-              backgroundColor: AppTheme.primaryGreen.withOpacity(0.1),
+              backgroundColor: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
               child: Text(
                 'You',
                 style: TextStyle(
                   fontSize: 10,
-                  color: AppTheme.primaryGreen,
+                  color: Theme.of(context).colorScheme.secondary,
                   fontWeight: FontWeight.bold,
                 ),
               ),
@@ -452,13 +454,14 @@ class ChatScreen extends HookConsumerWidget {
   }
 
   Widget _buildReplyPreview(BuildContext context, MessageModel replyTo, WidgetRef ref) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(AppConstants.defaultPadding),
       decoration: BoxDecoration(
-        color: AppTheme.onSurfaceColor.withOpacity(0.05),
+        color: colorScheme.onSurface.withOpacity(0.05),
         border: Border(
           bottom: BorderSide(
-            color: AppTheme.onSurfaceColor.withOpacity(0.1),
+            color: colorScheme.onSurface.withOpacity(0.1),
           ),
         ),
       ),
@@ -468,7 +471,7 @@ class ChatScreen extends HookConsumerWidget {
             width: 4,
             height: 40,
             decoration: BoxDecoration(
-              color: AppTheme.primaryBlue,
+              color: Theme.of(context).colorScheme.primary,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -482,7 +485,7 @@ class ChatScreen extends HookConsumerWidget {
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                    color: colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -490,7 +493,7 @@ class ChatScreen extends HookConsumerWidget {
                   replyTo.text ?? '',
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                    color: colorScheme.onSurface.withOpacity(0.7),
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -516,13 +519,14 @@ class ChatScreen extends HookConsumerWidget {
     ValueNotifier<bool> showEmojiPicker,
     WidgetRef ref,
   ) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(AppConstants.defaultPadding),
       decoration: BoxDecoration(
-        color: AppTheme.neutralWhite,
+        color: Theme.of(context).colorScheme.background,
         border: Border(
           top: BorderSide(
-            color: AppTheme.onSurfaceColor.withOpacity(0.1),
+            color: colorScheme.onSurface.withOpacity(0.1),
           ),
         ),
       ),
@@ -550,7 +554,7 @@ class ChatScreen extends HookConsumerWidget {
                   borderSide: BorderSide.none,
                 ),
                 filled: true,
-                fillColor: AppTheme.onSurfaceColor.withOpacity(0.05),
+                fillColor: colorScheme.onSurface.withOpacity(0.05),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: AppConstants.defaultPadding,
                   vertical: AppConstants.smallPadding,
@@ -573,14 +577,14 @@ class ChatScreen extends HookConsumerWidget {
           IconButton(
             icon: const Icon(Icons.send),
             onPressed: controller.text.trim().isEmpty ? null : () {
-              _sendMessage(controller, ref);
+              _sendMessage(context, controller, ref);
             },
             style: IconButton.styleFrom(
               backgroundColor: controller.text.trim().isEmpty 
-                  ? AppTheme.onSurfaceColor.withOpacity(0.1)
-                  : AppTheme.primaryBlue,
+                  ? colorScheme.onSurface.withOpacity(0.1)
+                  : Theme.of(context).colorScheme.primary,
               foregroundColor: controller.text.trim().isEmpty 
-                  ? AppTheme.onSurfaceColor.withOpacity(0.5)
+                  ? colorScheme.onSurface.withOpacity(0.5)
                   : Colors.white,
             ),
           ),
@@ -589,7 +593,7 @@ class ChatScreen extends HookConsumerWidget {
     );
   }
 
-  void _sendMessage(TextEditingController controller, WidgetRef ref) async {
+  void _sendMessage(BuildContext context, TextEditingController controller, WidgetRef ref) async {
     final text = controller.text.trim();
     if (text.isEmpty) return;
 
@@ -607,7 +611,7 @@ class ChatScreen extends HookConsumerWidget {
     } catch (e) {
       NavigationService.showSnackBar(
         message: 'Failed to send message: $e',
-        backgroundColor: AppTheme.errorColor,
+        backgroundColor: Theme.of(context).colorScheme.error,
       );
     }
   }
@@ -624,7 +628,7 @@ class ChatScreen extends HookConsumerWidget {
               leading: const Icon(Icons.search),
               title: const Text('Search Messages'),
               onTap: () {
-                Navigator.pop(context);
+                NavigationService.goBack();
                 // TODO: Implement search
               },
             ),
@@ -632,7 +636,7 @@ class ChatScreen extends HookConsumerWidget {
               leading: const Icon(Icons.people),
               title: const Text('Community Info'),
               onTap: () {
-                Navigator.pop(context);
+                NavigationService.goBack();
                 NavigationService.navigateToCommunityDetails(communityId);
               },
             ),
@@ -640,7 +644,7 @@ class ChatScreen extends HookConsumerWidget {
               leading: const Icon(Icons.settings),
               title: const Text('Chat Settings'),
               onTap: () {
-                Navigator.pop(context);
+                NavigationService.goBack();
                 // TODO: Implement chat settings
               },
             ),

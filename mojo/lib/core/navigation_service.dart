@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart' as material;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:logger/logger.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
 import '../models/community_model.dart';
 import '../models/user_model.dart';
 import '../routes/app_routes.dart';
@@ -12,86 +14,397 @@ class NavigationService {
   static material.NavigatorState? get navigator => navigatorKey.currentState;
   static material.BuildContext? get context => navigatorKey.currentContext;
 
-  // Push named route
-  static Future<T?> pushNamed<T>(String routeName, {Object? arguments}) {
-    final ctx = context;
-    if (ctx == null) return Future.value(null);
-    
-    return material.Navigator.of(ctx).pushNamed<T>(routeName, arguments: arguments);
+  // Logger instance for navigation events
+  static final Logger _logger = Logger(
+    printer: PrettyPrinter(
+      methodCount: 0,
+      errorMethodCount: 8,
+      lineLength: 120,
+      colors: true,
+      printEmojis: true,
+      printTime: true,
+    ),
+  );
+
+  // Analytics instance
+  static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;
+
+  // Initialize navigation service with analytics
+  static Future<void> initialize() async {
+    try {
+      _logger.i('🚀 Initializing NavigationService with analytics');
+      
+      // Enable analytics collection
+      await _analytics.setAnalyticsCollectionEnabled(true);
+      
+      // Set user properties for better tracking
+      await _analytics.setUserProperty(name: 'app_version', value: '1.0.0');
+      await _analytics.setUserProperty(name: 'platform', value: 'flutter');
+      
+      _logger.i('✅ NavigationService initialized successfully');
+    } catch (e) {
+      _logger.e('❌ Failed to initialize NavigationService: $e');
+    }
   }
 
-  // Push replacement named route
-  static Future<T?> pushReplacementNamed<T>(String routeName, {Object? arguments}) {
-    final ctx = context;
-    if (ctx == null) return Future.value(null);
-    
-    return material.Navigator.of(ctx).pushReplacementNamed<T, void>(routeName, arguments: arguments);
-  }
-
-  // Push and remove until
-  static Future<T?> pushNamedAndRemoveUntil<T>(String routeName, {Object? arguments}) {
-    final ctx = context;
-    if (ctx == null) return Future.value(null);
-    
-    return material.Navigator.of(ctx).pushNamedAndRemoveUntil<T>(
-      routeName,
-      (route) => false,
-      arguments: arguments,
-    );
-  }
-
-  // Push with fade transition
-  static Future<T?> pushWithFade<T>(material.Widget page, {Object? arguments}) {
-    final ctx = context;
-    if (ctx == null) return Future.value(null);
-    
-    return material.Navigator.of(ctx).push<T>(
-      material.PageRouteBuilder<T>(
-        pageBuilder: (context, animation, secondaryAnimation) => page,
-        transitionsBuilder: (context, animation, secondaryAnimation, child) {
-          return material.FadeTransition(opacity: animation, child: child);
+  // Track app session start
+  static Future<void> trackAppSessionStart() async {
+    try {
+      await _analytics.logEvent(
+        name: 'app_session_start',
+        parameters: {
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          'session_id': DateTime.now().millisecondsSinceEpoch.toString(),
         },
-        transitionDuration: const Duration(milliseconds: 300),
-      ),
-    );
+      );
+      _logger.i('📊 App session start tracked');
+    } catch (e) {
+      _logger.e('❌ Failed to track app session start: $e');
+    }
   }
 
-  // Go back
+  // Track app session end
+  static Future<void> trackAppSessionEnd() async {
+    try {
+      await _analytics.logEvent(
+        name: 'app_session_end',
+        parameters: {
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
+      );
+      _logger.i('📊 App session end tracked');
+    } catch (e) {
+      _logger.e('❌ Failed to track app session end: $e');
+    }
+  }
+
+  // Track user engagement
+  static Future<void> trackUserEngagement(String action, {Map<String, dynamic>? parameters}) async {
+    try {
+      await _analytics.logEvent(
+        name: 'user_action',
+        parameters: {
+          'action': action,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          ...?parameters,
+        },
+      );
+      _logger.i('📊 User engagement tracked: $action');
+    } catch (e) {
+      _logger.e('❌ Failed to track user engagement: $e');
+    }
+  }
+
+  // Track error with crash reporting
+  static Future<void> trackError(String error, String stackTrace, {Map<String, dynamic>? parameters}) async {
+    try {
+      await _analytics.logEvent(
+        name: 'app_error',
+        parameters: {
+          'error': error,
+          'stack_trace': stackTrace,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          ...?parameters,
+        },
+      );
+      _logger.e('❌ Error tracked: $error');
+    } catch (e) {
+      _logger.e('❌ Failed to track error: $e');
+    }
+  }
+
+  // Track performance metrics
+  static Future<void> trackPerformance(String metric, int value, {String? unit}) async {
+    try {
+      await _analytics.logEvent(
+        name: 'performance_metric',
+        parameters: {
+          'metric': metric,
+          'value': value,
+          'unit': unit ?? 'ms',
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+        },
+      );
+      _logger.i('📊 Performance tracked: $metric = $value${unit ?? 'ms'}');
+    } catch (e) {
+      _logger.e('❌ Failed to track performance: $e');
+    }
+  }
+
+  // Track screen load time
+  static Future<void> trackScreenLoadTime(String screenName, int loadTimeMs) async {
+    await trackPerformance('screen_load_time', loadTimeMs);
+  }
+
+  // Track user interaction
+  static Future<void> trackUserInteraction(String interaction, {Map<String, dynamic>? parameters}) async {
+    try {
+      await _analytics.logEvent(
+        name: 'user_interaction',
+        parameters: {
+          'interaction': interaction,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          ...?parameters,
+        },
+      );
+      _logger.i('👆 User interaction tracked: $interaction');
+    } catch (e) {
+      _logger.e('❌ Failed to track user interaction: $e');
+    }
+  }
+
+  // Track feature usage
+  static Future<void> trackFeatureUsage(String feature, {Map<String, dynamic>? parameters}) async {
+    try {
+      await _analytics.logEvent(
+        name: 'feature_usage',
+        parameters: {
+          'feature': feature,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          ...?parameters,
+        },
+      );
+      _logger.i('🎯 Feature usage tracked: $feature');
+    } catch (e) {
+      _logger.e('❌ Failed to track feature usage: $e');
+    }
+  }
+
+  // Track conversion events
+  static Future<void> trackConversion(String conversionType, {Map<String, dynamic>? parameters}) async {
+    try {
+      await _analytics.logEvent(
+        name: 'conversion',
+        parameters: {
+          'conversion_type': conversionType,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          ...?parameters,
+        },
+      );
+      _logger.i('🎉 Conversion tracked: $conversionType');
+    } catch (e) {
+      _logger.e('❌ Failed to track conversion: $e');
+    }
+  }
+
+  // Track navigation event
+  static Future<void> _trackNavigationEvent(String routeName, {Map<String, dynamic>? parameters}) async {
+    try {
+      await _analytics.logEvent(
+        name: 'navigation',
+        parameters: {
+          'route_name': routeName,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          ...?parameters,
+        },
+      );
+      _logger.i('📊 Navigation tracked: $routeName');
+    } catch (e) {
+      _logger.e('❌ Failed to track navigation event: $e');
+    }
+  }
+
+  // Track navigation error
+  static Future<void> _trackNavigationError(String routeName, String error, {Map<String, dynamic>? parameters}) async {
+    try {
+      await _analytics.logEvent(
+        name: 'navigation_error',
+        parameters: {
+          'route_name': routeName,
+          'error': error,
+          'timestamp': DateTime.now().millisecondsSinceEpoch,
+          ...?parameters,
+        },
+      );
+      _logger.e('❌ Navigation error tracked: $routeName - $error');
+    } catch (e) {
+      _logger.e('❌ Failed to track navigation error: $e');
+    }
+  }
+
+  // Push named route with logging and analytics
+  static Future<T?> pushNamed<T>(String routeName, {Object? arguments}) async {
+    final ctx = context;
+    if (ctx == null) {
+      _logger.e('❌ Navigation failed: No context available for route $routeName');
+      await _trackNavigationError(routeName, 'No context available');
+      return Future.value(null);
+    }
+    
+    try {
+      _logger.i('🚀 Navigating to: $routeName');
+      await _trackNavigationEvent(routeName, parameters: {
+        'navigation_type': 'push_named',
+        'has_arguments': arguments != null ? 'true' : 'false',
+      });
+      
+      final result = await material.Navigator.of(ctx).pushNamed<T>(routeName, arguments: arguments);
+      _logger.i('✅ Navigation completed: $routeName');
+      return result;
+    } catch (e) {
+      _logger.e('❌ Navigation error: $routeName - $e');
+      await _trackNavigationError(routeName, e.toString());
+      return Future.value(null);
+    }
+  }
+
+  // Push replacement named route with logging and analytics
+  static Future<T?> pushReplacementNamed<T>(String routeName, {Object? arguments}) async {
+    final ctx = context;
+    if (ctx == null) {
+      _logger.e('❌ Navigation failed: No context available for route $routeName');
+      await _trackNavigationError(routeName, 'No context available');
+      return Future.value(null);
+    }
+    
+    try {
+      _logger.i('🔄 Replacing navigation to: $routeName');
+      await _trackNavigationEvent(routeName, parameters: {
+        'navigation_type': 'push_replacement_named',
+        'has_arguments': arguments != null ? 'true' : 'false',
+      });
+      
+      final result = await material.Navigator.of(ctx).pushReplacementNamed<T, void>(routeName, arguments: arguments);
+      _logger.i('✅ Navigation replacement completed: $routeName');
+      return result;
+    } catch (e) {
+      _logger.e('❌ Navigation replacement error: $routeName - $e');
+      await _trackNavigationError(routeName, e.toString());
+      return Future.value(null);
+    }
+  }
+
+  // Push and remove until with logging and analytics
+  static Future<T?> pushNamedAndRemoveUntil<T>(String routeName, {Object? arguments}) async {
+    final ctx = context;
+    if (ctx == null) {
+      _logger.e('❌ Navigation failed: No context available for route $routeName');
+      await _trackNavigationError(routeName, 'No context available');
+      return Future.value(null);
+    }
+    
+    try {
+      _logger.i('🗑️ Clearing stack and navigating to: $routeName');
+      await _trackNavigationEvent(routeName, parameters: {
+        'navigation_type': 'push_named_and_remove_until',
+        'has_arguments': arguments != null ? 'true' : 'false',
+      });
+      
+      final result = await material.Navigator.of(ctx).pushNamedAndRemoveUntil<T>(
+        routeName,
+        (route) => false,
+        arguments: arguments,
+      );
+      _logger.i('✅ Stack cleared and navigation completed: $routeName');
+      return result;
+    } catch (e) {
+      _logger.e('❌ Navigation clear stack error: $routeName - $e');
+      await _trackNavigationError(routeName, e.toString());
+      return Future.value(null);
+    }
+  }
+
+  // Push with fade transition with logging and analytics
+  static Future<T?> pushWithFade<T>(material.Widget page, {Object? arguments}) async {
+    final ctx = context;
+    if (ctx == null) {
+      _logger.e('❌ Navigation failed: No context available for fade transition');
+      await _trackNavigationError('fade_transition', 'No context available');
+      return Future.value(null);
+    }
+    
+    try {
+      _logger.i('✨ Navigating with fade transition');
+      await _trackNavigationEvent('fade_transition', parameters: {
+        'navigation_type': 'push_with_fade',
+        'has_arguments': arguments != null ? 'true' : 'false',
+      });
+      
+      final result = await material.Navigator.of(ctx).push<T>(
+        material.PageRouteBuilder<T>(
+          pageBuilder: (context, animation, secondaryAnimation) => page,
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return material.FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 300),
+        ),
+      );
+      _logger.i('✅ Fade transition completed');
+      return result;
+    } catch (e) {
+      _logger.e('❌ Fade transition error: $e');
+      await _trackNavigationError('fade_transition', e.toString());
+      return Future.value(null);
+    }
+  }
+
+  // Go back with logging
   static void goBack<T>([T? result]) {
     final ctx = context;
-    if (ctx == null) return;
+    if (ctx == null) {
+      _logger.e('❌ Cannot go back: No context available');
+      return;
+    }
     
-    material.Navigator.of(ctx).pop<T>(result);
+    try {
+      _logger.i('⬅️ Going back');
+      material.Navigator.of(ctx).pop<T>(result);
+      _logger.i('✅ Successfully went back');
+    } catch (e) {
+      _logger.e('❌ Error going back: $e');
+    }
   }
 
-  // Can go back
+  // Can go back with logging
   static bool canGoBack() {
     final ctx = context;
-    if (ctx == null) return false;
+    if (ctx == null) {
+      _logger.w('⚠️ Cannot check if can go back: No context available');
+      return false;
+    }
     
-    return material.Navigator.of(ctx).canPop();
+    final canPop = material.Navigator.of(ctx).canPop();
+    _logger.d('🔍 Can go back: $canPop');
+    return canPop;
   }
 
-  // Show general dialog
+  // Show general dialog with logging and analytics
   static Future<T?> showGeneralDialog<T>({
     required material.Widget child,
     bool barrierDismissible = true,
     material.Color? barrierColor,
     String? barrierLabel,
-  }) {
+  }) async {
     final ctx = context;
-    if (ctx == null) return Future.value(null);
+    if (ctx == null) {
+      _logger.e('❌ Cannot show dialog: No context available');
+      return Future.value(null);
+    }
     
-    return material.showGeneralDialog<T>(
-      context: ctx,
-      pageBuilder: (context, animation, secondaryAnimation) => child,
-      barrierDismissible: barrierDismissible,
-      barrierColor: barrierColor ?? material.Colors.black54,
-      barrierLabel: barrierLabel,
-    );
+    try {
+      _logger.i('💬 Showing general dialog');
+      await _trackNavigationEvent('general_dialog', parameters: {
+        'navigation_type': 'show_general_dialog',
+        'barrier_dismissible': barrierDismissible ? 'true' : 'false',
+      });
+      
+      final result = await material.showGeneralDialog<T>(
+        context: ctx,
+        pageBuilder: (context, animation, secondaryAnimation) => child,
+        barrierDismissible: barrierDismissible,
+        barrierColor: barrierColor ?? material.Colors.black54,
+        barrierLabel: barrierLabel,
+      );
+      _logger.i('✅ General dialog completed');
+      return result;
+    } catch (e) {
+      _logger.e('❌ General dialog error: $e');
+      await _trackNavigationError('general_dialog', e.toString());
+      return Future.value(null);
+    }
   }
 
-  // Show bottom sheet
+  // Show bottom sheet with logging and analytics
   static Future<T?> showBottomSheet<T>({
     required material.Widget child,
     material.Color? backgroundColor,
@@ -109,32 +422,51 @@ class NavigationService {
     material.Offset? anchorPoint,
     bool? showDragHandle,
     String? barrierLabel,
-  }) {
+  }) async {
     final ctx = context;
-    if (ctx == null) return Future.value(null);
+    if (ctx == null) {
+      _logger.e('❌ Cannot show bottom sheet: No context available');
+      return Future.value(null);
+    }
     
-    return material.showModalBottomSheet<T>(
-      context: ctx,
-      builder: (context) => child,
-      backgroundColor: backgroundColor,
-      elevation: elevation,
-      shape: shape,
-      clipBehavior: clipBehavior ?? material.Clip.hardEdge,
-      barrierColor: barrierColor,
-      isScrollControlled: isScrollControlled,
-      isDismissible: isDismissible,
-      enableDrag: enableDrag,
-      useSafeArea: useSafeArea,
-      useRootNavigator: useRootNavigator,
-      routeSettings: routeSettings,
-      transitionAnimationController: transitionAnimationController,
-      anchorPoint: anchorPoint,
-      showDragHandle: showDragHandle,
-      barrierLabel: barrierLabel,
-    );
+    try {
+      _logger.i('📱 Showing bottom sheet');
+      await _trackNavigationEvent('bottom_sheet', parameters: {
+        'navigation_type': 'show_bottom_sheet',
+        'is_scroll_controlled': isScrollControlled ? 'true' : 'false',
+        'is_dismissible': isDismissible ? 'true' : 'false',
+        'enable_drag': enableDrag ? 'true' : 'false',
+      });
+      
+      final result = await material.showModalBottomSheet<T>(
+        context: ctx,
+        builder: (context) => child,
+        backgroundColor: backgroundColor,
+        elevation: elevation,
+        shape: shape,
+        clipBehavior: clipBehavior ?? material.Clip.hardEdge,
+        barrierColor: barrierColor,
+        isScrollControlled: isScrollControlled,
+        isDismissible: isDismissible,
+        enableDrag: enableDrag,
+        useSafeArea: useSafeArea,
+        useRootNavigator: useRootNavigator,
+        routeSettings: routeSettings,
+        transitionAnimationController: transitionAnimationController,
+        anchorPoint: anchorPoint,
+        showDragHandle: showDragHandle,
+        barrierLabel: barrierLabel,
+      );
+      _logger.i('✅ Bottom sheet completed');
+      return result;
+    } catch (e) {
+      _logger.e('❌ Bottom sheet error: $e');
+      await _trackNavigationError('bottom_sheet', e.toString());
+      return Future.value(null);
+    }
   }
 
-  // Show snackbar
+  // Show snackbar with logging
   static void showSnackBar({
     required String message,
     Duration? duration,
@@ -151,28 +483,37 @@ class NavigationService {
     material.Clip? clipBehavior,
   }) {
     final ctx = context;
-    if (ctx == null) return;
+    if (ctx == null) {
+      _logger.e('❌ Cannot show snackbar: No context available');
+      return;
+    }
     
-    final snackBar = material.SnackBar(
-      content: material.Text(message),
-      duration: duration ?? const Duration(seconds: 4),
-      action: action,
-      backgroundColor: backgroundColor,
-      width: width,
-      margin: margin,
-      padding: padding,
-      elevation: elevation,
-      shape: shape,
-      dismissDirection: dismissDirection,
-      animation: animation,
-      onVisible: onVisible,
-      clipBehavior: clipBehavior ?? material.Clip.hardEdge,
-    );
+    try {
+      _logger.i('🍞 Showing snackbar: $message');
+      final snackBar = material.SnackBar(
+        content: material.Text(message),
+        duration: duration ?? const Duration(seconds: 4),
+        action: action,
+        backgroundColor: backgroundColor,
+        width: width,
+        margin: margin,
+        padding: padding,
+        elevation: elevation,
+        shape: shape,
+        dismissDirection: dismissDirection,
+        animation: animation,
+        onVisible: onVisible,
+        clipBehavior: clipBehavior ?? material.Clip.hardEdge,
+      );
 
-    material.ScaffoldMessenger.of(ctx).showSnackBar(snackBar);
+      material.ScaffoldMessenger.of(ctx).showSnackBar(snackBar);
+      _logger.i('✅ Snackbar shown successfully');
+    } catch (e) {
+      _logger.e('❌ Snackbar error: $e');
+    }
   }
 
-  // Show error dialog
+  // Show error dialog with logging and analytics
   static Future<T?> showErrorDialog<T>({
     required String title,
     required String message,
@@ -180,216 +521,422 @@ class NavigationService {
     String? cancelText,
     VoidCallback? onConfirm,
     VoidCallback? onCancel,
-  }) {
+  }) async {
     final ctx = context;
-    if (ctx == null) return Future.value(null);
+    if (ctx == null) {
+      _logger.e('❌ Cannot show error dialog: No context available');
+      return Future.value(null);
+    }
     
-    return material.showDialog<T>(
-      context: ctx,
-      builder: (context) => material.AlertDialog(
-        title: material.Text(title),
-        content: material.Text(message),
-        actions: [
-          if (cancelText != null)
+    try {
+      _logger.i('⚠️ Showing error dialog: $title');
+      await _trackNavigationEvent('error_dialog', parameters: {
+        'navigation_type': 'show_error_dialog',
+        'title': title,
+        'has_cancel': cancelText != null ? 'true' : 'false',
+      });
+      
+      final result = await material.showDialog<T>(
+        context: ctx,
+        builder: (context) => material.AlertDialog(
+          title: material.Text(title),
+          content: material.Text(message),
+          actions: [
+            if (cancelText != null)
+              material.TextButton(
+                onPressed: () {
+                  goBack();
+                  onCancel?.call();
+                },
+                child: material.Text(cancelText),
+              ),
             material.TextButton(
               onPressed: () {
                 goBack();
-                onCancel?.call();
+                onConfirm?.call();
               },
-              child: material.Text(cancelText),
+              child: material.Text(confirmText ?? 'OK'),
             ),
-          material.TextButton(
-            onPressed: () {
-              goBack();
-              onConfirm?.call();
-            },
-            child: material.Text(confirmText ?? 'OK'),
-          ),
-        ],
-      ),
-    );
+          ],
+        ),
+      );
+      _logger.i('✅ Error dialog completed');
+      return result;
+    } catch (e) {
+      _logger.e('❌ Error dialog error: $e');
+      await _trackNavigationError('error_dialog', e.toString());
+      return Future.value(null);
+    }
   }
 
-  // Show confirmation dialog
+  // Show confirmation dialog with logging and analytics
   static Future<bool?> showConfirmationDialog({
     required String title,
     required String message,
     String? confirmText,
     String? cancelText,
-  }) {
+  }) async {
     final ctx = context;
-    if (ctx == null) return Future.value(null);
+    if (ctx == null) {
+      _logger.e('❌ Cannot show confirmation dialog: No context available');
+      return Future.value(null);
+    }
     
-    return material.showDialog<bool>(
-      context: ctx,
-      builder: (context) => material.AlertDialog(
-        title: material.Text(title),
-        content: material.Text(message),
-        actions: [
-          material.TextButton(
-            onPressed: () => goBack(false),
-            child: material.Text(cancelText ?? 'Cancel'),
-          ),
-          material.TextButton(
-            onPressed: () => goBack(true),
-            child: material.Text(confirmText ?? 'Confirm'),
-          ),
-        ],
-      ),
-    );
+    try {
+      _logger.i('❓ Showing confirmation dialog: $title');
+      await _trackNavigationEvent('confirmation_dialog', parameters: {
+        'navigation_type': 'show_confirmation_dialog',
+        'title': title,
+      });
+      
+      final result = await material.showDialog<bool>(
+        context: ctx,
+        builder: (context) => material.AlertDialog(
+          title: material.Text(title),
+          content: material.Text(message),
+          actions: [
+            material.TextButton(
+              onPressed: () => goBack(false),
+              child: material.Text(cancelText ?? 'Cancel'),
+            ),
+            material.TextButton(
+              onPressed: () => goBack(true),
+              child: material.Text(confirmText ?? 'Confirm'),
+            ),
+          ],
+        ),
+      );
+      _logger.i('✅ Confirmation dialog completed with result: $result');
+      return result;
+    } catch (e) {
+      _logger.e('❌ Confirmation dialog error: $e');
+      await _trackNavigationError('confirmation_dialog', e.toString());
+      return Future.value(null);
+    }
   }
 
-  // Show loading dialog
+  // Show loading dialog with logging and analytics
   static Future<T?> showLoadingDialog<T>({
     String? message,
     bool barrierDismissible = false,
-  }) {
+  }) async {
     final ctx = context;
-    if (ctx == null) return Future.value(null);
+    if (ctx == null) {
+      _logger.e('❌ Cannot show loading dialog: No context available');
+      return Future.value(null);
+    }
     
-    return material.showDialog<T>(
-      context: ctx,
-      barrierDismissible: barrierDismissible,
-      builder: (context) => material.WillPopScope(
-        onWillPop: () async => barrierDismissible,
-        child: material.AlertDialog(
-          content: material.Row(
-            children: [
-              const material.CircularProgressIndicator(),
-              if (message != null) ...[
-                const material.SizedBox(width: 16),
-                material.Expanded(child: material.Text(message)),
+    try {
+      _logger.i('⏳ Showing loading dialog: ${message ?? 'Loading...'}');
+      await _trackNavigationEvent('loading_dialog', parameters: {
+        'navigation_type': 'show_loading_dialog',
+        'has_message': message != null ? 'true' : 'false',
+        'barrier_dismissible': barrierDismissible ? 'true' : 'false',
+      });
+      
+      final result = await material.showDialog<T>(
+        context: ctx,
+        barrierDismissible: barrierDismissible,
+        builder: (context) => material.WillPopScope(
+          onWillPop: () async => barrierDismissible,
+          child: material.AlertDialog(
+            content: material.Row(
+              children: [
+                const material.CircularProgressIndicator(),
+                if (message != null) ...[
+                  const material.SizedBox(width: 16),
+                  material.Expanded(child: material.Text(message)),
+                ],
               ],
-            ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+      _logger.i('✅ Loading dialog completed');
+      return result;
+    } catch (e) {
+      _logger.e('❌ Loading dialog error: $e');
+      await _trackNavigationError('loading_dialog', e.toString());
+      return Future.value(null);
+    }
   }
 
-  // Hide loading dialog
+  // Hide loading dialog with logging
   static void hideLoadingDialog() {
+    _logger.i('⏹️ Hiding loading dialog');
     goBack();
   }
 
-  // Get route arguments safely
+  // Get route arguments safely with logging
   static T? getRouteArguments<T>(material.BuildContext context) {
-    final args = material.ModalRoute.of(context)?.settings.arguments;
-    if (args is T) {
-      return args;
+    try {
+      final args = material.ModalRoute.of(context)?.settings.arguments;
+      if (args is T) {
+        _logger.d('📋 Retrieved route arguments of type ${T.toString()}');
+        return args;
+      }
+      _logger.w('⚠️ Route arguments not found or wrong type for ${T.toString()}');
+      return null;
+    } catch (e) {
+      _logger.e('❌ Error getting route arguments: $e');
+      return null;
     }
-    return null;
   }
 
-  // Get community ID from route arguments
+  // Get community ID from route arguments with logging
   static String? getCommunityIdFromArgs(material.BuildContext context) {
-    final args = getRouteArguments<dynamic>(context);
-    if (args is String) {
-      return args;
-    } else if (args is Map<String, dynamic>) {
-      return args['communityId'] as String?;
+    try {
+      final args = getRouteArguments<dynamic>(context);
+      if (args is String) {
+        _logger.d('🏘️ Retrieved community ID from string args: $args');
+        return args;
+      } else if (args is Map<String, dynamic>) {
+        final communityId = args['communityId'] as String?;
+        _logger.d('🏘️ Retrieved community ID from map args: $communityId');
+        return communityId;
+      }
+      _logger.w('⚠️ Community ID not found in route arguments');
+      return null;
+    } catch (e) {
+      _logger.e('❌ Error getting community ID from args: $e');
+      return null;
     }
-    return null;
   }
 
-  // Get user from route arguments
+  // Get user from route arguments with logging
   static UserModel? getUserFromArgs(material.BuildContext context) {
-    final args = getRouteArguments<dynamic>(context);
-    if (args is UserModel) {
-      return args;
-    } else if (args is Map<String, dynamic>) {
-      final userData = args['user'] as Map<String, dynamic>?;
-      if (userData != null) {
-        return UserModel.fromMap(userData);
+    try {
+      final args = getRouteArguments<dynamic>(context);
+      if (args is UserModel) {
+        _logger.d('👤 Retrieved user from direct args');
+        return args;
+      } else if (args is Map<String, dynamic>) {
+        final userData = args['user'] as Map<String, dynamic>?;
+        if (userData != null) {
+          final user = UserModel.fromMap(userData);
+          _logger.d('👤 Retrieved user from map args: ${user.id}');
+          return user;
+        }
       }
+      _logger.w('⚠️ User not found in route arguments');
+      return null;
+    } catch (e) {
+      _logger.e('❌ Error getting user from args: $e');
+      return null;
     }
-    return null;
   }
 
-  // Get community from route arguments
+  // Get community from route arguments with logging
   static CommunityModel? getCommunityFromArgs(material.BuildContext context) {
-    final args = getRouteArguments<dynamic>(context);
-    if (args is CommunityModel) {
-      return args;
-    } else if (args is Map<String, dynamic>) {
-      final communityData = args['community'] as Map<String, dynamic>?;
-      if (communityData != null) {
-        return CommunityModel.fromMap(communityData, '');
+    try {
+      final args = getRouteArguments<dynamic>(context);
+      if (args is CommunityModel) {
+        _logger.d('🏘️ Retrieved community from direct args: ${args.id}');
+        return args;
+      } else if (args is Map<String, dynamic>) {
+        final communityData = args['community'] as Map<String, dynamic>?;
+        if (communityData != null) {
+          final community = CommunityModel.fromMap(communityData, '');
+          _logger.d('🏘️ Retrieved community from map args: ${community.id}');
+          return community;
+        }
       }
+      _logger.w('⚠️ Community not found in route arguments');
+      return null;
+    } catch (e) {
+      _logger.e('❌ Error getting community from args: $e');
+      return null;
     }
-    return null;
   }
 
-  // Navigate to phone auth
-  static Future<T?> navigateToPhoneAuth<T>() {
-    return pushNamed<T>(AppRoutes.phoneAuth);
+  // Navigate to phone auth with logging and analytics
+  static Future<T?> navigateToPhoneAuth<T>() async {
+    try {
+      _logger.i('📱 Navigating to phone authentication');
+      await _trackNavigationEvent('phone_auth', parameters: {
+        'navigation_type': 'navigate_to_phone_auth',
+      });
+      return await pushNamed<T>(AppRoutes.phoneAuth);
+    } catch (e) {
+      _logger.e('❌ Error navigating to phone auth: $e');
+      await _trackNavigationError('phone_auth', e.toString());
+      return Future.value(null);
+    }
   }
 
-  // Navigate to community details
-  static Future<T?> navigateToCommunityDetails<T>(String communityId, {CommunityModel? community}) {
-    if (community != null) {
-      return pushNamed<T>(AppRoutes.communityDetails, arguments: {
+  // Navigate to community details with logging and analytics
+  static Future<T?> navigateToCommunityDetails<T>(String communityId, {CommunityModel? community}) async {
+    try {
+      _logger.i('🏘️ Navigating to community details: $communityId');
+      await _trackNavigationEvent('community_details', parameters: {
+        'navigation_type': 'navigate_to_community_details',
+        'community_id': communityId,
+        'has_community_data': community != null,
+      });
+      
+      if (community != null) {
+        return await pushNamed<T>(AppRoutes.communityDetails, arguments: {
+          'communityId': communityId,
+          'community': community.toMap(),
+        });
+      }
+      return await pushNamed<T>(AppRoutes.communityDetails, arguments: communityId);
+    } catch (e) {
+      _logger.e('❌ Error navigating to community details: $e');
+      await _trackNavigationError('community_details', e.toString(), parameters: {
+        'community_id': communityId,
+      });
+      return Future.value(null);
+    }
+  }
+
+  // Navigate to admin management with logging and analytics
+  static Future<T?> navigateToAdminManagement<T>(CommunityModel community) async {
+    try {
+      _logger.i('👑 Navigating to admin management: ${community.id}');
+      await _trackNavigationEvent('admin_management', parameters: {
+        'navigation_type': 'navigate_to_admin_management',
+        'community_id': community.id,
+        'community_name': community.name,
+      });
+      return await pushNamed<T>(AppRoutes.adminManagement, arguments: community);
+    } catch (e) {
+      _logger.e('❌ Error navigating to admin management: $e');
+      await _trackNavigationError('admin_management', e.toString(), parameters: {
+        'community_id': community.id,
+      });
+      return Future.value(null);
+    }
+  }
+
+  // Navigate to home with role-based routing and logging/analytics
+  static Future<T?> navigateToHome<T>({String? role}) async {
+    try {
+      _logger.i('🏠 Navigating to home with role: ${role ?? 'default'}');
+      await _trackNavigationEvent('home', parameters: {
+        'navigation_type': 'navigate_to_home',
+        'role': role ?? 'default',
+      });
+      
+      if (role == null || role.isEmpty) {
+        return await pushNamedAndRemoveUntil<T>(AppRoutes.publicHome);
+      }
+      
+      String targetRoute;
+      switch (role.toLowerCase()) {
+        case 'admin':
+          targetRoute = AppRoutes.adminHome;
+          break;
+        case 'business':
+          targetRoute = AppRoutes.businessHome;
+          break;
+        case 'moderator':
+          targetRoute = AppRoutes.moderatorHome;
+          break;
+        default:
+          targetRoute = AppRoutes.home;
+      }
+      
+      _logger.i('🎯 Target home route: $targetRoute');
+      return await pushNamedAndRemoveUntil<T>(targetRoute);
+    } catch (e) {
+      _logger.e('❌ Error navigating to home: $e');
+      await _trackNavigationError('home', e.toString(), parameters: {
+        'role': role ?? 'default',
+      });
+      return Future.value(null);
+    }
+  }
+
+  // Navigate to profile with logging and analytics
+  static Future<T?> navigateToProfile<T>({UserModel? user}) async {
+    try {
+      _logger.i('👤 Navigating to profile');
+      await _trackNavigationEvent('profile', parameters: {
+        'navigation_type': 'navigate_to_profile',
+        'has_user_data': user != null,
+      });
+      
+      if (user != null) {
+        return await pushNamed<T>(AppRoutes.profile, arguments: {
+          'user': user.toMap(),
+        });
+      }
+      return await pushNamed<T>(AppRoutes.profile);
+    } catch (e) {
+      _logger.e('❌ Error navigating to profile: $e');
+      await _trackNavigationError('profile', e.toString());
+      return Future.value(null);
+    }
+  }
+
+  // Navigate to chat with logging and analytics
+  static Future<T?> navigateToChat<T>(String communityId, {String? channelId}) async {
+    try {
+      _logger.i('💬 Navigating to chat: $communityId${channelId != null ? ' (channel: $channelId)' : ''}');
+      await _trackNavigationEvent('chat', parameters: {
+        'navigation_type': 'navigate_to_chat',
+        'community_id': communityId,
+        'has_channel_id': channelId != null,
+      });
+      
+      return await pushNamed<T>(AppRoutes.chat, arguments: {
         'communityId': communityId,
-        'community': community.toMap(),
+        'channelId': channelId,
       });
-    }
-    return pushNamed<T>(AppRoutes.communityDetails, arguments: communityId);
-  }
-
-  // Navigate to admin management
-  static Future<T?> navigateToAdminManagement<T>(CommunityModel community) {
-    return pushNamed<T>(AppRoutes.adminManagement, arguments: community);
-  }
-
-  // Navigate to home with role-based routing
-  static Future<T?> navigateToHome<T>({String? role}) {
-    if (role == null || role.isEmpty) {
-      return pushNamedAndRemoveUntil<T>(AppRoutes.publicHome);
-    }
-    
-    switch (role.toLowerCase()) {
-      case 'admin':
-        return pushNamedAndRemoveUntil<T>(AppRoutes.adminHome);
-      case 'business':
-        return pushNamedAndRemoveUntil<T>(AppRoutes.businessHome);
-      case 'moderator':
-        return pushNamedAndRemoveUntil<T>(AppRoutes.moderatorHome);
-      default:
-        return pushNamedAndRemoveUntil<T>(AppRoutes.home);
-    }
-  }
-
-  // Navigate to profile
-  static Future<T?> navigateToProfile<T>({UserModel? user}) {
-    if (user != null) {
-      return pushNamed<T>(AppRoutes.profile, arguments: {
-        'user': user.toMap(),
+    } catch (e) {
+      _logger.e('❌ Error navigating to chat: $e');
+      await _trackNavigationError('chat', e.toString(), parameters: {
+        'community_id': communityId,
       });
+      return Future.value(null);
     }
-    return pushNamed<T>(AppRoutes.profile);
   }
 
-  // Navigate to chat
-  static Future<T?> navigateToChat<T>(String communityId, {String? channelId}) {
-    return pushNamed<T>(AppRoutes.chat, arguments: {
-      'communityId': communityId,
-      'channelId': channelId,
-    });
+  // Navigate to create community with logging and analytics
+  static Future<T?> navigateToCreateCommunity<T>() async {
+    try {
+      _logger.i('➕ Navigating to create community');
+      await _trackNavigationEvent('create_community', parameters: {
+        'navigation_type': 'navigate_to_create_community',
+      });
+      return await pushNamed<T>(AppRoutes.createCommunity);
+    } catch (e) {
+      _logger.e('❌ Error navigating to create community: $e');
+      await _trackNavigationError('create_community', e.toString());
+      return Future.value(null);
+    }
   }
 
-  // Navigate to create community
-  static Future<T?> navigateToCreateCommunity<T>() {
-    return pushNamed<T>(AppRoutes.createCommunity);
+  // Navigate to search with logging and analytics
+  static Future<T?> navigateToSearch<T>({String? initialQuery}) async {
+    try {
+      _logger.i('🔍 Navigating to search${initialQuery != null ? ' with query: $initialQuery' : ''}');
+      await _trackNavigationEvent('search', parameters: {
+        'navigation_type': 'navigate_to_search',
+        'has_initial_query': (initialQuery != null).toString(),
+      });
+      return await pushNamed<T>(AppRoutes.search, arguments: initialQuery);
+    } catch (e) {
+      _logger.e('❌ Error navigating to search: $e');
+      await _trackNavigationError('search', e.toString());
+      return Future.value(null);
+    }
   }
 
-  // Navigate to search
-  static Future<T?> navigateToSearch<T>({String? initialQuery}) {
-    return pushNamed<T>(AppRoutes.search, arguments: initialQuery);
-  }
-
-  // Navigate to settings
-  static Future<T?> navigateToSettings<T>() {
-    return pushNamed<T>(AppRoutes.settings);
+  // Navigate to settings with logging and analytics
+  static Future<T?> navigateToSettings<T>() async {
+    try {
+      _logger.i('⚙️ Navigating to settings');
+      await _trackNavigationEvent('settings', parameters: {
+        'navigation_type': 'navigate_to_settings',
+      });
+      return await pushNamed<T>(AppRoutes.settings);
+    } catch (e) {
+      _logger.e('❌ Error navigating to settings: $e');
+      await _trackNavigationError('settings', e.toString());
+      return Future.value(null);
+    }
   }
 
   // Navigate to event details

@@ -11,6 +11,7 @@ import '../views/profile_screen.dart';
 import '../views/chat_screen.dart';
 import '../views/admin_management_screen.dart';
 import '../models/community_model.dart';
+import '../core/navigation_service.dart';
 
 class AppRoutes {
   // Main routes
@@ -231,6 +232,65 @@ class AppRoutes {
         }
         return MaterialPageRoute(
           builder: (_) => AdminManagementScreen(community: community!),
+        );
+      case 'settings':
+        return MaterialPageRoute(
+          builder: (context) => Scaffold(
+            appBar: AppBar(
+              title: const Text('Settings'),
+            ),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.construction, size: 64, color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                  const SizedBox(height: 24),
+                  const Text('Coming Soon!', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  const Text('This feature is under construction. Stay tuned!', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Back to Home'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      case notifications:
+      case help:
+      case about:
+      case privacyPolicy:
+      case termsOfService:
+      case contact:
+      case feedback:
+      case inviteFriends:
+      case shareApp:
+      case rateApp:
+        return MaterialPageRoute(
+          builder: (context) => Scaffold(
+            appBar: AppBar(
+              title: Text(settings.name!.split('/').last.replaceAll('-', ' ').toUpperCase()),
+            ),
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.construction, size: 64, color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                  const SizedBox(height: 24),
+                  const Text('Coming Soon!', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 12),
+                  const Text('This feature is under construction. Stay tuned!', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('Back to Home'),
+                  ),
+                ],
+              ),
+            ),
+          ),
         );
       default:
         return MaterialPageRoute(

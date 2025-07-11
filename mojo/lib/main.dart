@@ -37,15 +37,28 @@ import 'views/public_home_screen.dart';
   );
 }*/
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
+  try {
+    WidgetsFlutterBinding.ensureInitialized();
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+    
+    // Initialize NavigationService with analytics
+    await NavigationService.initialize();
+    
+    runApp(
+      const ProviderScope(
+        child: MyApp(),
+      ),
+    );
+  } catch (e) {
+    // Fallback to basic app without Firebase
+    runApp(
+      const ProviderScope(
+        child: MyApp(),
+      ),
+    );
+  }
 }
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
@@ -79,8 +92,18 @@ class AuthWrapper extends ConsumerWidget {
             return userAsync.when(
               data: (user) {
                 if (user == null) {
+                  // Track anonymous session
+                  NavigationService.trackAppSessionStart();
+                  NavigationService.trackUserEngagement('anonymous_session_start');
                   return const PhoneAuthScreen();
                 }
+                
+                // Track authenticated session
+                NavigationService.trackAppSessionStart();
+                NavigationService.trackUserEngagement('authenticated_session_start', parameters: {
+                  'user_role': user.role,
+                  'user_id': user.id,
+                });
                 
                 // Role-based routing
                 switch (user.role) {
@@ -99,9 +122,16 @@ class AuthWrapper extends ConsumerWidget {
                   child: CircularProgressIndicator(),
                 ),
               ),
-              error: (_, __) => const PhoneAuthScreen(),
+              error: (error, stack) {
+                // Track error state
+                NavigationService.trackError('auth_error', error.toString(), parameters: {'error_type': 'user_load_failed'});
+                return const PhoneAuthScreen();
+              },
             );
           case AuthState.unauthenticated:
+            // Track unauthenticated session
+            NavigationService.trackAppSessionStart();
+            NavigationService.trackUserEngagement('unauthenticated_session_start');
             return const PhoneAuthScreen();
           case AuthState.loading:
             return const Scaffold(
@@ -116,7 +146,11 @@ class AuthWrapper extends ConsumerWidget {
           child: CircularProgressIndicator(),
         ),
       ),
-      error: (_, __) => const PhoneAuthScreen(),
+      error: (error, stack) {
+        // Track error state
+        NavigationService.trackError('auth_state_error', error.toString(), parameters: {'error_type': 'auth_state_failed'});
+        return const PhoneAuthScreen();
+      },
     );
   }
 }

@@ -6,6 +6,15 @@ import '../core/constants.dart';
 import '../core/theme.dart';
 import '../core/navigation_service.dart';
 
+String sanitizePhoneNumber(String input, {String defaultCountryCode = '+1'}) {
+  String digits = input.replaceAll(RegExp(r'\D'), '');
+  if (input.trim().startsWith('+')) {
+    return '+$digits';
+  } else {
+    return '$defaultCountryCode$digits';
+  }
+}
+
 class PhoneAuthScreen extends HookConsumerWidget {
   const PhoneAuthScreen({super.key});
 
@@ -16,6 +25,7 @@ class PhoneAuthScreen extends HookConsumerWidget {
     final isOtpSent = useState(false);
     final isLoading = ref.watch(authLoadingProvider);
     final error = ref.watch(authErrorProvider);
+    final phoneError = useState<String?>(null);
 
     // Listen to auth state changes
     ref.listen(authNotifierProvider, (previous, next) {
@@ -34,7 +44,7 @@ class PhoneAuthScreen extends HookConsumerWidget {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(error),
-              backgroundColor: AppTheme.errorColor,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         });
@@ -44,41 +54,45 @@ class PhoneAuthScreen extends HookConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Welcome to MOJO'),
-        backgroundColor: AppTheme.neutralWhite,
-        elevation: 0,
+        title: const Text('Phone Authentication'),
+        backgroundColor: Theme.of(context).colorScheme.primary,
+        foregroundColor: Colors.white,
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppConstants.defaultPadding),
         child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // App Logo/Title
+            // Header
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: AppTheme.primaryBlue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(50),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(
-                Icons.phone_android,
-                size: 80,
-                color: AppTheme.primaryBlue,
-              ),
-            ),
-            const SizedBox(height: AppConstants.largePadding),
-            Text(
-              AppConstants.appName,
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                color: AppTheme.primaryBlue,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: AppConstants.smallPadding),
-            Text(
-              'Sign in with your phone number',
-              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                color: AppTheme.onSurfaceColor.withOpacity(0.7),
+              child: Column(
+                children: [
+                  Icon(
+                    Icons.phone_android,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  const SizedBox(height: AppConstants.smallPadding),
+                  Text(
+                    'Welcome to MOJO',
+                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                  ),
+                  const SizedBox(height: AppConstants.smallPadding),
+                  Text(
+                    'Enter your phone number to get started',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: AppConstants.largePadding * 2),
@@ -88,13 +102,14 @@ class PhoneAuthScreen extends HookConsumerWidget {
               TextField(
                 controller: phoneController,
                 keyboardType: TextInputType.phone,
-                decoration: const InputDecoration(
+                decoration: InputDecoration(
                   labelText: 'Phone Number',
-                  hintText: '+1 234 567 8900',
+                  hintText: 'e.g. 1234567890 or +1 234 567 8900',
                   prefixIcon: Icon(Icons.phone),
+                  errorText: phoneError.value,
                 ),
                 onChanged: (value) {
-                  // Clear error when user types
+                  phoneError.value = null; // Clear error on change
                   if (error != null) {
                     ref.read(authErrorProvider.notifier).state = null;
                   }
@@ -109,17 +124,16 @@ class PhoneAuthScreen extends HookConsumerWidget {
                       : () async {
                           final phoneNumber = phoneController.text.trim();
                           if (phoneNumber.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Please enter a phone number'),
-                                backgroundColor: AppTheme.errorColor,
-                              ),
-                            );
+                            phoneError.value = 'Please enter a phone number';
                             return;
                           }
-
-                          ref.read(phoneNumberProvider.notifier).state = phoneNumber;
-                          await ref.read(authNotifierProvider.notifier).sendOtp(phoneNumber);
+                          final sanitized = sanitizePhoneNumber(phoneNumber);
+                          if (sanitized.length < 12) { // +1 + 10 digits = 12
+                            phoneError.value = 'Please enter a valid phone number';
+                            return;
+                          }
+                          ref.read(phoneNumberProvider.notifier).state = sanitized;
+                          await ref.read(authNotifierProvider.notifier).sendOtp(sanitized);
                           isOtpSent.value = true;
                         },
                   child: isLoading
@@ -160,9 +174,9 @@ class PhoneAuthScreen extends HookConsumerWidget {
                           final otp = otpController.text.trim();
                           if (otp.isEmpty) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
+                              SnackBar(
                                 content: Text('Please enter the OTP'),
-                                backgroundColor: AppTheme.errorColor,
+                                backgroundColor: Theme.of(context).colorScheme.error,
                               ),
                             );
                             return;
@@ -189,21 +203,27 @@ class PhoneAuthScreen extends HookConsumerWidget {
                 child: const Text('Change Phone Number'),
               ),
             ],
-            
+
             // Anonymous Login Section
             const SizedBox(height: AppConstants.largePadding),
             const Divider(),
-            const SizedBox(height: AppConstants.defaultPadding),
-            
+            const SizedBox(height: 16),
             Text(
-              'Or continue as guest',
+              'Want to explore first?',
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.onSurfaceColor.withOpacity(0.7),
-              ),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  ),
               textAlign: TextAlign.center,
             ),
-            const SizedBox(height: AppConstants.defaultPadding),
-            
+            const SizedBox(height: 8),
+            Text(
+              'Continue as guest to browse public communities. Sign up anytime for full access!',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                  ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
@@ -212,11 +232,12 @@ class PhoneAuthScreen extends HookConsumerWidget {
                     : () async {
                         try {
                           await ref.read(authNotifierProvider.notifier).signInAnonymously();
+                          // Optionally: show a Lottie animation or snackbar
                         } catch (e) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Failed to sign in as guest: $e'),
-                              backgroundColor: AppTheme.errorColor,
+                              backgroundColor: Theme.of(context).colorScheme.error,
                             ),
                           );
                         }
@@ -231,9 +252,9 @@ class PhoneAuthScreen extends HookConsumerWidget {
                 ),
               ),
             ),
-          ],
+          ], // Single closing bracket for the Column's children
         ),
       ),
     );
   }
-} 
+}

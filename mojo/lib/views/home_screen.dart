@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../providers/auth_providers.dart';
 import '../providers/community_providers.dart';
+import '../services/auth_service.dart';
 import '../core/constants.dart';
 import '../core/theme.dart';
 import '../core/navigation_service.dart';
 import '../models/community_model.dart';
+import '../widgets/loading_widget.dart';
+import '../widgets/error_widget.dart';
 
 // User role provider for role-based UI
 final userRoleProvider = FutureProvider<String>((ref) async {
@@ -20,13 +23,13 @@ class HomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final userAsync = ref.watch(authNotifierProvider);
     final userRoleAsync = ref.watch(userRoleProvider);
-    final publicCommunitiesAsync = ref.watch(publicCommunitiesProvider({'limit': 5}));
+    final publicCommunitiesAsync = ref.watch(publicCommunitiesProvider(const CommunityQueryParams(limit: 5)));
     final userCommunitiesAsync = ref.watch(userCommunitiesProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text(AppConstants.appName),
-        backgroundColor: AppTheme.neutralWhite,
+        backgroundColor: Theme.of(context).colorScheme.background,
         actions: [
           IconButton(
             icon: const Icon(Icons.search),
@@ -70,7 +73,7 @@ class HomeScreen extends ConsumerWidget {
                 const SizedBox(height: AppConstants.largePadding),
                 
                 // Public Communities Section
-                _buildPublicCommunities(context, publicCommunitiesAsync),
+                _buildPublicCommunities(context, ref, publicCommunitiesAsync),
                 const SizedBox(height: AppConstants.largePadding),
                 
                 // My Communities Section (hidden for anonymous users)
@@ -95,7 +98,7 @@ class HomeScreen extends ConsumerWidget {
               const Icon(
                 Icons.error_outline,
                 size: 64,
-                color: AppTheme.errorColor,
+                color: null, // Use default icon color
               ),
               const SizedBox(height: AppConstants.defaultPadding),
               Text(
@@ -106,7 +109,7 @@ class HomeScreen extends ConsumerWidget {
               Text(
                 error.toString(),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.errorColor,
+                  color: Theme.of(context).colorScheme.error,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -120,7 +123,7 @@ class HomeScreen extends ConsumerWidget {
                 onPressed: () {
                   NavigationService.navigateToCreateCommunity();
                 },
-                backgroundColor: const Color(AppColors.primaryGreen),
+                backgroundColor: Theme.of(context).colorScheme.primary,
                 child: const Icon(Icons.add, color: Colors.white),
               )
             : null,
@@ -139,8 +142,8 @@ class HomeScreen extends ConsumerWidget {
             CircleAvatar(
               radius: 30,
               backgroundColor: user.role == 'anonymous' 
-                  ? AppTheme.primaryOrange 
-                  : AppTheme.primaryBlue,
+                  ? Theme.of(context).colorScheme.tertiary
+                  : Theme.of(context).colorScheme.primary,
               child: Text(
                 user.displayName?.substring(0, 1).toUpperCase() ?? 
                 (user.role == 'anonymous' ? 'G' : user.phoneNumber.substring(0, 1)),
@@ -165,7 +168,7 @@ class HomeScreen extends ConsumerWidget {
                         ? 'Guest User' 
                         : user.phoneNumber,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
                   ),
                   const SizedBox(height: AppConstants.smallPadding),
@@ -176,8 +179,8 @@ class HomeScreen extends ConsumerWidget {
                     ),
                     decoration: BoxDecoration(
                       color: user.role == 'anonymous' 
-                          ? AppTheme.primaryOrange 
-                          : const Color(AppColors.primaryGreen),
+                          ? Theme.of(context).colorScheme.tertiary
+                          : Theme.of(context).colorScheme.primary,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
@@ -222,7 +225,7 @@ class HomeScreen extends ConsumerWidget {
         Container(
           height: 200,
           decoration: BoxDecoration(
-            color: AppTheme.neutralLightGray,
+            color: Theme.of(context).colorScheme.surfaceVariant,
             borderRadius: BorderRadius.circular(16),
           ),
           child: Center(
@@ -232,7 +235,7 @@ class HomeScreen extends ConsumerWidget {
                 Icon(
                   Icons.emoji_events,
                   size: 48,
-                  color: AppTheme.primaryOrange,
+                  color: Theme.of(context).colorScheme.tertiary,
                 ),
                 const SizedBox(height: AppConstants.smallPadding),
                 const Text(
@@ -242,10 +245,10 @@ class HomeScreen extends ConsumerWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const Text(
+                Text(
                   'Complete challenges to earn points!',
                   style: TextStyle(
-                    color: AppTheme.onSurfaceColor,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 const SizedBox(height: AppConstants.smallPadding),
@@ -255,18 +258,18 @@ class HomeScreen extends ConsumerWidget {
                     vertical: 6,
                   ),
                   decoration: BoxDecoration(
-                    color: AppTheme.primaryOrange.withOpacity(0.1),
+                    color: Theme.of(context).colorScheme.tertiary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppTheme.primaryOrange.withOpacity(0.3),
+                      color: Theme.of(context).colorScheme.tertiary.withOpacity(0.3),
                     ),
                   ),
-                  child: const Text(
+                  child: Text(
                     'Sign up to participate',
                     style: TextStyle(
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryOrange,
+                      color: Theme.of(context).colorScheme.tertiary,
                     ),
                   ),
                 ),
@@ -278,105 +281,151 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-    Widget _buildPublicCommunities(BuildContext context, AsyncValue<List<CommunityModel>> communitiesAsync) {
+  Widget _buildYourCommunities(BuildContext context, WidgetRef ref) {
+    final communitiesAsync = ref.watch(userCommunitiesProvider);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Public Communities',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
+          'Your Communities',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: AppConstants.defaultPadding),
+        communitiesAsync.when(
+          data: (communities) {
+            if (communities.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.group_add, size: 64, color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                    const SizedBox(height: 16),
+                    const Text('Join a community to see it here!', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => NavigationService.navigateToCreateCommunity(),
+                      child: const Text('Create Community'),
+                    ),
+                  ],
+                ),
+              );
+            }
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: communities.length,
+              itemBuilder: (context, index) {
+                final community = communities[index];
+                return AnimatedOpacity(
+                  opacity: 1.0,
+                  duration: AppConstants.mediumAnimation,
+                  child: Card(
+                    elevation: AppConstants.cardElevation,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+                    ),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundImage: community.coverImage.isNotEmpty
+                            ? NetworkImage(community.coverImage)
+                            : null,
+                        child: community.coverImage.isEmpty
+                            ? Text(community.name.substring(0, 1))
+                            : null,
+                      ),
+                      title: Text(community.name),
+                      subtitle: Text('${community.memberCount} Members'),
+                      onTap: () {
+                        NavigationService.navigateToCommunityDetails(community.id, community: community);
+                      },
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+          loading: () => const LoadingWidget(message: 'Loading your communities...'),
+          error: (error, _) => CustomErrorWidget(
+            message: 'Error loading your communities',
+            error: error.toString(),
+            onRetry: () => ref.refresh(userCommunitiesProvider),
           ),
         ),
-        const SizedBox(height: AppConstants.smallPadding),
-        SizedBox(
-          height: 120,
-          child: communitiesAsync.when(
-            data: (communities) {
-              if (communities.isEmpty) {
-                return const Center(
-                  child: Text('No public communities available'),
-                );
-              }
-              
-              return ListView.builder(
-                scrollDirection: Axis.horizontal,
-                itemCount: communities.length,
-                itemBuilder: (context, index) {
-                  final community = communities[index];
-                  return Container(
-                    width: 200,
-                    margin: const EdgeInsets.only(right: AppConstants.smallPadding),
-                    child: Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(AppConstants.smallPadding),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              community.name,
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              community.description,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: AppTheme.onSurfaceColor.withOpacity(0.7),
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const Spacer(),
-                            Row(
-                              children: [
-                                Icon(
-                                  Icons.people,
-                                  size: 12,
-                                  color: AppTheme.onSurfaceColor.withOpacity(0.7),
-                                ),
-                                const SizedBox(width: 4),
-                                Text(
-                                  '${community.memberCount} members',
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: AppTheme.onSurfaceColor.withOpacity(0.7),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            ElevatedButton(
-                              onPressed: () {
-                                NavigationService.navigateToCommunityDetails(community.id);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(AppColors.primaryBlue),
-                                minimumSize: const Size(double.infinity, 32),
-                              ),
-                              child: const Text(
-                                'View',
-                                style: TextStyle(color: Colors.white),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+      ],
+    );
+  }
+
+  Widget _buildPublicCommunities(BuildContext context, WidgetRef ref, AsyncValue<List<CommunityModel>> publicCommunitiesAsync) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Explore Communities',
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+        ),
+        const SizedBox(height: AppConstants.defaultPadding),
+        publicCommunitiesAsync.when(
+          data: (communities) {
+            if (communities.isEmpty) {
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.public, size: 64, color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                    const SizedBox(height: 16),
+                    const Text('No public communities found.', style: TextStyle(fontSize: 16, color: Colors.grey)),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: () => NavigationService.navigateToCreateCommunity(),
+                      child: const Text('Create Community'),
                     ),
-                  );
-                },
+                  ],
+                ),
               );
-            },
-            loading: () => const Center(
-              child: CircularProgressIndicator(),
-            ),
-            error: (error, stack) => Center(
-              child: Text('Error loading communities: $error'),
-            ),
+            }
+            return ListView.builder(
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              itemCount: communities.length,
+              itemBuilder: (context, index) {
+                final community = communities[index];
+                return AnimatedOpacity(
+                  opacity: 1.0,
+                  duration: AppConstants.mediumAnimation,
+                  child: Card(
+                    elevation: AppConstants.cardElevation,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(AppConstants.borderRadius),
+                    ),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundImage: community.coverImage.isNotEmpty
+                            ? NetworkImage(community.coverImage)
+                            : null,
+                        child: community.coverImage.isEmpty
+                            ? Text(community.name.substring(0, 1))
+                            : null,
+                      ),
+                      title: Text(community.name),
+                      subtitle: Text('${community.memberCount} Members'),
+                      onTap: () {
+                        NavigationService.navigateToCommunityDetails(community.id, community: community);
+                      },
+                    ),
+                  ),
+                );
+              },
+            );
+          },
+          loading: () => const LoadingWidget(message: 'Loading public communities...'),
+          error: (error, _) => CustomErrorWidget(
+            message: 'Error loading public communities',
+            error: error.toString(),
+            onRetry: () => ref.invalidate(publicCommunitiesProvider(const CommunityQueryParams(limit: 5))),
           ),
         ),
       ],
@@ -431,7 +480,7 @@ class HomeScreen extends ConsumerWidget {
                               community.description,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                               ),
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
@@ -442,14 +491,14 @@ class HomeScreen extends ConsumerWidget {
                                 Icon(
                                   Icons.people,
                                   size: 12,
-                                  color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
                                   '${community.memberCount} members',
                                   style: TextStyle(
                                     fontSize: 10,
-                                    color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                   ),
                                 ),
                               ],
@@ -460,7 +509,7 @@ class HomeScreen extends ConsumerWidget {
                                 NavigationService.navigateToCommunityDetails(community.id);
                               },
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(AppColors.primaryGreen),
+                                backgroundColor: Theme.of(context).colorScheme.primary,
                                 minimumSize: const Size(double.infinity, 32),
                               ),
                               child: const Text(
@@ -485,6 +534,58 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildEmptyPublicCommunities(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: colorScheme.primary.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(50),
+            ),
+            child: Icon(
+              Icons.group_add,
+              size: 32,
+              color: colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: AppConstants.smallPadding),
+          Text(
+            'No public communities yet',
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: colorScheme.onSurface,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Be the first to create a community!',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: colorScheme.onSurface.withOpacity(0.7),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppConstants.smallPadding),
+          ElevatedButton.icon(
+            onPressed: () {
+              NavigationService.navigateToCreateCommunity();
+            },
+            icon: const Icon(Icons.add, size: 16),
+            label: const Text('Create Community'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: colorScheme.primary,
+              foregroundColor: colorScheme.onPrimary,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            ),
+          ),
+        ],
+      ),
     );
   }
 } 

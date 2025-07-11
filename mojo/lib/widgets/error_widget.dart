@@ -27,13 +27,13 @@ class CustomErrorWidget extends StatelessWidget {
             Icon(
               icon ?? Icons.error_outline,
               size: 64,
-              color: AppTheme.errorColor,
+              color: Theme.of(context).colorScheme.error,
             ),
             const SizedBox(height: AppConstants.defaultPadding),
             Text(
               message,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: Theme.of(context).colorScheme.onSurface,
                 fontWeight: FontWeight.bold,
               ),
               textAlign: TextAlign.center,
@@ -43,7 +43,7 @@ class CustomErrorWidget extends StatelessWidget {
               Text(
                 error!,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: AppTheme.errorColor,
+                  color: Theme.of(context).colorScheme.error,
                 ),
                 textAlign: TextAlign.center,
               ),
@@ -55,8 +55,8 @@ class CustomErrorWidget extends StatelessWidget {
                 icon: const Icon(Icons.refresh),
                 label: const Text('Retry'),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryBlue,
-                  foregroundColor: Colors.white,
+                  backgroundColor: Theme.of(context).colorScheme.primary,
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
                 ),
               ),
             ],

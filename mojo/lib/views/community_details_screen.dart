@@ -123,7 +123,7 @@ class CommunityDetailsScreen extends ConsumerWidget {
   ) {
     return AppBar(
       title: Text(community.name),
-      backgroundColor: AppTheme.neutralWhite,
+      backgroundColor: Theme.of(context).colorScheme.background,
       elevation: 0,
       leading: IconButton(
         icon: const Icon(Icons.arrow_back),
@@ -148,8 +148,8 @@ class CommunityDetailsScreen extends ConsumerWidget {
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
           colors: [
-            AppTheme.primaryBlue.withOpacity(0.8),
-            AppTheme.primaryBlue.withOpacity(0.4),
+            Theme.of(context).colorScheme.primary.withOpacity(0.8),
+            Theme.of(context).colorScheme.primary.withOpacity(0.4),
           ],
         ),
       ),
@@ -167,11 +167,11 @@ class CommunityDetailsScreen extends ConsumerWidget {
                   community.coverImage,
                   fit: BoxFit.cover,
                   errorBuilder: (context, error, stackTrace) => Container(
-                    color: AppTheme.neutralLightGray,
-                    child: const Icon(
+                    color: Theme.of(context).colorScheme.surfaceVariant,
+                    child: Icon(
                       Icons.broken_image,
                       size: 48,
-                      color: AppTheme.onSurfaceColor,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                 ),
@@ -262,7 +262,7 @@ class CommunityDetailsScreen extends ConsumerWidget {
   ) {
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.neutralWhite,
+        color: Theme.of(context).colorScheme.background,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -273,9 +273,9 @@ class CommunityDetailsScreen extends ConsumerWidget {
       ),
       child: TabBar(
         isScrollable: true,
-        indicatorColor: AppTheme.primaryBlue,
-        labelColor: AppTheme.primaryBlue,
-        unselectedLabelColor: AppTheme.onSurfaceColor,
+        indicatorColor: Theme.of(context).colorScheme.primary,
+        labelColor: Theme.of(context).colorScheme.primary,
+        unselectedLabelColor: Theme.of(context).colorScheme.onSurface,
         tabs: _buildTabs(membershipAsync),
       ),
     );
@@ -330,12 +330,12 @@ class CommunityDetailsScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(AppConstants.smallPadding),
             decoration: BoxDecoration(
-              color: AppTheme.neutralLightGray,
+              color: Theme.of(context).colorScheme.surfaceVariant,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
-                const Icon(Icons.chat_bubble_outline, color: AppTheme.primaryBlue),
+                Icon(Icons.chat_bubble_outline, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: AppConstants.smallPadding),
                 Text(
                   'Community Chat',
@@ -347,7 +347,7 @@ class CommunityDetailsScreen extends ConsumerWidget {
                 Text(
                   '${community.members.length} members',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.onSurfaceColor,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -363,27 +363,27 @@ class CommunityDetailsScreen extends ConsumerWidget {
                   Container(
                     padding: const EdgeInsets.all(20),
                     decoration: BoxDecoration(
-                      color: AppTheme.primaryBlue.withOpacity(0.1),
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                       borderRadius: BorderRadius.circular(50),
                     ),
                     child: Icon(
                       Icons.chat_bubble_outline,
                       size: 60,
-                      color: AppTheme.primaryBlue,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                   const SizedBox(height: AppConstants.largePadding),
                   Text(
                     'Join the conversation!',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: AppTheme.onSurfaceColor,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: AppConstants.smallPadding),
                   Text(
                     'Connect with ${community.members.length} members',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -397,7 +397,7 @@ class CommunityDetailsScreen extends ConsumerWidget {
                       icon: const Icon(Icons.chat_bubble_outline),
                       label: const Text('Open Chat'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: AppTheme.primaryBlue,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
                         foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                           vertical: AppConstants.defaultPadding,
@@ -423,12 +423,12 @@ class CommunityDetailsScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(AppConstants.smallPadding),
             decoration: BoxDecoration(
-              color: AppTheme.neutralLightGray,
+              color: Theme.of(context).colorScheme.surfaceVariant,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
-                const Icon(Icons.event_outlined, color: AppTheme.primaryOrange),
+                Icon(Icons.event_outlined, color: Theme.of(context).colorScheme.tertiary),
                 const SizedBox(width: AppConstants.smallPadding),
                 Text(
                   'Upcoming Events',
@@ -440,7 +440,7 @@ class CommunityDetailsScreen extends ConsumerWidget {
                 Text(
                   '0 events',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.onSurfaceColor,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -456,20 +456,20 @@ class CommunityDetailsScreen extends ConsumerWidget {
                   Icon(
                     Icons.event_outlined,
                     size: 64,
-                    color: AppTheme.onSurfaceColor.withOpacity(0.5),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                   ),
                   const SizedBox(height: AppConstants.defaultPadding),
                   Text(
                     'No events yet',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: AppTheme.onSurfaceColor,
+                      color: Theme.of(context).colorScheme.onSurface,
                     ),
                   ),
                   const SizedBox(height: AppConstants.smallPadding),
                   Text(
                     'Create the first event for this community',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -508,12 +508,12 @@ class CommunityDetailsScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.all(AppConstants.smallPadding),
             decoration: BoxDecoration(
-              color: AppTheme.neutralLightGray,
+              color: Theme.of(context).colorScheme.surfaceVariant,
               borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               children: [
-                const Icon(Icons.admin_panel_settings_outlined, color: AppTheme.primaryRed),
+                Icon(Icons.admin_panel_settings_outlined, color: Theme.of(context).colorScheme.error),
                 const SizedBox(width: AppConstants.smallPadding),
                 Text(
                   'Admin Panel',
@@ -525,7 +525,7 @@ class CommunityDetailsScreen extends ConsumerWidget {
                 Text(
                   '${community.members.length} members',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.onSurfaceColor,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -581,7 +581,7 @@ class CommunityDetailsScreen extends ConsumerWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: AppConstants.smallPadding),
       child: ListTile(
-        leading: Icon(icon, color: AppTheme.primaryBlue),
+        leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
         title: Text(title),
         subtitle: Text(subtitle),
         trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -601,7 +601,7 @@ class CommunityDetailsScreen extends ConsumerWidget {
         if (membership == 'none') {
           return FloatingActionButton.extended(
             onPressed: () => _joinCommunity(context, ref, community),
-            backgroundColor: const Color(AppColors.primaryGreen),
+            backgroundColor: Theme.of(context).colorScheme.secondary,
             icon: const Icon(Icons.add, color: Colors.white),
             label: const Text(
               'Join Community',
@@ -612,7 +612,7 @@ class CommunityDetailsScreen extends ConsumerWidget {
         
         return FloatingActionButton(
           onPressed: () => _showActionSheet(context, ref, community, membership),
-          backgroundColor: const Color(AppColors.primaryBlue),
+          backgroundColor: Theme.of(context).colorScheme.primary,
           child: const Icon(Icons.add, color: Colors.white),
         );
       },
@@ -704,12 +704,12 @@ class CommunityDetailsScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => NavigationService.goBack(),
             child: const Text('Cancel'),
           ),
           ElevatedButton(
             onPressed: () {
-              Navigator.pop(context);
+              NavigationService.goBack();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Search coming soon!')),
               );
@@ -748,7 +748,7 @@ class CommunityDetailsScreen extends ConsumerWidget {
               leading: const Icon(Icons.chat_bubble_outline),
               title: const Text('Send Message'),
               onTap: () {
-                Navigator.pop(context);
+                NavigationService.goBack();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Chat coming soon!')),
                 );
@@ -758,7 +758,7 @@ class CommunityDetailsScreen extends ConsumerWidget {
               leading: const Icon(Icons.flash_on_outlined),
               title: const Text('Create Moment'),
               onTap: () {
-                Navigator.pop(context);
+                NavigationService.goBack();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Moments coming soon!')),
                 );
@@ -768,7 +768,7 @@ class CommunityDetailsScreen extends ConsumerWidget {
               leading: const Icon(Icons.event_outlined),
               title: const Text('Create Event'),
               onTap: () {
-                Navigator.pop(context);
+                NavigationService.goBack();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Events coming soon!')),
                 );
@@ -779,7 +779,7 @@ class CommunityDetailsScreen extends ConsumerWidget {
                 leading: const Icon(Icons.admin_panel_settings_outlined),
                 title: const Text('Admin Actions'),
                 onTap: () {
-                  Navigator.pop(context);
+                  NavigationService.goBack();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Admin panel coming soon!')),
                   );

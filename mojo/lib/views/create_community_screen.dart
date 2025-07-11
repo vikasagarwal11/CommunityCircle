@@ -29,73 +29,58 @@ class CreateCommunityScreen extends HookConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create Community'),
-        backgroundColor: AppTheme.neutralWhite,
+        backgroundColor: Theme.of(context).colorScheme.background,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => NavigationService.goBack(),
         ),
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(AppConstants.defaultPadding),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Header
-            _buildHeader(context),
-            const SizedBox(height: AppConstants.largePadding),
-            
-            // Community Name
-            _buildNameField(context, nameController, formValidation),
-            const SizedBox(height: AppConstants.defaultPadding),
-            
-            // Description
-            _buildDescriptionField(context, descriptionController, formValidation),
-            const SizedBox(height: AppConstants.defaultPadding),
-            
-            // Visibility Settings
-            _buildVisibilitySection(context, visibility),
-            const SizedBox(height: AppConstants.defaultPadding),
-            
-            // Community Type
-            _buildCommunityTypeSection(context, isBusiness),
-            const SizedBox(height: AppConstants.defaultPadding),
-            
-            // Approval Settings
-            _buildApprovalSection(context, approvalRequired),
-            const SizedBox(height: AppConstants.defaultPadding),
-            
-            // Advanced Options Toggle
-            _buildAdvancedOptionsToggle(context, showAdvancedOptions),
-            
-            // Advanced Options (Conditional)
-            if (showAdvancedOptions.value) ...[
-              const SizedBox(height: AppConstants.defaultPadding),
-              _buildThemeSection(context, selectedColor),
-              const SizedBox(height: AppConstants.defaultPadding),
-              _buildCoverImageSection(context, coverImage),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(AppConstants.defaultPadding),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 16),
+              _buildNameField(context, nameController, formValidation, ref),
+              const SizedBox(height: 16),
+              _buildDescriptionField(context, descriptionController, formValidation, ref),
+              const SizedBox(height: 16),
+              _buildVisibilitySection(context, visibility),
+              const SizedBox(height: 16),
+              _buildCommunityTypeSection(context, isBusiness),
+              const SizedBox(height: 16),
+              _buildApprovalSection(context, approvalRequired),
+              const SizedBox(height: 16),
+              _buildAdvancedOptionsToggle(context, showAdvancedOptions),
+              if (showAdvancedOptions.value) ...[
+                const SizedBox(height: 16),
+                _buildThemeSection(context, selectedColor),
+                const SizedBox(height: 16),
+                _buildCoverImageSection(context, coverImage),
+              ],
+              const SizedBox(height: 16),
+              _buildAdditionalFeatures(context),
             ],
-            const SizedBox(height: AppConstants.largePadding),
-            
-            // Create Button
-            _buildCreateButton(
-              context,
-              ref,
-              nameController,
-              descriptionController,
-              visibility,
-              isBusiness,
-              approvalRequired,
-              selectedColor,
-              coverImage,
-              isFormValid,
-              isLoading,
-            ),
-            
-            // Additional Features Section
-            const SizedBox(height: AppConstants.largePadding),
-            _buildAdditionalFeatures(context),
-          ],
+          ),
+        ),
+      ),
+      bottomNavigationBar: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: _buildCreateButton(
+          context,
+          ref,
+          nameController,
+          descriptionController,
+          visibility,
+          isBusiness,
+          approvalRequired,
+          selectedColor,
+          coverImage,
+          isFormValid,
+          isLoading,
         ),
       ),
     );
@@ -108,13 +93,12 @@ class CreateCommunityScreen extends HookConsumerWidget {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: AppTheme.primaryBlue.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
             borderRadius: BorderRadius.circular(16),
           ),
           child: const Icon(
             Icons.add_business,
             size: 48,
-            color: AppTheme.primaryBlue,
           ),
         ),
         const SizedBox(height: AppConstants.defaultPadding),
@@ -128,14 +112,14 @@ class CreateCommunityScreen extends HookConsumerWidget {
         Text(
           'Build a space where people can connect, share, and grow together.',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: AppTheme.onSurfaceColor.withOpacity(0.7),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
           ),
         ),
       ],
     );
   }
 
-  Widget _buildNameField(BuildContext context, TextEditingController controller, Map<String, String> validation) {
+  Widget _buildNameField(BuildContext context, TextEditingController controller, Map<String, String> validation, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -157,14 +141,17 @@ class CreateCommunityScreen extends HookConsumerWidget {
             ),
           ),
           onChanged: (value) {
-            // Form validation will be handled by the provider
+            ref.read(communityFormProvider.notifier).update((state) => {
+              ...state,
+              'name': value,
+            });
           },
         ),
       ],
     );
   }
 
-  Widget _buildDescriptionField(BuildContext context, TextEditingController controller, Map<String, String> validation) {
+  Widget _buildDescriptionField(BuildContext context, TextEditingController controller, Map<String, String> validation, WidgetRef ref) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -186,6 +173,12 @@ class CreateCommunityScreen extends HookConsumerWidget {
               borderRadius: BorderRadius.circular(12),
             ),
           ),
+          onChanged: (value) {
+            ref.read(communityFormProvider.notifier).update((state) => {
+              ...state,
+              'description': value,
+            });
+          },
         ),
       ],
     );
@@ -240,43 +233,49 @@ class CreateCommunityScreen extends HookConsumerWidget {
     ValueNotifier<String> visibility,
   ) {
     final isSelected = visibility.value == value;
-    return GestureDetector(
-      onTap: () => visibility.value = value,
-      child: Container(
-        padding: const EdgeInsets.all(AppConstants.defaultPadding),
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryBlue.withOpacity(0.1) : AppTheme.neutralLightGray,
+    return Semantics(
+      label: title,
+      selected: isSelected,
+      child: Card(
+        elevation: isSelected ? 2 : 0,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? AppTheme.primaryBlue : Colors.transparent,
-            width: 2,
-          ),
+          side: isSelected
+              ? BorderSide(color: Theme.of(context).colorScheme.primary, width: 2)
+              : BorderSide.none,
         ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? AppTheme.primaryBlue : AppTheme.onSurfaceColor.withOpacity(0.7),
-              size: 24,
+        child: InkWell(
+          onTap: () => visibility.value = value,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(AppConstants.defaultPadding),
+            child: Column(
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  size: 24,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            const SizedBox(height: AppConstants.smallPadding),
-            Text(
-              title,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isSelected ? AppTheme.primaryBlue : AppTheme.onSurfaceColor,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: AppTheme.onSurfaceColor.withOpacity(0.7),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -331,43 +330,49 @@ class CreateCommunityScreen extends HookConsumerWidget {
     ValueNotifier<bool> isBusiness,
   ) {
     final isSelected = isBusiness.value == value;
-    return GestureDetector(
-      onTap: () => isBusiness.value = value,
-      child: Container(
-        padding: const EdgeInsets.all(AppConstants.defaultPadding),
-        decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryGreen.withOpacity(0.1) : AppTheme.neutralLightGray,
+    return Semantics(
+      label: title,
+      selected: isSelected,
+      child: Card(
+        elevation: isSelected ? 2 : 0,
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isSelected ? AppTheme.primaryGreen : Colors.transparent,
-            width: 2,
-          ),
+          side: isSelected
+              ? BorderSide(color: Theme.of(context).colorScheme.secondary, width: 2)
+              : BorderSide.none,
         ),
-        child: Column(
-          children: [
-            Icon(
-              icon,
-              color: isSelected ? AppTheme.primaryGreen : AppTheme.onSurfaceColor.withOpacity(0.7),
-              size: 24,
+        child: InkWell(
+          onTap: () => isBusiness.value = value,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.all(AppConstants.defaultPadding),
+            child: Column(
+              children: [
+                Icon(
+                  icon,
+                  color: isSelected ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  size: 24,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: isSelected ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.onSurface,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
             ),
-            const SizedBox(height: AppConstants.smallPadding),
-            Text(
-              title,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                color: isSelected ? AppTheme.primaryGreen : AppTheme.onSurfaceColor,
-              ),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 12,
-                color: AppTheme.onSurfaceColor.withOpacity(0.7),
-              ),
-              textAlign: TextAlign.center,
-            ),
-          ],
+          ),
         ),
       ),
     );
@@ -387,14 +392,14 @@ class CreateCommunityScreen extends HookConsumerWidget {
         Container(
           padding: const EdgeInsets.all(AppConstants.defaultPadding),
           decoration: BoxDecoration(
-            color: AppTheme.neutralLightGray,
+            color: Theme.of(context).colorScheme.surfaceVariant,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
               Icon(
                 approvalRequired.value ? Icons.approval : Icons.person_add,
-                color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               const SizedBox(width: AppConstants.smallPadding),
               Expanded(
@@ -413,7 +418,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
                           : 'Anyone can join directly',
                       style: TextStyle(
                         fontSize: 12,
-                        color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       ),
                     ),
                   ],
@@ -422,7 +427,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
               Switch(
                 value: approvalRequired.value,
                 onChanged: (value) => approvalRequired.value = value,
-                activeColor: AppTheme.primaryBlue,
+                activeColor: Theme.of(context).colorScheme.primary,
               ),
             ],
           ),
@@ -432,13 +437,14 @@ class CreateCommunityScreen extends HookConsumerWidget {
   }
 
   Widget _buildThemeSection(BuildContext context, ValueNotifier<String> selectedColor) {
+    final colorScheme = Theme.of(context).colorScheme;
     final colors = [
-      '#2196F3', // Blue
-      '#4CAF50', // Green
-      '#FF9800', // Orange
-      '#9C27B0', // Purple
-      '#F44336', // Red
-      '#00BCD4', // Cyan
+      colorScheme.primary.value.toRadixString(16),
+      colorScheme.secondary.value.toRadixString(16),
+      colorScheme.tertiary.value.toRadixString(16),
+      colorScheme.error.value.toRadixString(16),
+      colorScheme.surface.value.toRadixString(16),
+      colorScheme.background.value.toRadixString(16),
     ];
 
     return Column(
@@ -456,13 +462,19 @@ class CreateCommunityScreen extends HookConsumerWidget {
           runSpacing: AppConstants.smallPadding,
           children: colors.map((color) {
             final isSelected = selectedColor.value == color;
+            // Robust color parsing
+            String normalized = color.replaceAll('#', '');
+            if (normalized.length == 6) {
+              normalized = 'FF$normalized'; // Add alpha if missing
+            }
+            final colorValue = int.parse(normalized, radix: 16);
             return GestureDetector(
               onTap: () => selectedColor.value = color,
               child: Container(
                 width: 48,
                 height: 48,
                 decoration: BoxDecoration(
-                  color: Color(int.parse(color.replaceAll('#', '0xFF'))),
+                  color: Color(colorValue),
                   borderRadius: BorderRadius.circular(24),
                   border: Border.all(
                     color: isSelected ? Colors.white : Colors.transparent,
@@ -471,7 +483,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: Color(int.parse(color.replaceAll('#', '0xFF'))).withOpacity(0.3),
+                            color: Color(colorValue).withOpacity(0.3),
                             blurRadius: 8,
                             spreadRadius: 2,
                           ),
@@ -513,7 +525,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: AppTheme.onSurfaceColor.withOpacity(0.2),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
               ),
             ),
             child: ClipRRect(
@@ -522,11 +534,11 @@ class CreateCommunityScreen extends HookConsumerWidget {
                 coverImage.value!,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
-                  color: AppTheme.neutralLightGray,
-                  child: const Icon(
+                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  child: Icon(
                     Icons.broken_image,
                     size: 48,
-                    color: AppTheme.onSurfaceColor,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -580,10 +592,10 @@ class CreateCommunityScreen extends HookConsumerWidget {
             width: double.infinity,
             child: TextButton.icon(
               onPressed: () => coverImage.value = null,
-              icon: const Icon(Icons.delete, color: AppTheme.errorColor),
-              label: const Text(
+              icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
+              label: Text(
                 'Remove Image',
-                style: TextStyle(color: AppTheme.errorColor),
+                style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
             ),
           ),
@@ -614,32 +626,28 @@ class CreateCommunityScreen extends HookConsumerWidget {
         onPressed: isFormValid && !isLoading.value
             ? () async {
                 isLoading.value = true;
-                
+                final overlay = Overlay.of(context);
+                final overlayEntry = OverlayEntry(
+                  builder: (context) => Positioned.fill(
+                    child: Container(
+                      color: Colors.black54,
+                      child: const Center(
+                        child: CircularProgressIndicator(),
+                      ),
+                    ),
+                  ),
+                );
+                overlay.insert(overlayEntry);
                 try {
                   String? finalCoverImageUrl = coverImage.value;
-                  
-                  // Upload image if selected
                   if (selectedImageFile.value != null) {
-                    NavigationService.showSnackBar(
-                      message: 'Uploading image...',
-                      backgroundColor: AppTheme.primaryBlue,
-                    );
-                    
-                    // Create a temporary community ID for upload
                     final tempCommunityId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
                     final uploadedUrl = await storageService.uploadCommunityCoverImage(
                       communityId: tempCommunityId,
                       imageFile: selectedImageFile.value!,
                     );
-                    
-                    if (uploadedUrl != null) {
-                      finalCoverImageUrl = uploadedUrl;
-                    } else {
-                      throw Exception('Failed to upload image');
-                    }
+                    finalCoverImageUrl = uploadedUrl ?? finalCoverImageUrl;
                   }
-                  
-                  // Create community
                   await ref.read(communityActionsProvider.notifier).createCommunity(
                     name: nameController.text.trim(),
                     description: descriptionController.text.trim(),
@@ -652,23 +660,41 @@ class CreateCommunityScreen extends HookConsumerWidget {
                       'banner_url': finalCoverImageUrl ?? '',
                     },
                   );
+                  overlayEntry.remove();
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Success'),
+                      content: const Text('Community created successfully!'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
+                  );
                 } catch (e) {
-                  NavigationService.showSnackBar(
-                    message: 'Failed to create community: $e',
-                    backgroundColor: AppTheme.errorColor,
+                  overlayEntry.remove();
+                  showDialog(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Error'),
+                      content: Text('Failed to create community: $e'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('OK'),
+                        ),
+                      ],
+                    ),
                   );
                 } finally {
                   isLoading.value = false;
                 }
               }
             : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppTheme.primaryBlue,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-        ),
+        style: Theme.of(context).elevatedButtonTheme.style,
         child: isLoading.value
             ? const SizedBox(
                 height: 20,
@@ -683,7 +709,6 @@ class CreateCommunityScreen extends HookConsumerWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.white,
                 ),
               ),
       ),
@@ -694,14 +719,14 @@ class CreateCommunityScreen extends HookConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(AppConstants.defaultPadding),
       decoration: BoxDecoration(
-        color: AppTheme.neutralLightGray,
+        color: Theme.of(context).colorScheme.surfaceVariant,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         children: [
           Icon(
             Icons.tune,
-            color: AppTheme.primaryBlue,
+            color: Theme.of(context).colorScheme.primary,
             size: 20,
           ),
           const SizedBox(width: AppConstants.smallPadding),
@@ -713,14 +738,14 @@ class CreateCommunityScreen extends HookConsumerWidget {
                   'Advanced Options',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: AppTheme.onSurfaceColor,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
                 Text(
                   'Customize theme and cover image',
                   style: TextStyle(
                     fontSize: 12,
-                    color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -729,7 +754,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
           Switch(
             value: showAdvancedOptions.value,
             onChanged: (value) => showAdvancedOptions.value = value,
-            activeColor: AppTheme.primaryBlue,
+            activeColor: Theme.of(context).colorScheme.primary,
           ),
         ],
       ),
@@ -750,7 +775,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
         Container(
           padding: const EdgeInsets.all(AppConstants.defaultPadding),
           decoration: BoxDecoration(
-            color: AppTheme.neutralLightGray,
+            color: Theme.of(context).colorScheme.surfaceVariant,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -805,12 +830,12 @@ class CreateCommunityScreen extends HookConsumerWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isEnabled ? AppTheme.primaryGreen.withOpacity(0.1) : AppTheme.neutralLightGray,
+            color: isEnabled ? Theme.of(context).colorScheme.secondary.withOpacity(0.1) : Theme.of(context).colorScheme.surfaceVariant,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
             icon,
-            color: isEnabled ? AppTheme.primaryGreen : AppTheme.onSurfaceColor.withOpacity(0.5),
+            color: isEnabled ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             size: 20,
           ),
         ),
@@ -823,14 +848,14 @@ class CreateCommunityScreen extends HookConsumerWidget {
                 title,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: isEnabled ? AppTheme.onSurfaceColor : AppTheme.onSurfaceColor.withOpacity(0.5),
+                  color: isEnabled ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                 ),
               ),
               Text(
                 description,
                 style: TextStyle(
                   fontSize: 12,
-                  color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
             ],
@@ -839,7 +864,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: isEnabled ? AppTheme.primaryGreen : AppTheme.neutralLightGray,
+            color: isEnabled ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.surfaceVariant,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
@@ -847,7 +872,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: isEnabled ? Colors.white : AppTheme.onSurfaceColor.withOpacity(0.5),
+              color: isEnabled ? Colors.white : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             ),
           ),
         ),

@@ -36,15 +36,4 @@ class AppConstants {
   static const String generalError = 'Something went wrong. Please try again.';
   static const String invalidPhoneNumber = 'Please enter a valid phone number.';
   static const String invalidOtp = 'Please enter a valid OTP.';
-}
-
-
-
-// App Colors
-class AppColors {
-  static const int primaryGreen = 0xFF4CAF50;
-  static const int primaryBlue = 0xFF2196F3;
-  static const int primaryOrange = 0xFFFF9800;
-  static const int primaryRed = 0xFFF44336;
-  static const int primaryPurple = 0xFF9C27B0;
 } 

@@ -30,7 +30,7 @@ class AdminManagementScreen extends HookConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Manage ${community.name}'),
-        backgroundColor: AppTheme.neutralWhite,
+        backgroundColor: Theme.of(context).colorScheme.background,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -73,8 +73,8 @@ class AdminManagementScreen extends HookConsumerWidget {
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
-            AppTheme.primaryBlue.withOpacity(0.1),
-            AppTheme.primaryGreen.withOpacity(0.1),
+            Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            Theme.of(context).colorScheme.secondary.withOpacity(0.1),
           ],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
@@ -87,10 +87,10 @@ class AdminManagementScreen extends HookConsumerWidget {
             width: 60,
             height: 60,
             decoration: BoxDecoration(
-              color: AppTheme.primaryBlue.withOpacity(0.1),
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(30),
               border: Border.all(
-                color: AppTheme.primaryBlue,
+                color: Theme.of(context).colorScheme.primary,
                 width: 2,
               ),
             ),
@@ -104,7 +104,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                   )
                 : Icon(
                     Icons.group,
-                    color: AppTheme.primaryBlue,
+                    color: Theme.of(context).colorScheme.primary,
                     size: 30,
                   ),
           ),
@@ -127,13 +127,13 @@ class AdminManagementScreen extends HookConsumerWidget {
                     Icon(
                       Icons.people,
                       size: 16,
-                      color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
                     const SizedBox(width: 4),
                     Text(
                       '${community.members.length} members',
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       ),
                     ),
                     const SizedBox(width: AppConstants.smallPadding),
@@ -144,8 +144,8 @@ class AdminManagementScreen extends HookConsumerWidget {
                       ),
                       decoration: BoxDecoration(
                         color: community.visibility == 'public'
-                            ? AppTheme.primaryGreen.withOpacity(0.1)
-                            : AppTheme.primaryOrange.withOpacity(0.1),
+                            ? Theme.of(context).colorScheme.secondary.withOpacity(0.1)
+                            : Theme.of(context).colorScheme.tertiary.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Text(
@@ -154,8 +154,8 @@ class AdminManagementScreen extends HookConsumerWidget {
                           fontSize: 10,
                           fontWeight: FontWeight.bold,
                           color: community.visibility == 'public'
-                              ? AppTheme.primaryGreen
-                              : AppTheme.primaryOrange,
+                              ? Theme.of(context).colorScheme.secondary
+                              : Theme.of(context).colorScheme.tertiary,
                         ),
                       ),
                     ),
@@ -180,7 +180,7 @@ class AdminManagementScreen extends HookConsumerWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: AppTheme.neutralWhite,
+        color: Theme.of(context).colorScheme.background,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -207,7 +207,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                 decoration: BoxDecoration(
                   border: Border(
                     bottom: BorderSide(
-                      color: isSelected ? AppTheme.primaryBlue : Colors.transparent,
+                      color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
                       width: 2,
                     ),
                   ),
@@ -216,7 +216,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                   tab,
                   style: TextStyle(
                     fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                    color: isSelected ? AppTheme.primaryBlue : AppTheme.onSurfaceColor,
+                    color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ),
@@ -304,28 +304,28 @@ class AdminManagementScreen extends HookConsumerWidget {
                 'Members',
                 '${stats['member_count'] ?? 0}',
                 Icons.people,
-                AppTheme.primaryBlue,
+                Theme.of(context).colorScheme.primary,
               ),
               _buildStatCard(
                 context,
                 'Events',
                 '${stats['event_count'] ?? 0}',
                 Icons.event,
-                AppTheme.primaryGreen,
+                Theme.of(context).colorScheme.secondary,
               ),
               _buildStatCard(
                 context,
                 'Moments',
                 '${stats['moment_count'] ?? 0}',
                 Icons.flash_on,
-                AppTheme.primaryOrange,
+                Theme.of(context).colorScheme.tertiary,
               ),
               _buildStatCard(
                 context,
                 'Messages',
                 '${stats['message_count'] ?? 0}',
                 Icons.chat,
-                AppTheme.primaryPurple,
+                Theme.of(context).colorScheme.primary,
               ),
             ],
           ),
@@ -368,7 +368,7 @@ class AdminManagementScreen extends HookConsumerWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.onSurfaceColor.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
           ),
         ],
@@ -390,7 +390,7 @@ class AdminManagementScreen extends HookConsumerWidget {
         Container(
           padding: const EdgeInsets.all(AppConstants.defaultPadding),
           decoration: BoxDecoration(
-            color: AppTheme.neutralLightGray,
+            color: Theme.of(context).colorScheme.surfaceVariant,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -400,7 +400,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                 'New member joined',
                 '2 minutes ago',
                 Icons.person_add,
-                AppTheme.primaryGreen,
+                Theme.of(context).colorScheme.secondary,
               ),
               const Divider(height: 1),
               _buildActivityItem(
@@ -408,7 +408,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                 'Event created',
                 '15 minutes ago',
                 Icons.event,
-                AppTheme.primaryBlue,
+                Theme.of(context).colorScheme.primary,
               ),
               const Divider(height: 1),
               _buildActivityItem(
@@ -416,7 +416,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                 'Moment posted',
                 '1 hour ago',
                 Icons.flash_on,
-                AppTheme.primaryOrange,
+                Theme.of(context).colorScheme.tertiary,
               ),
             ],
           ),
@@ -458,7 +458,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                 Text(
                   time,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                   ),
                 ),
               ],
@@ -492,28 +492,28 @@ class AdminManagementScreen extends HookConsumerWidget {
               context,
               'Create Event',
               Icons.event,
-              AppTheme.primaryGreen,
+              Theme.of(context).colorScheme.secondary,
               () => _createEvent(context),
             ),
             _buildActionCard(
               context,
               'Send Announcement',
               Icons.announcement,
-              AppTheme.primaryBlue,
+              Theme.of(context).colorScheme.primary,
               () => _sendAnnouncement(context),
             ),
             _buildActionCard(
               context,
               'Manage Members',
               Icons.people,
-              AppTheme.primaryOrange,
+              Theme.of(context).colorScheme.tertiary,
               () => _manageMembers(context),
             ),
             _buildActionCard(
               context,
               'View Analytics',
               Icons.analytics,
-              AppTheme.primaryPurple,
+              Theme.of(context).colorScheme.primary,
               () => _viewAnalytics(context),
             ),
           ],
@@ -585,13 +585,13 @@ class AdminManagementScreen extends HookConsumerWidget {
               if (selectedMembers.isNotEmpty) ...[
                 TextButton.icon(
                   onPressed: () => _banSelectedMembers(context, ref),
-                  icon: const Icon(Icons.block, color: AppTheme.errorColor),
+                  icon: Icon(Icons.block, color: Theme.of(context).colorScheme.error),
                   label: const Text('Ban Selected'),
                 ),
                 const SizedBox(width: AppConstants.smallPadding),
                 TextButton.icon(
                   onPressed: () => _removeSelectedMembers(context, ref),
-                  icon: const Icon(Icons.person_remove, color: AppTheme.primaryOrange),
+                  icon: Icon(Icons.person_remove, color: Theme.of(context).colorScheme.tertiary),
                   label: const Text('Remove'),
                 ),
                 const SizedBox(width: AppConstants.smallPadding),
@@ -645,13 +645,13 @@ class AdminManagementScreen extends HookConsumerWidget {
           Icon(
             searchQuery.isNotEmpty ? Icons.search_off : Icons.people_outline,
             size: 64,
-            color: AppTheme.onSurfaceColor.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           ),
           const SizedBox(height: AppConstants.defaultPadding),
           Text(
             searchQuery.isNotEmpty ? 'No members found' : 'No members yet',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppTheme.onSurfaceColor,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: AppConstants.smallPadding),
@@ -660,7 +660,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                 ? 'Try adjusting your search terms'
                 : 'Invite members to get started',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.onSurfaceColor.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -698,7 +698,7 @@ class AdminManagementScreen extends HookConsumerWidget {
               },
             ),
             CircleAvatar(
-              backgroundColor: isAdmin ? AppTheme.primaryRed : AppTheme.primaryBlue,
+              backgroundColor: isAdmin ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary,
               child: Text(
                 (member.displayName?.isNotEmpty == true ? member.displayName![0].toUpperCase() : '?'),
                 style: const TextStyle(color: Colors.white),
@@ -718,14 +718,14 @@ class AdminManagementScreen extends HookConsumerWidget {
             Text(
               isAdmin ? 'Community Admin' : 'Member',
               style: TextStyle(
-                color: isAdmin ? AppTheme.primaryRed : AppTheme.onSurfaceColor.withOpacity(0.7),
+                color: isAdmin ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
             ),
             Text(
               member.email ?? member.phoneNumber,
               style: TextStyle(
                 fontSize: 12,
-                color: AppTheme.onSurfaceColor.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
               ),
             ),
           ],
@@ -735,21 +735,21 @@ class AdminManagementScreen extends HookConsumerWidget {
             : PopupMenuButton<String>(
                 onSelected: (value) => _handleMemberAction(context, ref, member.id, value, isLoading),
                 itemBuilder: (context) => [
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'ban',
                     child: Row(
                       children: [
-                        Icon(Icons.block, color: AppTheme.errorColor),
+                        Icon(Icons.block, color: Theme.of(context).colorScheme.error),
                         SizedBox(width: 8),
                         Text('Ban User'),
                       ],
                     ),
                   ),
-                  const PopupMenuItem(
+                  PopupMenuItem(
                     value: 'remove',
                     child: Row(
                       children: [
-                        Icon(Icons.person_remove, color: AppTheme.primaryOrange),
+                        Icon(Icons.person_remove, color: Theme.of(context).colorScheme.tertiary),
                         SizedBox(width: 8),
                         Text('Remove from Community'),
                       ],
@@ -867,10 +867,10 @@ class AdminManagementScreen extends HookConsumerWidget {
         const SizedBox(height: AppConstants.defaultPadding),
         Container(
           decoration: BoxDecoration(
-            color: AppTheme.neutralWhite,
+            color: Theme.of(context).colorScheme.surfaceVariant,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: AppTheme.onSurfaceColor.withOpacity(0.1),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
               width: 1,
             ),
           ),
@@ -891,18 +891,18 @@ class AdminManagementScreen extends HookConsumerWidget {
     return ListTile(
       leading: Icon(
         icon,
-        color: isDanger ? AppTheme.errorColor : AppTheme.primaryBlue,
+        color: isDanger ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.primary,
       ),
       title: Text(
         title,
         style: TextStyle(
-          color: isDanger ? AppTheme.errorColor : AppTheme.onSurfaceColor,
+          color: isDanger ? Theme.of(context).colorScheme.error : Theme.of(context).colorScheme.onSurface,
         ),
       ),
       subtitle: Text(
         subtitle,
         style: TextStyle(
-          color: isDanger ? AppTheme.errorColor.withOpacity(0.7) : AppTheme.onSurfaceColor.withOpacity(0.7),
+          color: isDanger ? Theme.of(context).colorScheme.error.withOpacity(0.7) : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
         ),
       ),
       trailing: const Icon(Icons.arrow_forward_ios, size: 16),
@@ -920,7 +920,7 @@ class AdminManagementScreen extends HookConsumerWidget {
     bool value,
   ) {
     return ListTile(
-      leading: Icon(icon, color: AppTheme.primaryBlue),
+      leading: Icon(icon, color: Theme.of(context).colorScheme.primary),
       title: Text(title),
       subtitle: Text(subtitle),
       trailing: Switch(
@@ -931,7 +931,7 @@ class AdminManagementScreen extends HookConsumerWidget {
             key: newValue,
           };
         },
-        activeColor: AppTheme.primaryGreen,
+        activeColor: Theme.of(context).colorScheme.secondary,
       ),
     );
   }
@@ -1000,28 +1000,28 @@ class AdminManagementScreen extends HookConsumerWidget {
               'Total Revenue',
               '\$${stats['total_revenue'] ?? 0}',
               Icons.attach_money,
-              AppTheme.primaryGreen,
+              Theme.of(context).colorScheme.secondary,
             ),
             _buildAnalyticsCard(
               context,
               'This Month',
               '\$${stats['monthly_revenue'] ?? 0}',
               Icons.trending_up,
-              AppTheme.primaryBlue,
+              Theme.of(context).colorScheme.primary,
             ),
             _buildAnalyticsCard(
               context,
               'Active Members',
               '${stats['active_members'] ?? 0}',
               Icons.people,
-              AppTheme.primaryOrange,
+              Theme.of(context).colorScheme.tertiary,
             ),
             _buildAnalyticsCard(
               context,
               'Avg. Session',
               '${stats['avg_session_minutes'] ?? 0}m',
               Icons.timer,
-              AppTheme.primaryPurple,
+              Theme.of(context).colorScheme.primary,
             ),
           ],
         ),
@@ -1055,28 +1055,28 @@ class AdminManagementScreen extends HookConsumerWidget {
               'Engagement Rate',
               '${((analytics['engagement_rate'] ?? 0) * 100).toStringAsFixed(1)}%',
               Icons.trending_up,
-              AppTheme.primaryGreen,
+              Theme.of(context).colorScheme.secondary,
             ),
             _buildAnalyticsCard(
               context,
               'Growth Rate',
               '${((analytics['growth_rate'] ?? 0) * 100).toStringAsFixed(1)}%',
               Icons.show_chart,
-              AppTheme.primaryBlue,
+              Theme.of(context).colorScheme.primary,
             ),
             _buildAnalyticsCard(
               context,
               'Retention Rate',
               '${((analytics['retention_rate'] ?? 0) * 100).toStringAsFixed(1)}%',
               Icons.people_outline,
-              AppTheme.primaryOrange,
+              Theme.of(context).colorScheme.tertiary,
             ),
             _buildAnalyticsCard(
               context,
               'Avg Response Time',
               '${analytics['avg_response_time'] ?? 0}h',
               Icons.schedule,
-              AppTheme.primaryPurple,
+              Theme.of(context).colorScheme.primary,
             ),
           ],
         ),
@@ -1093,28 +1093,28 @@ class AdminManagementScreen extends HookConsumerWidget {
               'Total Revenue',
               '\$${(revenueMetrics['total_revenue'] ?? 0).toStringAsFixed(0)}',
               Icons.attach_money,
-              AppTheme.primaryGreen,
+              Theme.of(context).colorScheme.secondary,
             ),
             _buildAnalyticsCard(
               context,
               'Monthly Revenue',
               '\$${(revenueMetrics['monthly_revenue'] ?? 0).toStringAsFixed(0)}',
               Icons.trending_up,
-              AppTheme.primaryBlue,
+              Theme.of(context).colorScheme.primary,
             ),
             _buildAnalyticsCard(
               context,
               'Avg Transaction',
               '\$${(revenueMetrics['avg_transaction'] ?? 0).toStringAsFixed(0)}',
               Icons.shopping_cart,
-              AppTheme.primaryOrange,
+              Theme.of(context).colorScheme.tertiary,
             ),
             _buildAnalyticsCard(
               context,
               'Conversion Rate',
               '${((revenueMetrics['conversion_rate'] ?? 0) * 100).toStringAsFixed(1)}%',
               Icons.percent,
-              AppTheme.primaryPurple,
+              Theme.of(context).colorScheme.primary,
             ),
           ],
         ),
@@ -1131,28 +1131,28 @@ class AdminManagementScreen extends HookConsumerWidget {
               'Messages',
               '${((contentDistribution['messages'] ?? 0) * 100).toStringAsFixed(0)}%',
               Icons.chat,
-              AppTheme.primaryBlue,
+              Theme.of(context).colorScheme.primary,
             ),
             _buildAnalyticsCard(
               context,
               'Events',
               '${((contentDistribution['events'] ?? 0) * 100).toStringAsFixed(0)}%',
               Icons.event,
-              AppTheme.primaryGreen,
+              Theme.of(context).colorScheme.secondary,
             ),
             _buildAnalyticsCard(
               context,
               'Moments',
               '${((contentDistribution['moments'] ?? 0) * 100).toStringAsFixed(0)}%',
               Icons.flash_on,
-              AppTheme.primaryOrange,
+              Theme.of(context).colorScheme.tertiary,
             ),
             _buildAnalyticsCard(
               context,
               'Polls',
               '${((contentDistribution['polls'] ?? 0) * 100).toStringAsFixed(0)}%',
               Icons.poll,
-              AppTheme.primaryPurple,
+              Theme.of(context).colorScheme.primary,
             ),
           ],
         ),
@@ -1183,7 +1183,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                 // TODO: Refresh analytics data
                 NavigationService.showSnackBar(
                   message: 'Analytics refreshed!',
-                  backgroundColor: AppTheme.primaryGreen,
+                  backgroundColor: Theme.of(context).colorScheme.secondary,
                 );
               },
             ),
@@ -1235,7 +1235,7 @@ class AdminManagementScreen extends HookConsumerWidget {
           Text(
             title,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppTheme.onSurfaceColor.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -1265,14 +1265,14 @@ class AdminManagementScreen extends HookConsumerWidget {
                 context,
                 'Reported Content',
                 '3',
-                AppTheme.primaryOrange,
+                Theme.of(context).colorScheme.tertiary,
               ),
               const SizedBox(width: AppConstants.defaultPadding),
               _buildModerationStat(
                 context,
                 'Banned Users',
                 '${community.bannedUsers.length}',
-                AppTheme.errorColor,
+                Theme.of(context).colorScheme.error,
               ),
             ],
           ),
@@ -1288,7 +1288,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                   'Reported Messages',
                   'Review and moderate reported messages',
                   Icons.report,
-                  AppTheme.primaryOrange,
+                  Theme.of(context).colorScheme.tertiary,
                   () => _reviewReportedMessages(context),
                 ),
                 _buildModerationCard(
@@ -1296,7 +1296,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                   'Banned Users',
                   'Manage banned users and appeals',
                   Icons.block,
-                  AppTheme.errorColor,
+                  Theme.of(context).colorScheme.error,
                   () => _manageBannedUsers(context),
                 ),
                 _buildModerationCard(
@@ -1304,7 +1304,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                   'Content Filters',
                   'Configure automatic content filtering',
                   Icons.filter_list,
-                  AppTheme.primaryBlue,
+                  Theme.of(context).colorScheme.primary,
                   () => _configureContentFilters(context),
                 ),
                 _buildModerationCard(
@@ -1312,7 +1312,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                   'Moderation Log',
                   'View moderation activity history',
                   Icons.history,
-                  AppTheme.primaryGreen,
+                  Theme.of(context).colorScheme.secondary,
                   () => _viewModerationLog(context),
                 ),
               ],
@@ -1352,7 +1352,7 @@ class AdminManagementScreen extends HookConsumerWidget {
             Text(
               title,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               ),
               textAlign: TextAlign.center,
             ),
@@ -1494,7 +1494,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                 Container(
                   height: 100,
                   decoration: BoxDecoration(
-                    border: Border.all(color: AppTheme.onSurfaceColor.withOpacity(0.3)),
+                    border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3)),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: ListView.builder(
@@ -1502,7 +1502,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                     itemBuilder: (context, index) => ListTile(
                       title: Text(emails[index]),
                       trailing: IconButton(
-                        icon: const Icon(Icons.remove_circle, color: AppTheme.errorColor),
+                        icon: Icon(Icons.remove_circle, color: Theme.of(context).colorScheme.error),
                         onPressed: () {
                           setState(() {
                             emails.removeAt(index);
@@ -1568,7 +1568,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                 Container(
                   height: 100,
                   decoration: BoxDecoration(
-                    border: Border.all(color: AppTheme.onSurfaceColor.withOpacity(0.3)),
+                    border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3)),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: ListView.builder(
@@ -1576,7 +1576,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                     itemBuilder: (context, index) => ListTile(
                       title: Text(phones[index]),
                       trailing: IconButton(
-                        icon: const Icon(Icons.remove_circle, color: AppTheme.errorColor),
+                        icon: Icon(Icons.remove_circle, color: Theme.of(context).colorScheme.error),
                         onPressed: () {
                           setState(() {
                             phones.removeAt(index);
@@ -1611,7 +1611,7 @@ class AdminManagementScreen extends HookConsumerWidget {
     // TODO: Implement actual invitation sending
     NavigationService.showSnackBar(
       message: 'Invitations sent to ${contacts.length} contact(s)!',
-      backgroundColor: AppTheme.primaryGreen,
+      backgroundColor: Theme.of(context).colorScheme.secondary,
     );
   }
 
@@ -1652,7 +1652,7 @@ class AdminManagementScreen extends HookConsumerWidget {
               ref.read(bulkActionsProvider(community.id).notifier)
                   .banSelectedMembers(community.id, selectedMembers.toList());
             },
-            style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
             child: const Text('Ban'),
           ),
         ],
@@ -1680,7 +1680,7 @@ class AdminManagementScreen extends HookConsumerWidget {
               ref.read(bulkActionsProvider(community.id).notifier)
                   .removeSelectedMembers(community.id, selectedMembers.toList());
             },
-            style: TextButton.styleFrom(foregroundColor: AppTheme.primaryOrange),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.tertiary),
             child: const Text('Remove'),
           ),
         ],
@@ -1705,7 +1705,7 @@ class AdminManagementScreen extends HookConsumerWidget {
               // TODO: Implement ban user
               NavigationService.showSnackBar(
                 message: 'User banned successfully',
-                backgroundColor: AppTheme.primaryGreen,
+                backgroundColor: Theme.of(context).colorScheme.secondary,
               );
             },
             child: const Text('Ban'),
@@ -1732,7 +1732,7 @@ class AdminManagementScreen extends HookConsumerWidget {
               // TODO: Implement remove user
               NavigationService.showSnackBar(
                 message: 'User removed successfully',
-                backgroundColor: AppTheme.primaryGreen,
+                backgroundColor: Theme.of(context).colorScheme.secondary,
               );
             },
             child: const Text('Remove'),
@@ -1798,7 +1798,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.onSurfaceColor.withOpacity(0.3)),
+                  border: Border.all(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3)),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(8),
@@ -1806,7 +1806,7 @@ class AdminManagementScreen extends HookConsumerWidget {
                     community.coverImage,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) => Container(
-                      color: AppTheme.neutralLightGray,
+                      color: Theme.of(context).colorScheme.surfaceVariant,
                       child: const Icon(Icons.image, size: 40),
                     ),
                   ),
@@ -1870,10 +1870,10 @@ class AdminManagementScreen extends HookConsumerWidget {
               // TODO: Implement delete community
               NavigationService.showSnackBar(
                 message: 'Community deleted successfully',
-                backgroundColor: AppTheme.primaryGreen,
+                backgroundColor: Theme.of(context).colorScheme.secondary,
               );
             },
-            style: TextButton.styleFrom(foregroundColor: AppTheme.errorColor),
+            style: TextButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
             child: const Text('Delete'),
           ),
         ],

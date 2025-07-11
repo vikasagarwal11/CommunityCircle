@@ -116,7 +116,10 @@ class CommunityService {
       query = query.startAfterDocument(lastDocument);
     }
 
+    // Defensive: always emit an empty list if no docs
     return query.snapshots().map((snapshot) {
+      _logger.i('getPublicCommunities: snapshot docs count = ${snapshot.docs.length}');
+      if (snapshot.docs.isEmpty) return <CommunityModel>[];
       return snapshot.docs.map((doc) {
         return CommunityModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
       }).toList();
@@ -167,17 +170,23 @@ class CommunityService {
       searchQuery = searchQuery.where('is_business', isEqualTo: isBusiness);
     }
 
+    // Add category filter if needed
+    // ... (your category filter logic here)
+
     return searchQuery.snapshots().map((snapshot) {
       final communities = snapshot.docs.map((doc) {
         return CommunityModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
       }).toList();
 
       // Filter by search query
-      return communities.where((community) {
+      final filtered = communities.where((community) {
         final searchLower = query.toLowerCase();
         return community.name.toLowerCase().contains(searchLower) ||
                community.description.toLowerCase().contains(searchLower);
       }).take(limit).toList();
+
+      // Always emit a list, even if empty
+      return filtered;
     });
   }
 

@@ -50,7 +50,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Search Communities'),
-        backgroundColor: AppTheme.neutralWhite,
+        backgroundColor: Theme.of(context).colorScheme.background,
         elevation: 0,
         actions: [
           IconButton(
@@ -84,7 +84,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return Container(
       padding: const EdgeInsets.all(AppConstants.defaultPadding),
       decoration: BoxDecoration(
-        color: AppTheme.neutralWhite,
+        color: Theme.of(context).colorScheme.background,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.1),
@@ -112,7 +112,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             borderSide: BorderSide.none,
           ),
           filled: true,
-          fillColor: AppTheme.neutralLightGray,
+          fillColor: Theme.of(context).colorScheme.surfaceVariant,
         ),
         onChanged: (value) {
           _updateSearchQuery(value);
@@ -130,10 +130,10 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     return Container(
       padding: const EdgeInsets.all(AppConstants.defaultPadding),
       decoration: BoxDecoration(
-        color: AppTheme.neutralWhite,
+        color: Theme.of(context).colorScheme.background,
         border: Border(
           bottom: BorderSide(
-            color: AppTheme.neutralLightGray,
+            color: Theme.of(context).colorScheme.surfaceVariant,
             width: 1,
           ),
         ),
@@ -193,13 +193,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           vertical: 8,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? AppTheme.primaryBlue : AppTheme.neutralLightGray,
+          color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceVariant,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
           label,
           style: TextStyle(
-            color: isSelected ? Colors.white : AppTheme.onSurfaceColor,
+            color: isSelected ? Colors.white : Theme.of(context).colorScheme.onSurface,
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
           ),
@@ -225,7 +225,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           itemCount: communities.length,
           itemBuilder: (context, index) {
             final community = communities[index];
-            return _buildCommunityCard(community);
+            return _buildCommunityCard(context, community);
           },
         );
       },
@@ -236,23 +236,23 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
+            Icon(
               Icons.error_outline,
               size: 64,
-              color: AppTheme.errorColor,
+              color: Theme.of(context).colorScheme.error,
             ),
             const SizedBox(height: AppConstants.defaultPadding),
             Text(
               'Error searching communities',
               style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                color: AppTheme.onSurfaceColor,
+                color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
             const SizedBox(height: AppConstants.smallPadding),
             Text(
               error.toString(),
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: AppTheme.errorColor,
+                color: Theme.of(context).colorScheme.error,
               ),
               textAlign: TextAlign.center,
             ),
@@ -270,13 +270,13 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           Icon(
             Icons.search,
             size: 64,
-            color: AppTheme.onSurfaceColor.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           ),
           const SizedBox(height: AppConstants.defaultPadding),
           Text(
             'Search Communities',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-              color: AppTheme.onSurfaceColor,
+              color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -284,7 +284,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           Text(
             'Find communities that match your interests',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.onSurfaceColor.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -301,20 +301,20 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           Icon(
             Icons.search_off,
             size: 64,
-            color: AppTheme.onSurfaceColor.withOpacity(0.5),
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
           ),
           const SizedBox(height: AppConstants.defaultPadding),
           Text(
             'No communities found',
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: AppTheme.onSurfaceColor,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: AppConstants.smallPadding),
           Text(
             'Try adjusting your search terms or filters',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: AppTheme.onSurfaceColor.withOpacity(0.7),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -323,7 +323,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
     );
   }
 
-  Widget _buildCommunityCard(CommunityModel community) {
+  Widget _buildCommunityCard(BuildContext context, CommunityModel community) {
     return Card(
       margin: const EdgeInsets.only(bottom: AppConstants.smallPadding),
       child: InkWell(
@@ -340,7 +340,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                 width: 60,
                 height: 60,
                 decoration: BoxDecoration(
-                  color: AppTheme.primaryBlue.withOpacity(0.1),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Center(
@@ -349,7 +349,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
-                      color: AppTheme.primaryBlue,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
                 ),
@@ -371,7 +371,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                     Text(
                       community.description,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -382,26 +382,26 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                         Icon(
                           Icons.people,
                           size: 16,
-                          color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           '${community.memberCount} members',
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                           ),
                         ),
                         const SizedBox(width: AppConstants.defaultPadding),
                         Icon(
                           Icons.visibility,
                           size: 16,
-                          color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                         ),
                         const SizedBox(width: 4),
                         Text(
                           community.visibility,
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppTheme.onSurfaceColor.withOpacity(0.7),
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                           ),
                         ),
                         if (community.isBusiness) ...[
@@ -412,14 +412,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: AppTheme.primaryOrange.withOpacity(0.1),
+                              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
                               'Business',
                               style: TextStyle(
                                 fontSize: 10,
-                                color: AppTheme.primaryOrange,
+                                color: Theme.of(context).colorScheme.primary,
                                 fontWeight: FontWeight.bold,
                               ),
                             ),
@@ -435,7 +435,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
               Icon(
                 Icons.arrow_forward_ios,
                 size: 16,
-                color: AppTheme.onSurfaceColor.withOpacity(0.5),
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
               ),
             ],
           ),
