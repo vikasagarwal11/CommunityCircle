@@ -1,5 +1,4 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/community_service.dart';
 import '../services/storage_service.dart';
 import '../models/community_model.dart';
@@ -12,6 +11,23 @@ class CommunityQueryParams extends Equatable {
   const CommunityQueryParams({required this.limit});
   @override
   List<Object?> get props => [limit];
+}
+
+class CommunitySearchParams extends Equatable {
+  final String query;
+  final String? category;
+  final bool? isBusiness;
+  final int limit;
+
+  const CommunitySearchParams({
+    required this.query,
+    this.category,
+    this.isBusiness,
+    this.limit = 20,
+  });
+
+  @override
+  List<Object?> get props => [query, category, isBusiness, limit];
 }
 
 // Community service provider
@@ -69,15 +85,15 @@ final communityDetailsProvider = StreamProvider.family<CommunityModel?, String>(
 });
 
 // Search communities provider
-final searchCommunitiesProvider = StreamProvider.family<List<CommunityModel>, Map<String, dynamic>>((ref, params) {
+final searchCommunitiesProvider = StreamProvider.family<List<CommunityModel>, CommunitySearchParams>((ref, params) {
   final communityService = ref.watch(communityServiceProvider);
-  final query = params['query'] as String;
-  final category = params['category'] as String?;
-  final isBusiness = params['isBusiness'] as bool?;
-  final limit = params['limit'] as int? ?? 20;
-  
+  final query = params.query;
+  final category = params.category;
+  final isBusiness = params.isBusiness;
+  final limit = params.limit;
+
   if (query.isEmpty) return Stream.value([]);
-  
+
   return communityService.searchCommunities(
     query: query,
     category: category,
@@ -142,9 +158,13 @@ class CommunityActionsNotifier extends StateNotifier<AsyncValue<void>> {
     required String name,
     required String description,
     String? coverImage,
+    String? badgeUrl,
     required String visibility,
     bool approvalRequired = false,
     bool isBusiness = false,
+    List<String>? joinQuestions,
+    List<String>? rules,
+    String? welcomeMessage, // NEW: Custom welcome message
     Map<String, String>? theme,
   }) async {
     state = const AsyncValue.loading();
@@ -154,9 +174,13 @@ class CommunityActionsNotifier extends StateNotifier<AsyncValue<void>> {
         name: name,
         description: description,
         coverImage: coverImage,
+        badgeUrl: badgeUrl,
         visibility: visibility,
         approvalRequired: approvalRequired,
         isBusiness: isBusiness,
+        joinQuestions: joinQuestions,
+        rules: rules,
+        welcomeMessage: welcomeMessage, // NEW
         theme: theme,
       );
       
@@ -279,6 +303,126 @@ class CommunityActionsNotifier extends StateNotifier<AsyncValue<void>> {
       state = AsyncValue.error(e, StackTrace.current);
     }
   }
+
+  Future<void> updateJoinQuestions(String communityId, List<String> questions) async {
+    state = const AsyncValue.loading();
+    
+    try {
+      await _communityService.updateJoinQuestions(communityId, questions);
+      state = const AsyncValue.data(null);
+      
+      // Invalidate related providers
+      _ref.invalidate(communityDetailsProvider(communityId));
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
+
+  Future<void> joinCommunityWithAnswers(String communityId, List<String> answers) async {
+    state = const AsyncValue.loading();
+    
+    try {
+      await _communityService.joinCommunityWithAnswers(communityId, answers);
+      state = const AsyncValue.data(null);
+      
+      // Invalidate related providers
+      _ref.invalidate(communityDetailsProvider(communityId));
+      _ref.invalidate(userCommunitiesProvider);
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
+
+  Future<void> updateRules(String communityId, List<String> rules) async {
+    state = const AsyncValue.loading();
+    
+    try {
+      await _communityService.updateRules(communityId, rules);
+      state = const AsyncValue.data(null);
+      
+      // Invalidate related providers
+      _ref.invalidate(communityDetailsProvider(communityId));
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
+
+  // NEW: Update welcome message
+  Future<void> updateWelcomeMessage(String communityId, String welcomeMessage) async {
+    state = const AsyncValue.loading();
+    
+    try {
+      await _communityService.updateWelcomeMessage(communityId, welcomeMessage);
+      state = const AsyncValue.data(null);
+      
+      // Invalidate related providers
+      _ref.invalidate(communityDetailsProvider(communityId));
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
+
+  // NEW: Acknowledge rules
+  Future<void> acknowledgeRules(String communityId, List<String> acknowledgedRules) async {
+    state = const AsyncValue.loading();
+    
+    try {
+      await _communityService.acknowledgeRules(communityId, acknowledgedRules);
+      state = const AsyncValue.data(null);
+      
+      // Invalidate related providers
+      _ref.invalidate(communityDetailsProvider(communityId));
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
+
+  // NEW: Approve join request
+  Future<void> approveJoinRequest(String communityId, String userId) async {
+    state = const AsyncValue.loading();
+    
+    try {
+      await _communityService.approveJoinRequest(communityId, userId);
+      state = const AsyncValue.data(null);
+      
+      // Invalidate related providers
+      _ref.invalidate(communityDetailsProvider(communityId));
+      _ref.invalidate(userCommunitiesProvider);
+      _ref.invalidate(pendingJoinRequestsProvider(communityId));
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
+
+  // NEW: Reject join request
+  Future<void> rejectJoinRequest(String communityId, String userId, String? reason) async {
+    state = const AsyncValue.loading();
+    
+    try {
+      await _communityService.rejectJoinRequest(communityId, userId, reason);
+      state = const AsyncValue.data(null);
+      
+      // Invalidate related providers
+      _ref.invalidate(pendingJoinRequestsProvider(communityId));
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
+
+  // NEW: Complete onboarding for user in community
+  Future<void> completeOnboarding(String communityId, String userId) async {
+    state = const AsyncValue.loading();
+    
+    try {
+      await _communityService.completeOnboarding(communityId, userId);
+      state = const AsyncValue.data(null);
+      
+      // Invalidate related providers
+      _ref.invalidate(communityMembersProvider(communityId));
+    } catch (e) {
+      state = AsyncValue.error(e, StackTrace.current);
+    }
+  }
 }
 
 // Community actions provider
@@ -333,12 +477,57 @@ final communityFormValidationProvider = Provider<Map<String, String>>((ref) {
   if (form['description'].toString().trim().isEmpty) {
     errors['description'] = 'Community description is required';
   } else if (form['description'].toString().length < 10) {
-    errors['description'] = 'Description must be at least 10 characters';
+    errors['description'] = 'Community description must be at least 10 characters';
   } else if (form['description'].toString().length > 500) {
-    errors['description'] = 'Description must be less than 500 characters';
+    errors['description'] = 'Community description must be less than 500 characters';
   }
   
   return errors;
+});
+
+// NEW: Pending join requests provider for admin review
+final pendingJoinRequestsProvider = StreamProvider.family<List<Map<String, dynamic>>, String>((ref, communityId) {
+  final communityService = ref.watch(communityServiceProvider);
+  return communityService.getPendingJoinRequests(communityId);
+});
+
+// NEW: User join answers provider
+final userJoinAnswersProvider = FutureProvider.family<List<String>, Map<String, String>>((ref, params) async {
+  final communityService = ref.watch(communityServiceProvider);
+  final communityId = params['communityId']!;
+  final userId = params['userId']!;
+  return await communityService.getUserJoinAnswers(communityId, userId);
+});
+
+// NEW: Rule acknowledgment status provider
+final ruleAcknowledgmentStatusProvider = FutureProvider.family<bool, Map<String, String>>((ref, params) async {
+  final communityService = ref.watch(communityServiceProvider);
+  final communityId = params['communityId']!;
+  final userId = params['userId']!;
+  return await communityService.hasUserAcknowledgedRules(communityId, userId);
+});
+
+// NEW: Welcome message provider
+final welcomeMessageProvider = Provider.family<String, CommunityModel?>((ref, community) {
+  return community?.welcomeMessage ?? '';
+});
+
+// NEW: Community rules provider
+final communityRulesProvider = Provider.family<List<String>, CommunityModel?>((ref, community) {
+  return community?.rules ?? [];
+});
+
+// NEW: Community join questions provider
+final communityJoinQuestionsProvider = Provider.family<List<String>, CommunityModel?>((ref, community) {
+  return community?.joinQuestions ?? [];
+});
+
+// NEW: User onboarding completion status provider
+final userOnboardingStatusProvider = FutureProvider.family<bool, Map<String, String>>((ref, params) async {
+  final communityService = ref.watch(communityServiceProvider);
+  final communityId = params['communityId']!;
+  final userId = params['userId']!;
+  return await communityService.hasUserCompletedOnboarding(communityId, userId);
 });
 
 // Community form is valid provider

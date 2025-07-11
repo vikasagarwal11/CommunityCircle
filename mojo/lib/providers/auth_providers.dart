@@ -192,4 +192,25 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
 final authNotifierProvider = StateNotifierProvider<AuthNotifier, AsyncValue<UserModel?>>((ref) {
   final authService = ref.watch(authServiceProvider);
   return AuthNotifier(authService, ref);
+});
+
+// Provider to check if user can create communities
+final canCreateCommunityProvider = FutureProvider<bool>((ref) async {
+  final authService = ref.watch(authServiceProvider);
+  final userRole = await authService.getUserRole();
+  return userRole != 'anonymous';
+});
+
+// Provider to check if user can access admin features
+final canAccessAdminFeaturesProvider = FutureProvider<bool>((ref) async {
+  final authService = ref.watch(authServiceProvider);
+  final userRole = await authService.getUserRole();
+  return userRole == 'admin' || userRole == 'business';
+});
+
+// Provider to check if user can access business features
+final canAccessBusinessFeaturesProvider = FutureProvider<bool>((ref) async {
+  final authService = ref.watch(authServiceProvider);
+  final userRole = await authService.getUserRole();
+  return userRole == 'business';
 }); 

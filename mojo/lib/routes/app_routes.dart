@@ -10,8 +10,9 @@ import '../views/create_community_screen.dart';
 import '../views/profile_screen.dart';
 import '../views/chat_screen.dart';
 import '../views/admin_management_screen.dart';
+import '../views/join_requests_review_screen.dart';
 import '../models/community_model.dart';
-import '../core/navigation_service.dart';
+
 
 class AppRoutes {
   // Main routes
@@ -31,6 +32,7 @@ class AppRoutes {
   static const String communityDetails = '/community-details';
   static const String createCommunity = '/create-community';
   static const String adminManagement = '/admin-management';
+  static const String joinRequestsReview = '/join-requests-review';
   
   // Chat routes
   static const String chat = '/chat';
@@ -232,6 +234,31 @@ class AppRoutes {
         }
         return MaterialPageRoute(
           builder: (_) => AdminManagementScreen(community: community!),
+        );
+      case joinRequestsReview:
+        final args = settings.arguments;
+        CommunityModel? community;
+        
+        if (args is CommunityModel) {
+          community = args;
+        } else if (args is Map<String, dynamic>) {
+          final communityData = args['community'] as Map<String, dynamic>?;
+          if (communityData != null) {
+            community = CommunityModel.fromMap(communityData, '');
+          }
+        }
+        
+        if (community == null) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(
+                child: Text('Community not found'),
+              ),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => JoinRequestsReviewScreen(community: community!),
         );
       case 'settings':
         return MaterialPageRoute(

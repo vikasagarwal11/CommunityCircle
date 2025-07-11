@@ -12,6 +12,9 @@ class UserModel {
   final bool isOnline;
   final List<String> communityIds;
   final Map<String, String> communityRoles; // communityId -> role
+  final Map<String, List<String>> ruleAcknowledgments; // communityId -> [rule1, rule2, ...]
+  final Map<String, List<String>> joinAnswers; // communityId -> [answer1, answer2, ...]
+  final Map<String, bool> onboardingCompleted; // communityId -> completed
   final Map<String, dynamic>? preferences;
   final Map<String, dynamic>? businessProfile; // For business users
   final List<String> badges; // Achievement badges
@@ -30,6 +33,9 @@ class UserModel {
     this.isOnline = false,
     this.communityIds = const [],
     this.communityRoles = const {},
+    this.ruleAcknowledgments = const {},
+    this.joinAnswers = const {},
+    this.onboardingCompleted = const {},
     this.preferences,
     this.businessProfile,
     this.badges = const [],
@@ -50,6 +56,15 @@ class UserModel {
       isOnline: map['isOnline'] ?? false,
       communityIds: List<String>.from(map['communityIds'] ?? []),
       communityRoles: Map<String, String>.from(map['communityRoles'] ?? {}),
+      ruleAcknowledgments: (map['ruleAcknowledgments'] as Map<String, dynamic>?)?.map(
+            (key, value) => MapEntry(key, List<String>.from(value)),
+          ) ?? {},
+      joinAnswers: (map['joinAnswers'] as Map<String, dynamic>?)?.map(
+            (key, value) => MapEntry(key, List<String>.from(value)),
+          ) ?? {},
+      onboardingCompleted: (map['onboardingCompleted'] as Map<String, dynamic>?)?.map(
+            (key, value) => MapEntry(key, value as bool),
+          ) ?? {},
       preferences: map['preferences'],
       businessProfile: map['businessProfile'],
       badges: List<String>.from(map['badges'] ?? []),
@@ -71,6 +86,9 @@ class UserModel {
       'isOnline': isOnline,
       'communityIds': communityIds,
       'communityRoles': communityRoles,
+      'ruleAcknowledgments': ruleAcknowledgments,
+      'joinAnswers': joinAnswers,
+      'onboardingCompleted': onboardingCompleted,
       'preferences': preferences,
       'businessProfile': businessProfile,
       'badges': badges,
@@ -91,6 +109,9 @@ class UserModel {
     bool? isOnline,
     List<String>? communityIds,
     Map<String, String>? communityRoles,
+    Map<String, List<String>>? ruleAcknowledgments,
+    Map<String, List<String>>? joinAnswers,
+    Map<String, bool>? onboardingCompleted,
     Map<String, dynamic>? preferences,
     Map<String, dynamic>? businessProfile,
     List<String>? badges,
@@ -109,6 +130,9 @@ class UserModel {
       isOnline: isOnline ?? this.isOnline,
       communityIds: communityIds ?? this.communityIds,
       communityRoles: communityRoles ?? this.communityRoles,
+      ruleAcknowledgments: ruleAcknowledgments ?? this.ruleAcknowledgments,
+      joinAnswers: joinAnswers ?? this.joinAnswers,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
       preferences: preferences ?? this.preferences,
       businessProfile: businessProfile ?? this.businessProfile,
       badges: badges ?? this.badges,
@@ -138,6 +162,48 @@ class UserModel {
 
   bool isCommunityMember(String communityId) {
     return communityRoles[communityId] == 'member';
+  }
+
+  // NEW: Rule acknowledgment helpers
+  bool hasAcknowledgedRules(String communityId) {
+    return ruleAcknowledgments.containsKey(communityId) && 
+           ruleAcknowledgments[communityId]!.isNotEmpty;
+  }
+
+  List<String> getAcknowledgedRules(String communityId) {
+    return ruleAcknowledgments[communityId] ?? [];
+  }
+
+  void acknowledgeRule(String communityId, String rule) {
+    if (!ruleAcknowledgments.containsKey(communityId)) {
+      ruleAcknowledgments[communityId] = [];
+    }
+    if (!ruleAcknowledgments[communityId]!.contains(rule)) {
+      ruleAcknowledgments[communityId]!.add(rule);
+    }
+  }
+
+  // NEW: Join answers helpers
+  bool hasAnsweredJoinQuestions(String communityId) {
+    return joinAnswers.containsKey(communityId) && 
+           joinAnswers[communityId]!.isNotEmpty;
+  }
+
+  List<String> getJoinAnswers(String communityId) {
+    return joinAnswers[communityId] ?? [];
+  }
+
+  void setJoinAnswers(String communityId, List<String> answers) {
+    joinAnswers[communityId] = answers;
+  }
+
+  // NEW: Onboarding helpers
+  bool hasCompletedOnboarding(String communityId) {
+    return onboardingCompleted[communityId] ?? false;
+  }
+
+  void completeOnboarding(String communityId) {
+    onboardingCompleted[communityId] = true;
   }
 
   // Badge helpers

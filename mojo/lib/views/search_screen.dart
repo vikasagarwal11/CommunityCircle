@@ -40,12 +40,14 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   Widget build(BuildContext context) {
     final searchQuery = ref.watch(searchQueryProvider);
     final searchFilters = ref.watch(searchFiltersProvider);
-    final searchResultsAsync = ref.watch(searchCommunitiesProvider({
-      'query': _currentQuery,
-      'category': searchFilters['category'],
-      'isBusiness': searchFilters['isBusiness'],
-      'limit': searchFilters['limit'],
-    }));
+    final searchResultsAsync = ref.watch(searchCommunitiesProvider(
+      CommunitySearchParams(
+        query: _currentQuery,
+        category: searchFilters['category'],
+        isBusiness: searchFilters['isBusiness'],
+        limit: searchFilters['limit'],
+      ),
+    ));
 
     return Scaffold(
       appBar: AppBar(

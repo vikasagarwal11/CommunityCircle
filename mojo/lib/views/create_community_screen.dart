@@ -3,33 +3,172 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../providers/community_providers.dart';
+import '../providers/auth_providers.dart';
 import '../core/constants.dart';
-import '../core/theme.dart';
+
 import '../core/navigation_service.dart';
+import '../services/storage_service.dart'; // Added import for StorageService
 
 class CreateCommunityScreen extends HookConsumerWidget {
   const CreateCommunityScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Check user authentication and role
+    final userAsync = ref.watch(authNotifierProvider);
+    final userRoleAsync = ref.watch(canCreateCommunityProvider);
+    
+    return userAsync.when(
+      data: (user) {
+        if (user == null) {
+          // Redirect to auth screen if no user
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            NavigationService.navigateToPhoneAuth();
+          });
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        
+        return userRoleAsync.when(
+          data: (canCreate) {
+            if (!canCreate) {
+              // Show access denied screen for anonymous users
+                      return Scaffold(
+          appBar: AppBar(
+            title: const Text('Access Denied'),
+            backgroundColor: Theme.of(context).colorScheme.surface,
+            elevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back),
+              onPressed: () => NavigationService.goBack(),
+            ),
+          ),
+                body: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(AppConstants.defaultPadding),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.lock_outline,
+                          size: 64,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        const SizedBox(height: AppConstants.defaultPadding),
+                        Text(
+                          'Access Denied',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: AppConstants.smallPadding),
+                        Text(
+                          'Anonymous users cannot create communities. Please sign in with your phone number to continue.',
+                          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: AppConstants.largePadding),
+                        ElevatedButton(
+                          onPressed: () => NavigationService.navigateToPhoneAuth(),
+                          child: const Text('Sign In'),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }
+            
+            // User is authenticated and not anonymous, show create community screen
+            return _buildCreateCommunityContent(context, ref);
+          },
+          loading: () => const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          ),
+          error: (_, __) => Scaffold(
+            body: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Colors.red,
+                  ),
+                  const SizedBox(height: AppConstants.defaultPadding),
+                  const Text('Error loading user data'),
+                  const SizedBox(height: AppConstants.smallPadding),
+                  ElevatedButton(
+                    onPressed: () => NavigationService.goBack(),
+                    child: const Text('Go Back'),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      loading: () => const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      ),
+      error: (_, __) => Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.red,
+              ),
+              const SizedBox(height: AppConstants.defaultPadding),
+              const Text('Error loading user data'),
+              const SizedBox(height: AppConstants.smallPadding),
+              ElevatedButton(
+                onPressed: () => NavigationService.goBack(),
+                child: const Text('Go Back'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCreateCommunityContent(BuildContext context, WidgetRef ref) {
     final nameController = useTextEditingController();
     final descriptionController = useTextEditingController();
+    final welcomeMessageController = useTextEditingController(); // NEW: welcome message
     final visibility = useState('public');
     final isBusiness = useState(false);
     final approvalRequired = useState(false);
     final selectedColor = useState('#2196F3');
     final coverImage = useState<String?>(null);
+    final badgeIcon = useState<String?>(null); // NEW: badge/icon url
     final isLoading = useState(false);
     final showAdvancedOptions = useState(false);
+    final selectedBadgeFile = useState<File?>(null); // NEW: badge/icon file
+    final selectedCoverFile = useState<File?>(null); // for cover image
+    final joinQuestions = useState<List<String>>([]); // NEW: join questions
+    final rules = useState<List<String>>([]); // NEW: community rules
 
     final formValidation = ref.watch(communityFormValidationProvider);
     final isFormValid = ref.watch(communityFormIsValidProvider);
-    final communityActionsAsync = ref.watch(communityActionsProvider);
+    final storageService = ref.watch(storageServiceProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text('Create Community'),
-        backgroundColor: Theme.of(context).colorScheme.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -48,6 +187,9 @@ class CreateCommunityScreen extends HookConsumerWidget {
               const SizedBox(height: 16),
               _buildDescriptionField(context, descriptionController, formValidation, ref),
               const SizedBox(height: 16),
+              // NEW: Welcome Message field
+              _buildWelcomeMessageField(context, welcomeMessageController),
+              const SizedBox(height: 16),
               _buildVisibilitySection(context, visibility),
               const SizedBox(height: 16),
               _buildCommunityTypeSection(context, isBusiness),
@@ -58,6 +200,15 @@ class CreateCommunityScreen extends HookConsumerWidget {
               if (showAdvancedOptions.value) ...[
                 const SizedBox(height: 16),
                 _buildThemeSection(context, selectedColor),
+                const SizedBox(height: 16),
+                // NEW: Badge/Icon upload section
+                _buildBadgeIconSection(context, badgeIcon, selectedBadgeFile, storageService, isLoading),
+                const SizedBox(height: 16),
+                // NEW: Join Questions section
+                _buildJoinQuestionsSection(context, joinQuestions),
+                const SizedBox(height: 16),
+                // NEW: Community Rules section
+                _buildCommunityRulesSection(context, rules),
                 const SizedBox(height: 16),
                 _buildCoverImageSection(context, coverImage),
               ],
@@ -74,15 +225,55 @@ class CreateCommunityScreen extends HookConsumerWidget {
           ref,
           nameController,
           descriptionController,
+          welcomeMessageController, // NEW
           visibility,
           isBusiness,
           approvalRequired,
           selectedColor,
           coverImage,
+          badgeIcon, // NEW
+          joinQuestions, // NEW
+          rules, // NEW
           isFormValid,
           isLoading,
+          selectedBadgeFile,
+          selectedCoverFile,
         ),
       ),
+    );
+  }
+
+  // NEW: Welcome Message field
+  Widget _buildWelcomeMessageField(BuildContext context, TextEditingController controller) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Welcome Message',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: AppConstants.smallPadding),
+        Text(
+          'Optional message shown to new members when they join your community.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
+        const SizedBox(height: AppConstants.smallPadding),
+        TextField(
+          controller: controller,
+          maxLines: 3,
+          decoration: InputDecoration(
+            hintText: 'Welcome new members with a friendly message...',
+            prefixIcon: const Icon(Icons.waving_hand),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -93,7 +284,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
         Container(
           padding: const EdgeInsets.all(20),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(16),
           ),
           child: const Icon(
@@ -112,7 +303,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
         Text(
           'Build a space where people can connect, share, and grow together.',
           style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
       ],
@@ -253,7 +444,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
               children: [
                 Icon(
                   icon,
-                  color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   size: 24,
                 ),
                 const SizedBox(height: 4),
@@ -269,7 +460,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
                   subtitle,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -350,7 +541,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
               children: [
                 Icon(
                   icon,
-                  color: isSelected ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  color: isSelected ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   size: 24,
                 ),
                 const SizedBox(height: 4),
@@ -366,7 +557,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
                   subtitle,
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -392,14 +583,14 @@ class CreateCommunityScreen extends HookConsumerWidget {
         Container(
           padding: const EdgeInsets.all(AppConstants.defaultPadding),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Row(
             children: [
               Icon(
                 approvalRequired.value ? Icons.approval : Icons.person_add,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
               ),
               const SizedBox(width: AppConstants.smallPadding),
               Expanded(
@@ -418,7 +609,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
                           : 'Anyone can join directly',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -439,12 +630,12 @@ class CreateCommunityScreen extends HookConsumerWidget {
   Widget _buildThemeSection(BuildContext context, ValueNotifier<String> selectedColor) {
     final colorScheme = Theme.of(context).colorScheme;
     final colors = [
-      colorScheme.primary.value.toRadixString(16),
-      colorScheme.secondary.value.toRadixString(16),
-      colorScheme.tertiary.value.toRadixString(16),
-      colorScheme.error.value.toRadixString(16),
-      colorScheme.surface.value.toRadixString(16),
-      colorScheme.background.value.toRadixString(16),
+      colorScheme.primary.toARGB32().toRadixString(16),
+      colorScheme.secondary.toARGB32().toRadixString(16),
+      colorScheme.tertiary.toARGB32().toRadixString(16),
+      colorScheme.error.toARGB32().toRadixString(16),
+      colorScheme.surface.toARGB32().toRadixString(16),
+      colorScheme.surface.toARGB32().toRadixString(16), // Changed from background to surface
     ];
 
     return Column(
@@ -483,7 +674,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: Color(colorValue).withOpacity(0.3),
+                            color: Color(colorValue).withValues(alpha: 0.3),
                             blurRadius: 8,
                             spreadRadius: 2,
                           ),
@@ -525,7 +716,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.2),
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
               ),
             ),
             child: ClipRRect(
@@ -534,7 +725,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
                 coverImage.value!,
                 fit: BoxFit.cover,
                 errorBuilder: (context, error, stackTrace) => Container(
-                  color: Theme.of(context).colorScheme.surfaceVariant,
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   child: Icon(
                     Icons.broken_image,
                     size: 48,
@@ -609,17 +800,21 @@ class CreateCommunityScreen extends HookConsumerWidget {
     WidgetRef ref,
     TextEditingController nameController,
     TextEditingController descriptionController,
+    TextEditingController welcomeMessageController, // NEW
     ValueNotifier<String> visibility,
     ValueNotifier<bool> isBusiness,
     ValueNotifier<bool> approvalRequired,
     ValueNotifier<String> selectedColor,
     ValueNotifier<String?> coverImage,
+    ValueNotifier<String?> badgeIcon, // NEW
+    ValueNotifier<List<String>> joinQuestions, // NEW
+    ValueNotifier<List<String>> rules, // NEW
     bool isFormValid,
     ValueNotifier<bool> isLoading,
+    ValueNotifier<File?> selectedBadgeFile, // NEW
+    ValueNotifier<File?> selectedCoverFile, // for cover image
   ) {
     final storageService = ref.watch(storageServiceProvider);
-    final selectedImageFile = useState<File?>(null);
-
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
@@ -640,27 +835,41 @@ class CreateCommunityScreen extends HookConsumerWidget {
                 overlay.insert(overlayEntry);
                 try {
                   String? finalCoverImageUrl = coverImage.value;
-                  if (selectedImageFile.value != null) {
+                  String? finalBadgeIconUrl = badgeIcon.value;
+                  if (selectedCoverFile.value != null) {
                     final tempCommunityId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
                     final uploadedUrl = await storageService.uploadCommunityCoverImage(
                       communityId: tempCommunityId,
-                      imageFile: selectedImageFile.value!,
+                      imageFile: selectedCoverFile.value!,
                     );
                     finalCoverImageUrl = uploadedUrl ?? finalCoverImageUrl;
+                  }
+                  if (selectedBadgeFile.value != null) {
+                    final tempCommunityId = 'temp_${DateTime.now().millisecondsSinceEpoch}';
+                    final uploadedBadgeUrl = await storageService.uploadCommunityBadgeIcon(
+                      communityId: tempCommunityId,
+                      imageFile: selectedBadgeFile.value!,
+                    );
+                    finalBadgeIconUrl = uploadedBadgeUrl ?? finalBadgeIconUrl;
                   }
                   await ref.read(communityActionsProvider.notifier).createCommunity(
                     name: nameController.text.trim(),
                     description: descriptionController.text.trim(),
+                    welcomeMessage: welcomeMessageController.text.trim(), // NEW
                     coverImage: finalCoverImageUrl,
+                    badgeUrl: finalBadgeIconUrl, // NEW
                     visibility: visibility.value,
                     approvalRequired: approvalRequired.value,
                     isBusiness: isBusiness.value,
+                    joinQuestions: joinQuestions.value, // NEW
+                    rules: rules.value, // NEW
                     theme: {
                       'color': selectedColor.value,
                       'banner_url': finalCoverImageUrl ?? '',
                     },
                   );
                   overlayEntry.remove();
+                  if (!context.mounted) return;
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
@@ -676,6 +885,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
                   );
                 } catch (e) {
                   overlayEntry.remove();
+                  if (!context.mounted) return;
                   showDialog(
                     context: context,
                     builder: (context) => AlertDialog(
@@ -719,7 +929,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
     return Container(
       padding: const EdgeInsets.all(AppConstants.defaultPadding),
       decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surfaceVariant,
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
@@ -745,7 +955,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
                   'Customize theme and cover image',
                   style: TextStyle(
                     fontSize: 12,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                   ),
                 ),
               ],
@@ -775,7 +985,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
         Container(
           padding: const EdgeInsets.all(AppConstants.defaultPadding),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surfaceVariant,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
@@ -830,12 +1040,12 @@ class CreateCommunityScreen extends HookConsumerWidget {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: isEnabled ? Theme.of(context).colorScheme.secondary.withOpacity(0.1) : Theme.of(context).colorScheme.surfaceVariant,
+            color: isEnabled ? Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1) : Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(8),
           ),
           child: Icon(
             icon,
-            color: isEnabled ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+            color: isEnabled ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             size: 20,
           ),
         ),
@@ -848,14 +1058,14 @@ class CreateCommunityScreen extends HookConsumerWidget {
                 title,
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: isEnabled ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                  color: isEnabled ? Theme.of(context).colorScheme.onSurface : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
               ),
               Text(
                 description,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
               ),
             ],
@@ -864,7 +1074,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           decoration: BoxDecoration(
-            color: isEnabled ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.surfaceVariant,
+            color: isEnabled ? Theme.of(context).colorScheme.secondary : Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(12),
           ),
           child: Text(
@@ -872,11 +1082,355 @@ class CreateCommunityScreen extends HookConsumerWidget {
             style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.bold,
-              color: isEnabled ? Colors.white : Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: isEnabled ? Colors.white : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
             ),
           ),
         ),
       ],
+    );
+  }
+
+  // NEW: Badge/Icon upload section
+  Widget _buildBadgeIconSection(
+    BuildContext context,
+    ValueNotifier<String?> badgeIcon,
+    ValueNotifier<File?> selectedBadgeFile,
+    StorageService storageService,
+    ValueNotifier<bool> isLoading,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Community Icon/Logo',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Row(
+          children: [
+            if (badgeIcon.value != null && badgeIcon.value!.isNotEmpty)
+              CircleAvatar(
+                radius: 32,
+                backgroundImage: NetworkImage(badgeIcon.value!),
+              )
+            else if (selectedBadgeFile.value != null)
+              CircleAvatar(
+                radius: 32,
+                backgroundImage: FileImage(selectedBadgeFile.value!),
+              )
+            else
+              CircleAvatar(
+                radius: 32,
+                backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                child: Icon(Icons.image, size: 32, color: Theme.of(context).colorScheme.primary),
+              ),
+            const SizedBox(width: 16),
+            Flexible(
+              child: ElevatedButton.icon(
+                onPressed: isLoading.value
+                    ? null
+                    : () async {
+                        final picked = await storageService.pickImageFromGallery();
+                        if (picked != null) {
+                          selectedBadgeFile.value = picked;
+                          badgeIcon.value = null; // Will upload on create
+                        }
+                      },
+                icon: const Icon(Icons.photo_library),
+                label: const Text('Choose Icon'),
+              ),
+            ),
+            const SizedBox(width: 8),
+            Flexible(
+              child: ElevatedButton.icon(
+                onPressed: isLoading.value
+                    ? null
+                    : () async {
+                        final picked = await storageService.pickImageFromGallery();
+                        if (picked != null) {
+                          selectedBadgeFile.value = picked;
+                          badgeIcon.value = null; // Will upload on create
+                        }
+                      },
+                icon: const Icon(Icons.camera_alt),
+                label: const Text('Take Photo'),
+              ),
+            ),
+            if (selectedBadgeFile.value != null || (badgeIcon.value != null && badgeIcon.value!.isNotEmpty))
+              IconButton(
+                icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
+                onPressed: isLoading.value
+                    ? null
+                    : () {
+                        selectedBadgeFile.value = null;
+                        badgeIcon.value = null;
+                      },
+              ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Upload a square image for your community icon/logo. This will be shown in lists and headers.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+        ),
+      ],
+    );
+  }
+
+  // NEW: Join Questions section
+  Widget _buildJoinQuestionsSection(
+    BuildContext context,
+    ValueNotifier<List<String>> joinQuestions,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Join Questions',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Add questions that new members must answer when joining your community.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(AppConstants.defaultPadding),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              // Display existing questions
+              ...joinQuestions.value.asMap().entries.map((entry) {
+                final index = entry.key;
+                final question = entry.value;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: AppConstants.smallPadding),
+                  padding: const EdgeInsets.all(AppConstants.smallPadding),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '${index + 1}. $question',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
+                        onPressed: () {
+                          final newQuestions = List<String>.from(joinQuestions.value);
+                          newQuestions.removeAt(index);
+                          joinQuestions.value = newQuestions;
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              
+              // Add new question button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showAddQuestionDialog(context, joinQuestions),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Add Question'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Helper method to show add question dialog
+  void _showAddQuestionDialog(BuildContext context, ValueNotifier<List<String>> joinQuestions) {
+    final questionController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Join Question'),
+        content: TextField(
+          controller: questionController,
+          decoration: const InputDecoration(
+            hintText: 'Enter your question...',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final question = questionController.text.trim();
+              if (question.isNotEmpty) {
+                final newQuestions = List<String>.from(joinQuestions.value);
+                newQuestions.add(question);
+                joinQuestions.value = newQuestions;
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // NEW: Community Rules section
+  Widget _buildCommunityRulesSection(
+    BuildContext context,
+    ValueNotifier<List<String>> rules,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Community Rules',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Set guidelines that all members must follow in your community.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7)),
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(AppConstants.defaultPadding),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Column(
+            children: [
+              // Display existing rules
+              ...rules.value.asMap().entries.map((entry) {
+                final index = entry.key;
+                final rule = entry.value;
+                return Container(
+                  margin: const EdgeInsets.only(bottom: AppConstants.smallPadding),
+                  padding: const EdgeInsets.all(AppConstants.smallPadding),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.surface,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 24,
+                        height: 24,
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.error,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${index + 1}',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          rule,
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.delete, color: Theme.of(context).colorScheme.error),
+                        onPressed: () {
+                          final newRules = List<String>.from(rules.value);
+                          newRules.removeAt(index);
+                          rules.value = newRules;
+                        },
+                      ),
+                    ],
+                  ),
+                );
+              }),
+              
+              // Add new rule button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showAddRuleDialog(context, rules),
+                  icon: const Icon(Icons.gavel),
+                  label: const Text('Add Rule'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Helper method to show add rule dialog
+  void _showAddRuleDialog(BuildContext context, ValueNotifier<List<String>> rules) {
+    final ruleController = TextEditingController();
+    
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Add Community Rule'),
+        content: TextField(
+          controller: ruleController,
+          decoration: const InputDecoration(
+            hintText: 'Enter your rule/guideline...',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final rule = ruleController.text.trim();
+              if (rule.isNotEmpty) {
+                final newRules = List<String>.from(rules.value);
+                newRules.add(rule);
+                rules.value = newRules;
+                Navigator.pop(context);
+              }
+            },
+            child: const Text('Add'),
+          ),
+        ],
+      ),
     );
   }
 } 

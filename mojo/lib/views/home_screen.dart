@@ -117,8 +117,8 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
       ),
-      floatingActionButton: userRoleAsync.when(
-        data: (role) => role != 'anonymous'
+      floatingActionButton: ref.watch(canCreateCommunityProvider).when(
+        data: (canCreate) => canCreate
             ? FloatingActionButton(
                 onPressed: () {
                   NavigationService.navigateToCreateCommunity();
@@ -304,9 +304,41 @@ class HomeScreen extends ConsumerWidget {
                     const SizedBox(height: 16),
                     const Text('Join a community to see it here!', style: TextStyle(fontSize: 16, color: Colors.grey)),
                     const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: () => NavigationService.navigateToCreateCommunity(),
-                      child: const Text('Create Community'),
+                    ref.watch(canCreateCommunityProvider).when(
+                      data: (canCreate) => canCreate
+                          ? ElevatedButton(
+                              onPressed: () => NavigationService.navigateToCreateCommunity(),
+                              child: const Text('Create Community'),
+                            )
+                          : ElevatedButton(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Sign In Required'),
+                                    content: const Text(
+                                      'You need to sign in with your phone number to create communities.',
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () {
+                                          Navigator.of(context).pop();
+                                          NavigationService.navigateToPhoneAuth();
+                                        },
+                                        child: const Text('Sign In'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                              child: const Text('Sign In to Create'),
+                            ),
+                      loading: () => const SizedBox(),
+                      error: (_, __) => const SizedBox(),
                     ),
                   ],
                 ),

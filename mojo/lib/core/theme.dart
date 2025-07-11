@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'constants.dart';
 
 // Material 3 Design Tokens
 class AppColors {

@@ -5,7 +5,7 @@ import '../providers/chat_providers.dart';
 import '../providers/auth_providers.dart';
 import '../models/message_model.dart';
 import '../core/constants.dart';
-import '../core/theme.dart';
+
 import '../core/navigation_service.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/error_widget.dart';

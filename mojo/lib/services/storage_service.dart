@@ -161,6 +161,41 @@ class StorageService {
     }
   }
 
+  // Upload community badge/icon image
+  Future<String?> uploadCommunityBadgeIcon({
+    required String communityId,
+    required File imageFile,
+  }) async {
+    try {
+      _logger.i('Uploading community badge/icon for: $communityId');
+      final fileName = 'badge_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = _storage.ref()
+          .child('communities')
+          .child(communityId)
+          .child('badge')
+          .child(fileName);
+
+      final uploadTask = ref.putFile(
+        imageFile,
+        SettableMetadata(
+          contentType: 'image/jpeg',
+          customMetadata: {
+            'communityId': communityId,
+            'uploadedAt': DateTime.now().toIso8601String(),
+          },
+        ),
+      );
+
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      _logger.i('Badge/icon uploaded successfully: $downloadUrl');
+      return downloadUrl;
+    } catch (e) {
+      _logger.e('Error uploading badge/icon: $e');
+      return null;
+    }
+  }
+
   // Delete file from storage
   Future<void> deleteFile(String fileUrl) async {
     try {

@@ -6,6 +6,7 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import '../models/community_model.dart';
 import '../models/user_model.dart';
 import '../routes/app_routes.dart';
+import '../services/auth_service.dart';
 
 class NavigationService {
   static final material.GlobalKey<material.NavigatorState> navigatorKey = 
@@ -809,6 +810,27 @@ class NavigationService {
     }
   }
 
+  // NEW: Navigate to join requests review with logging and analytics
+  static Future<T?> navigateToJoinRequestsReview<T>(CommunityModel community) async {
+    try {
+      _logger.i('📋 Navigating to join requests review: ${community.id}');
+      await _trackNavigationEvent('join_requests_review', parameters: {
+        'navigation_type': 'navigate_to_join_requests_review',
+        'community_id': community.id,
+        'community_name': community.name,
+        'has_join_questions': community.hasJoinQuestions.toString(),
+        'approval_required': community.approvalRequired.toString(),
+      });
+      return await pushNamed<T>(AppRoutes.joinRequestsReview, arguments: community);
+    } catch (e) {
+      _logger.e('❌ Error navigating to join requests review: $e');
+      await _trackNavigationError('join_requests_review', e.toString(), parameters: {
+        'community_id': community.id,
+      });
+      return Future.value(null);
+    }
+  }
+
   // Navigate to home with role-based routing and logging/analytics
   static Future<T?> navigateToHome<T>({String? role}) async {
     try {
@@ -897,8 +919,51 @@ class NavigationService {
   static Future<T?> navigateToCreateCommunity<T>() async {
     try {
       _logger.i('➕ Navigating to create community');
+      
+      // Check user authentication and role
+      final authService = AuthService();
+      final userRole = await authService.getUserRole();
+      
+      if (userRole == 'anonymous') {
+        _logger.w('🚫 Anonymous user attempted to create community - access denied');
+        await _trackNavigationEvent('create_community_denied', parameters: {
+          'navigation_type': 'navigate_to_create_community',
+          'reason': 'anonymous_user',
+          'user_role': userRole,
+        });
+        
+        // Show access denied dialog
+        if (context != null) {
+          material.showDialog(
+            context: context!,
+            builder: (context) => material.AlertDialog(
+              title: const material.Text('Access Denied'),
+              content: const material.Text(
+                'Anonymous users cannot create communities. Please sign in with your phone number to continue.',
+              ),
+              actions: [
+                material.TextButton(
+                  onPressed: () => material.Navigator.of(context).pop(),
+                  child: const material.Text('Cancel'),
+                ),
+                material.TextButton(
+                  onPressed: () {
+                    material.Navigator.of(context).pop();
+                    navigateToPhoneAuth();
+                  },
+                  child: const material.Text('Sign In'),
+                ),
+              ],
+            ),
+          );
+        }
+        
+        return Future.value(null);
+      }
+      
       await _trackNavigationEvent('create_community', parameters: {
         'navigation_type': 'navigate_to_create_community',
+        'user_role': userRole,
       });
       return await pushNamed<T>(AppRoutes.createCommunity);
     } catch (e) {

@@ -6,10 +6,12 @@ import '../providers/community_providers.dart';
 import '../models/community_model.dart';
 import '../models/user_model.dart';
 import '../core/constants.dart';
-import '../core/theme.dart';
+
 import '../core/navigation_service.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/error_widget.dart';
+import '../widgets/join_questions_dialog.dart';
+import '../widgets/welcome_onboarding_dialog.dart';
 
 // Enhanced community provider with real-time updates
 final communityProvider = StreamProvider.family<CommunityModel?, String>((ref, communityId) {
@@ -90,6 +92,56 @@ class CommunityDetailsScreen extends ConsumerWidget {
     );
   }
 
+  // NEW: Check and show onboarding for existing members
+  void _checkAndShowOnboarding(BuildContext context, WidgetRef ref, CommunityModel community) {
+    final userAsync = ref.read(authNotifierProvider);
+    userAsync.when(
+      data: (user) {
+        if (user != null && community.isMember(user.id)) {
+          // Check if user has completed onboarding
+          ref.read(userOnboardingStatusProvider({
+            'communityId': community.id,
+            'userId': user.id,
+          })).when(
+            data: (hasCompleted) {
+              if (!hasCompleted) {
+                // Show onboarding for existing member who hasn't completed it
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  showDialog(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (context) => WelcomeOnboardingDialog(
+                      community: community,
+                      user: user,
+                      onComplete: () {
+                        // Mark onboarding as completed
+                        ref.read(communityActionsProvider.notifier).completeOnboarding(
+                          community.id,
+                          user.id,
+                        );
+                        // Show success message
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Welcome back! 🎉'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                });
+              }
+            },
+            loading: () => null,
+            error: (_, __) => null,
+          );
+        }
+      },
+      loading: () => null,
+      error: (_, __) => null,
+    );
+  }
+
   Widget _buildCommunityContent(
     BuildContext context,
     WidgetRef ref,
@@ -97,6 +149,11 @@ class CommunityDetailsScreen extends ConsumerWidget {
     AsyncValue<UserModel?> userAsync,
     AsyncValue<String> membershipAsync,
   ) {
+    // NEW: Check for onboarding on first load
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkAndShowOnboarding(context, ref, community);
+    });
+
     return DefaultTabController(
       length: _getTabCount(membershipAsync),
       child: Scaffold(
@@ -104,6 +161,10 @@ class CommunityDetailsScreen extends ConsumerWidget {
         body: Column(
           children: [
             _buildCommunityHeader(context, community),
+            // NEW: Rules display section
+            if (community.hasRules) _buildRulesSection(context, community),
+            // NEW: Welcome message display section
+            if (community.hasWelcomeMessage) _buildWelcomeMessageSection(context, community),
             _buildTabBar(context, membershipAsync),
             Expanded(
               child: _buildTabBarView(context, ref, community, membershipAsync),
@@ -111,6 +172,171 @@ class CommunityDetailsScreen extends ConsumerWidget {
           ],
         ),
         floatingActionButton: _buildFloatingActionButton(context, ref, community, membershipAsync),
+      ),
+    );
+  }
+
+  // NEW: Rules display section
+  Widget _buildRulesSection(BuildContext context, CommunityModel community) {
+    return Container(
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppConstants.defaultPadding,
+        vertical: AppConstants.smallPadding,
+      ),
+      padding: const EdgeInsets.all(AppConstants.defaultPadding),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.rule,
+                color: Theme.of(context).colorScheme.primary,
+                size: 20,
+              ),
+              const SizedBox(width: AppConstants.smallPadding),
+              Text(
+                'Community Rules',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  '${community.rules.length} rules',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppConstants.smallPadding),
+          ...community.rules.asMap().entries.map((entry) {
+            final index = entry.key;
+            final rule = entry.value;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppConstants.smallPadding),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '${index + 1}',
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppConstants.smallPadding),
+                  Expanded(
+                    child: Text(
+                      rule,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurface,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  // NEW: Welcome message display section
+  Widget _buildWelcomeMessageSection(BuildContext context, CommunityModel community) {
+    return Container(
+      margin: const EdgeInsets.symmetric(
+        horizontal: AppConstants.defaultPadding,
+        vertical: AppConstants.smallPadding,
+      ),
+      padding: const EdgeInsets.all(AppConstants.defaultPadding),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.waving_hand,
+                color: Theme.of(context).colorScheme.secondary,
+                size: 20,
+              ),
+              const SizedBox(width: AppConstants.smallPadding),
+              Text(
+                'Welcome Message',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+              ),
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  'From Admin',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.secondary,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppConstants.smallPadding),
+          Text(
+            community.welcomeMessage,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface,
+              height: 1.5,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -245,6 +471,22 @@ class CommunityDetailsScreen extends ConsumerWidget {
                           fontSize: 12,
                         ),
                       ),
+                      if (community.hasJoinQuestions) ...[
+                        const SizedBox(width: AppConstants.defaultPadding),
+                        Icon(
+                          Icons.question_answer,
+                          color: Colors.white70,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${community.joinQuestions.length} questions',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ],
@@ -542,6 +784,15 @@ class CommunityDetailsScreen extends ConsumerWidget {
                   Icons.people_outline,
                   () => _showMemberManagement(context, community),
                 ),
+                // NEW: Join Requests Review
+                if (community.approvalRequired || community.hasJoinQuestions)
+                  _buildAdminCard(
+                    context,
+                    'Join Requests',
+                    'Review pending join requests and answers',
+                    Icons.pending_actions,
+                    () => _showJoinRequestsReview(context, ref, community),
+                  ),
                 _buildAdminCard(
                   context,
                   'Community Settings',
@@ -602,10 +853,13 @@ class CommunityDetailsScreen extends ConsumerWidget {
           return FloatingActionButton.extended(
             onPressed: () => _joinCommunity(context, ref, community),
             backgroundColor: Theme.of(context).colorScheme.secondary,
-            icon: const Icon(Icons.add, color: Colors.white),
-            label: const Text(
-              'Join Community',
-              style: TextStyle(color: Colors.white),
+            icon: Icon(
+              community.hasJoinQuestions ? Icons.question_answer : Icons.add,
+              color: Colors.white,
+            ),
+            label: Text(
+              community.hasJoinQuestions ? 'Join & Answer' : 'Join Community',
+              style: const TextStyle(color: Colors.white),
             ),
           );
         }
@@ -728,7 +982,207 @@ class CommunityDetailsScreen extends ConsumerWidget {
   }
 
   void _joinCommunity(BuildContext context, WidgetRef ref, CommunityModel community) {
-    ref.read(communityActionsProvider.notifier).joinCommunity(community.id);
+    // Helper to show rules acknowledgment dialog
+    void showRulesDialog({required VoidCallback onAcknowledge}) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          bool acknowledged = false;
+          return StatefulBuilder(
+            builder: (context, setState) => AlertDialog(
+              title: Row(
+                children: [
+                  Icon(Icons.rule, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 8),
+                  const Text('Community Rules'),
+                ],
+              ),
+              content: SizedBox(
+                width: 350,
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ...community.rules.asMap().entries.map((entry) => Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('${entry.key + 1}. ', style: const TextStyle(fontWeight: FontWeight.bold)),
+                            Expanded(child: Text(entry.value)),
+                          ],
+                        ),
+                      )),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Checkbox(
+                            value: acknowledged,
+                            onChanged: (val) => setState(() => acknowledged = val ?? false),
+                          ),
+                          const Expanded(
+                            child: Text('I acknowledge and agree to these rules.'),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: acknowledged
+                      ? () async {
+                          Navigator.of(context).pop();
+                          await ref.read(communityActionsProvider.notifier).acknowledgeRules(
+                            community.id,
+                            community.rules,
+                          );
+                          onAcknowledge();
+                        }
+                      : null,
+                  child: const Text('Agree & Join'),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
+
+    // Helper to show onboarding dialog after successful join
+    void showOnboardingDialog() {
+      final userAsync = ref.read(authNotifierProvider);
+      userAsync.when(
+        data: (user) {
+          if (user != null) {
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (context) => WelcomeOnboardingDialog(
+                community: community,
+                user: user,
+                onComplete: () {
+                  // Mark onboarding as completed
+                  ref.read(communityActionsProvider.notifier).completeOnboarding(
+                    community.id,
+                    user.id,
+                  );
+                  // Show success message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Welcome to the community! 🎉'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+              ),
+            );
+          }
+        },
+        loading: () => null,
+        error: (_, __) => null,
+      );
+    }
+
+    // If community has join questions, show that first
+    if (community.hasJoinQuestions) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => JoinQuestionsDialog(
+          questions: community.joinQuestions,
+          onSubmit: (answers) async {
+            // After join questions, show rules dialog if needed
+            if (community.hasRules) {
+              showRulesDialog(onAcknowledge: () async {
+                try {
+                  await ref.read(communityActionsProvider.notifier).joinCommunityWithAnswers(
+                    community.id,
+                    answers,
+                  );
+                  if (context.mounted) {
+                    Navigator.of(context).pop(); // Close dialog
+                    showOnboardingDialog(); // Show onboarding after successful join
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    Navigator.of(context).pop(); // Close dialog
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed to join: ${e.toString()}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                }
+              });
+            } else {
+              // No rules, join directly
+              try {
+                await ref.read(communityActionsProvider.notifier).joinCommunityWithAnswers(
+                  community.id,
+                  answers,
+                );
+                if (context.mounted) {
+                  Navigator.of(context).pop(); // Close dialog
+                  showOnboardingDialog(); // Show onboarding after successful join
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  Navigator.of(context).pop(); // Close dialog
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to join: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            }
+          },
+          onCancel: () {
+            Navigator.of(context).pop(); // Close dialog
+          },
+        ),
+      );
+    } else if (community.hasRules) {
+      // No join questions, but has rules
+      showRulesDialog(onAcknowledge: () async {
+        try {
+          await ref.read(communityActionsProvider.notifier).joinCommunity(community.id);
+          if (context.mounted) {
+            showOnboardingDialog(); // Show onboarding after successful join
+          }
+        } catch (e) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to join: ${e.toString()}'),
+                backgroundColor: Colors.red,
+              ),
+            );
+          }
+        }
+      });
+    } else {
+      // Regular join without questions or rules
+      ref.read(communityActionsProvider.notifier).joinCommunity(community.id).then((_) {
+        showOnboardingDialog(); // Show onboarding after successful join
+      }).catchError((e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to join: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      });
+    }
   }
 
   void _showActionSheet(
@@ -805,6 +1259,10 @@ class CommunityDetailsScreen extends ConsumerWidget {
 
   void _showModeration(BuildContext context, CommunityModel community) {
     NavigationService.navigateToAdminManagement(community);
+  }
+
+  void _showJoinRequestsReview(BuildContext context, WidgetRef ref, CommunityModel community) {
+    NavigationService.navigateToJoinRequestsReview(community);
   }
 
   void _reportCommunity(BuildContext context, CommunityModel community) {

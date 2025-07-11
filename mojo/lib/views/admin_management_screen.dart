@@ -6,7 +6,7 @@ import '../models/user_model.dart';
 import '../providers/community_providers.dart';
 import '../providers/auth_providers.dart';
 import '../core/constants.dart';
-import '../core/theme.dart';
+
 import '../core/navigation_service.dart';
 
 class AdminManagementScreen extends HookConsumerWidget {
@@ -732,28 +732,51 @@ class AdminManagementScreen extends HookConsumerWidget {
         ),
         trailing: isAdmin
             ? null
-            : PopupMenuButton<String>(
-                onSelected: (value) => _handleMemberAction(context, ref, member.id, value, isLoading),
-                itemBuilder: (context) => [
-                  PopupMenuItem(
-                    value: 'ban',
-                    child: Row(
-                      children: [
-                        Icon(Icons.block, color: Theme.of(context).colorScheme.error),
-                        SizedBox(width: 8),
-                        Text('Ban User'),
-                      ],
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Join answers display (simple icon)
+                  if (community.hasJoinQuestions && member.joinAnswers != null && member.joinAnswers!.isNotEmpty)
+                    GestureDetector(
+                      onTap: () => _showJoinAnswersDialog(context, member),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Icon(
+                          Icons.question_answer,
+                          size: 16,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
                     ),
-                  ),
-                  PopupMenuItem(
-                    value: 'remove',
-                    child: Row(
-                      children: [
-                        Icon(Icons.person_remove, color: Theme.of(context).colorScheme.tertiary),
-                        SizedBox(width: 8),
-                        Text('Remove from Community'),
-                      ],
-                    ),
+                  const SizedBox(width: 8),
+                  PopupMenuButton<String>(
+                    onSelected: (value) => _handleMemberAction(context, ref, member.id, value, isLoading),
+                    itemBuilder: (context) => [
+                      PopupMenuItem(
+                        value: 'ban',
+                        child: Row(
+                          children: [
+                            Icon(Icons.block, color: Theme.of(context).colorScheme.error),
+                            SizedBox(width: 8),
+                            Text('Ban User'),
+                          ],
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'remove',
+                        child: Row(
+                          children: [
+                            Icon(Icons.person_remove, color: Theme.of(context).colorScheme.tertiary),
+                            SizedBox(width: 8),
+                            Text('Remove from Community'),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -1902,6 +1925,81 @@ class AdminManagementScreen extends HookConsumerWidget {
   void _viewModerationLog(BuildContext context) {
     NavigationService.showSnackBar(
       message: 'Moderation log coming soon!',
+    );
+  }
+
+  // NEW: Simple join answers display dialog
+  void _showJoinAnswersDialog(BuildContext context, UserModel member) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            Icon(Icons.question_answer, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Text('${member.displayName}\'s Join Answers'),
+          ],
+        ),
+        content: SizedBox(
+          width: 350,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Answers provided when joining:',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...community.joinQuestions.asMap().entries.map((entry) {
+                  final questionIndex = entry.key;
+                  final question = entry.value;
+                  final answers = member.joinAnswers[community.id] ?? [];
+                  final answer = questionIndex < answers.length ? answers[questionIndex] : 'No answer provided';
+                  
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Q${questionIndex + 1}: $question',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surfaceVariant,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            answer,
+                            style: Theme.of(context).textTheme.bodyMedium,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }).toList(),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
     );
   }
 } 
