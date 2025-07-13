@@ -25,55 +25,76 @@ class ProfileScreen extends HookConsumerWidget {
     final isEditing = useState(false);
     final isLoading = useState(false);
 
+    // Controllers for profile editing
+    TextEditingController? nameController;
+    TextEditingController? emailController;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profile'),
         backgroundColor: Theme.of(context).colorScheme.background,
         elevation: 0,
         actions: [
-          IconButton(
-            icon: Icon(isEditing.value ? Icons.save : Icons.edit),
-            onPressed: () {
-              if (isEditing.value) {
-                // Save changes
-                _saveProfileChanges(context, ref, isLoading);
+          currentUserAsync.when(
+            data: (user) {
+              if (user != null && user.role != 'anonymous') {
+                nameController ??= useTextEditingController(text: user.displayName ?? '');
+                emailController ??= useTextEditingController(text: user.email ?? '');
+                return IconButton(
+                  icon: Icon(isEditing.value ? Icons.save : Icons.edit),
+                  onPressed: () {
+                    if (isEditing.value) {
+                      _saveProfileChanges(context, ref, isLoading, nameController!, emailController!);
+                    }
+                    isEditing.value = !isEditing.value;
+                  },
+                );
               }
-              isEditing.value = !isEditing.value;
+              return const SizedBox.shrink();
             },
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
           ),
-          PopupMenuButton<String>(
-            onSelected: (value) {
-              switch (value) {
-                case 'settings':
-                  // Navigate to settings
-                  break;
-                case 'logout':
-                  _showLogoutDialog(context, ref);
-                  break;
-              }
-            },
-            itemBuilder: (context) => [
-              const PopupMenuItem(
-                value: 'settings',
-                child: Row(
-                  children: [
-                    Icon(Icons.settings),
-                    SizedBox(width: 8),
-                    Text('Settings'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'logout',
-                child: Row(
-                  children: [
-                    Icon(Icons.logout),
-                    SizedBox(width: 8),
-                    Text('Logout'),
-                  ],
-                ),
-              ),
-            ],
+          // Only show menu for non-anonymous users
+          currentUserAsync.when(
+            data: (user) => user != null && user.role != 'anonymous'
+                ? PopupMenuButton<String>(
+                    onSelected: (value) {
+                      switch (value) {
+                        case 'settings':
+                          // Navigate to settings
+                          break;
+                        case 'logout':
+                          _showLogoutDialog(context, ref);
+                          break;
+                      }
+                    },
+                    itemBuilder: (context) => [
+                      const PopupMenuItem(
+                        value: 'settings',
+                        child: Row(
+                          children: [
+                            Icon(Icons.settings),
+                            SizedBox(width: 8),
+                            Text('Settings'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'logout',
+                        child: Row(
+                          children: [
+                            Icon(Icons.logout),
+                            SizedBox(width: 8),
+                            Text('Logout'),
+                          ],
+                        ),
+                      ),
+                    ],
+                  )
+                : const SizedBox.shrink(),
+            loading: () => const SizedBox.shrink(),
+            error: (_, __) => const SizedBox.shrink(),
           ),
         ],
       ),
@@ -84,27 +105,41 @@ class ProfileScreen extends HookConsumerWidget {
               child: Text('User not found'),
             );
           }
-          
+          if (user.role == 'anonymous') {
+            // Show a sign-in prompt for guests
+            return Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Text('Sign up to create your profile and join communities!'),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () {
+                      NavigationService.navigateToPhoneAuth();
+                    },
+                    child: const Text('Sign Up / Sign In'),
+                  ),
+                ],
+              ),
+            );
+          }
           return SingleChildScrollView(
             padding: const EdgeInsets.all(AppConstants.defaultPadding),
             child: Column(
               children: [
                 // Profile Header
-                _buildProfileHeader(context, user, isEditing),
+                _buildProfileHeader(context, user, isEditing, nameController!, emailController!),
                 const SizedBox(height: AppConstants.largePadding),
-                
                 // User Stats
                 _buildUserStats(context, user),
                 const SizedBox(height: AppConstants.largePadding),
-                
                 // My Communities
                 _buildMyCommunities(context, userCommunitiesAsync),
                 const SizedBox(height: AppConstants.largePadding),
-                
                 // Owned Communities
-                _buildOwnedCommunities(context, ownedCommunitiesAsync),
+                if (user.role != 'anonymous')
+                  _buildOwnedCommunities(context, ownedCommunitiesAsync),
                 const SizedBox(height: AppConstants.largePadding),
-                
                 // Account Settings
                 _buildAccountSettings(context, user),
               ],
@@ -121,7 +156,13 @@ class ProfileScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildProfileHeader(BuildContext context, UserModel user, ValueNotifier<bool> isEditing) {
+  Widget _buildProfileHeader(
+    BuildContext context,
+    UserModel user,
+    ValueNotifier<bool> isEditing,
+    TextEditingController nameController,
+    TextEditingController emailController,
+  ) {
     return Container(
       padding: const EdgeInsets.all(AppConstants.largePadding),
       decoration: BoxDecoration(
@@ -193,12 +234,33 @@ class ProfileScreen extends HookConsumerWidget {
             ),
           ),
           const SizedBox(height: AppConstants.defaultPadding),
-          
           // User Info
           if (isEditing.value) ...[
-            _buildEditableName(context, user),
+            TextField(
+              controller: nameController,
+              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                hintText: 'Enter your name',
+              ),
+            ),
             const SizedBox(height: AppConstants.smallPadding),
-            _buildEditableEmail(context, user),
+            TextField(
+              controller: emailController,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+              ),
+              textAlign: TextAlign.center,
+              decoration: const InputDecoration(
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
+                hintText: 'Enter email address',
+              ),
+            ),
           ] else ...[
             Text(
               user.displayName ?? '',
@@ -214,9 +276,7 @@ class ProfileScreen extends HookConsumerWidget {
               ),
             ),
           ],
-          
           const SizedBox(height: AppConstants.defaultPadding),
-          
           // Role Badge
           Container(
             padding: const EdgeInsets.symmetric(
@@ -241,39 +301,6 @@ class ProfileScreen extends HookConsumerWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildEditableName(BuildContext context, UserModel user) {
-    final nameController = useTextEditingController(text: user.displayName ?? '');
-    
-    return TextField(
-      controller: nameController,
-      style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-        fontWeight: FontWeight.bold,
-      ),
-      textAlign: TextAlign.center,
-      decoration: const InputDecoration(
-        border: InputBorder.none,
-        contentPadding: EdgeInsets.zero,
-      ),
-    );
-  }
-
-  Widget _buildEditableEmail(BuildContext context, UserModel user) {
-    final emailController = useTextEditingController(text: user.email ?? '');
-    
-    return TextField(
-      controller: emailController,
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-      ),
-      textAlign: TextAlign.center,
-      decoration: const InputDecoration(
-        border: InputBorder.none,
-        contentPadding: EdgeInsets.zero,
-        hintText: 'Enter email address',
       ),
     );
   }
@@ -690,13 +717,21 @@ class ProfileScreen extends HookConsumerWidget {
     );
   }
 
-  void _saveProfileChanges(BuildContext context, WidgetRef ref, ValueNotifier<bool> isLoading) async {
+  void _saveProfileChanges(
+    BuildContext context,
+    WidgetRef ref,
+    ValueNotifier<bool> isLoading,
+    TextEditingController nameController,
+    TextEditingController emailController,
+  ) async {
     isLoading.value = true;
-    
+    final currentUser = ref.read(authNotifierProvider).value;
+    if (currentUser == null) return;
     try {
-      // TODO: Implement profile update
-      await Future.delayed(const Duration(seconds: 1)); // Simulate API call
-      
+      await ref.read(authNotifierProvider.notifier).updateProfile(
+        displayName: nameController.text.trim(),
+        email: emailController.text.trim(),
+      );
       NavigationService.showSnackBar(
         message: 'Profile updated successfully!',
         backgroundColor: Theme.of(context).colorScheme.tertiary,

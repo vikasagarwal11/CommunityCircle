@@ -92,8 +92,14 @@ final searchCommunitiesProvider = StreamProvider.family<List<CommunityModel>, Co
   final isBusiness = params.isBusiness;
   final limit = params.limit;
 
-  if (query.isEmpty) return Stream.value([]);
-
+  if (query.isEmpty) {
+    // Show all public communities, sorted by member count
+    return communityService.getPublicCommunities(limit: 100).map((communities) {
+      final sorted = [...communities];
+      sorted.sort((a, b) => (b.memberCount ?? 0).compareTo(a.memberCount ?? 0));
+      return sorted;
+    });
+  }
   return communityService.searchCommunities(
     query: query,
     category: category,
@@ -154,7 +160,7 @@ class CommunityActionsNotifier extends StateNotifier<AsyncValue<void>> {
 
   CommunityActionsNotifier(this._communityService, this._ref) : super(const AsyncValue.data(null));
 
-  Future<void> createCommunity({
+  Future<CommunityModel?> createCommunity({
     required String name,
     required String description,
     String? coverImage,
@@ -170,7 +176,7 @@ class CommunityActionsNotifier extends StateNotifier<AsyncValue<void>> {
     state = const AsyncValue.loading();
     
     try {
-      await _communityService.createCommunity(
+      final createdCommunity = await _communityService.createCommunity(
         name: name,
         description: description,
         coverImage: coverImage,
@@ -190,8 +196,11 @@ class CommunityActionsNotifier extends StateNotifier<AsyncValue<void>> {
       _ref.invalidate(publicCommunitiesProvider);
       _ref.invalidate(userCommunitiesProvider);
       _ref.invalidate(ownedCommunitiesProvider);
+      
+      return createdCommunity;
     } catch (e) {
       state = AsyncValue.error(e, StackTrace.current);
+      return null;
     }
   }
 

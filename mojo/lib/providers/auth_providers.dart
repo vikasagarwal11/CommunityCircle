@@ -137,6 +137,16 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
       state = const AsyncValue.data(null);
       _ref.read(phoneNumberProvider.notifier).state = '';
       _ref.read(verificationIdProvider.notifier).state = null;
+      // Invalidate all user-dependent providers to cancel Firestore listeners
+      _ref.invalidate(messagesProvider);
+      _ref.invalidate(threadMessagesProvider);
+      _ref.invalidate(typingUsersProvider);
+      _ref.invalidate(unreadCountProvider);
+      _ref.invalidate(messageSearchProvider);
+      _ref.invalidate(messageStatsProvider);
+      _ref.invalidate(communityMessagesProvider);
+      _ref.invalidate(pendingJoinRequestsProvider);
+      // Add more invalidations here if you add more user-dependent providers
     } catch (e) {
       _ref.read(authErrorProvider.notifier).state = e.toString();
     }

@@ -114,7 +114,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
             borderSide: BorderSide.none,
           ),
           filled: true,
-          fillColor: Theme.of(context).colorScheme.surfaceVariant,
+          fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
         ),
         onChanged: (value) {
           _updateSearchQuery(value);
@@ -135,7 +135,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
         color: Theme.of(context).colorScheme.background,
         border: Border(
           bottom: BorderSide(
-            color: Theme.of(context).colorScheme.surfaceVariant,
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
             width: 1,
           ),
         ),
@@ -195,7 +195,7 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
           vertical: 8,
         ),
         decoration: BoxDecoration(
-          color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceVariant,
+          color: isSelected ? Theme.of(context).colorScheme.primary : Theme.of(context).colorScheme.surfaceContainerHighest,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Text(
@@ -212,16 +212,11 @@ class _SearchScreenState extends ConsumerState<SearchScreen> {
   }
 
   Widget _buildSearchResults(AsyncValue<List<CommunityModel>> searchResultsAsync) {
-    if (_currentQuery.isEmpty) {
-      return _buildEmptyState();
-    }
-
     return searchResultsAsync.when(
       data: (communities) {
         if (communities.isEmpty) {
-          return _buildNoResults();
+          return _currentQuery.isEmpty ? _buildEmptyState() : _buildNoResults();
         }
-        
         return ListView.builder(
           padding: const EdgeInsets.all(AppConstants.defaultPadding),
           itemCount: communities.length,

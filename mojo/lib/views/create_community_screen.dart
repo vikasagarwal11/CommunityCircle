@@ -852,7 +852,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
                     );
                     finalBadgeIconUrl = uploadedBadgeUrl ?? finalBadgeIconUrl;
                   }
-                  await ref.read(communityActionsProvider.notifier).createCommunity(
+                  final createdCommunity = await ref.read(communityActionsProvider.notifier).createCommunity(
                     name: nameController.text.trim(),
                     description: descriptionController.text.trim(),
                     welcomeMessage: welcomeMessageController.text.trim(), // NEW
@@ -870,15 +870,48 @@ class CreateCommunityScreen extends HookConsumerWidget {
                   );
                   overlayEntry.remove();
                   if (!context.mounted) return;
+                  
+                  // Show success dialog and navigate to community
                   showDialog(
                     context: context,
+                    barrierDismissible: false,
                     builder: (context) => AlertDialog(
-                      title: const Text('Success'),
-                      content: const Text('Community created successfully!'),
+                      title: Row(
+                        children: [
+                          const Icon(Icons.celebration, color: Colors.orange),
+                          const SizedBox(width: 8),
+                          const Text('🎉 Success!'),
+                        ],
+                      ),
+                      content: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Your community has been created successfully!'),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Name: ${createdCommunity?.name ?? 'Unknown'}',
+                            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          const Text('You\'ll be redirected to your community page where you can start inviting members and creating content.'),
+                        ],
+                      ),
                       actions: [
                         TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('OK'),
+                          onPressed: () {
+                            Navigator.pop(context); // Close dialog
+                            // Navigate to the newly created community
+                            if (createdCommunity != null) {
+                              NavigationService.navigateToCommunityDetails(createdCommunity.id);
+                            } else {
+                              // Fallback: go back to home
+                              Navigator.pop(context);
+                            }
+                          },
+                          child: const Text('View Community'),
                         ),
                       ],
                     ),

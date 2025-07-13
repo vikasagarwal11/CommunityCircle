@@ -30,10 +30,11 @@ class PhoneAuthScreen extends HookConsumerWidget {
     // Listen to auth state changes
     ref.listen(authNotifierProvider, (previous, next) {
       next.whenData((user) {
-        if (user != null) {
-          // Navigate to home screen when authenticated
+        if (user != null && user.role != 'anonymous') {
+          // Navigate to home screen when authenticated (not guest)
           NavigationService.navigateToHome(role: user.role);
         }
+        // For anonymous users, do not navigate; AuthWrapper will show PublicHomeScreen
       });
     });
 
@@ -57,6 +58,12 @@ class PhoneAuthScreen extends HookConsumerWidget {
         title: const Text('Phone Authentication'),
         backgroundColor: Theme.of(context).colorScheme.primary,
         foregroundColor: Colors.white,
+        leading: BackButton(
+          onPressed: () {
+            ref.read(authLoadingProvider.notifier).state = false;
+            Navigator.of(context).maybePop();
+          },
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppConstants.defaultPadding),
@@ -199,6 +206,7 @@ class PhoneAuthScreen extends HookConsumerWidget {
                   isOtpSent.value = false;
                   otpController.clear();
                   ref.read(authErrorProvider.notifier).state = null;
+                  ref.read(authLoadingProvider.notifier).state = false;
                 },
                 child: const Text('Change Phone Number'),
               ),

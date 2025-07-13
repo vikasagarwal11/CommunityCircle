@@ -31,10 +31,14 @@ android {
         applicationId = "com.example.mojo"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = 23 //flutter.minSdkVersion
+        minSdk = 23 //flutter.minSdkVersion - Supports Android 6.0+ (API 23)
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // Multi-screen support
+        resConfigs("en", "es", "fr", "de", "hi", "ar") // Supported languages
+        vectorDrawables.useSupportLibrary = true // Vector drawable support
     }
 
     buildTypes {

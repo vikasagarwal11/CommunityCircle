@@ -181,20 +181,22 @@ class AuthService {
     String? profilePictureUrl,
   }) async {
     try {
+      _logger.d('updateProfile called with userId: $userId, displayName: $displayName, email: $email, profilePictureUrl: $profilePictureUrl');
       Map<String, dynamic> updates = {};
       if (displayName != null) updates['displayName'] = displayName;
       if (email != null) updates['email'] = email;
       if (profilePictureUrl != null) updates['profilePictureUrl'] = profilePictureUrl;
 
+      _logger.d('Attempting Firestore update for user $userId with: $updates');
       await _firestore
           .collection(AppConstants.usersCollection)
           .doc(userId)
           .update(updates);
 
-      _logger.i('Profile updated successfully');
-    } catch (e) {
-      _logger.e('Error updating profile: $e');
-      throw Exception('Failed to update profile');
+      _logger.i('Profile updated successfully for user $userId');
+    } catch (e, stack) {
+      _logger.e('Error updating profile for user $userId: $e\n$stack');
+      throw Exception('Failed to update profile: $e');
     }
   }
 

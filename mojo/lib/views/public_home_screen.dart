@@ -5,6 +5,8 @@ import '../core/constants.dart';
 import '../core/theme.dart';
 import '../core/navigation_service.dart';
 import '../models/community_model.dart';
+import '../providers/auth_providers.dart';
+import '../models/user_model.dart';
 
 class PublicHomeScreen extends ConsumerWidget {
   const PublicHomeScreen({super.key});
@@ -12,6 +14,7 @@ class PublicHomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final publicCommunitiesAsync = ref.watch(publicCommunitiesProvider(const CommunityQueryParams(limit: 6)));
+    final userAsync = ref.watch(authNotifierProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -38,29 +41,119 @@ class PublicHomeScreen extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            // Only show profile card for authenticated, non-anonymous users
+            userAsync.when(
+              data: (user) {
+                if (user != null && user.role != 'anonymous') {
+                  return _buildProfileCard(context, user);
+                }
+                return const SizedBox.shrink();
+              },
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+            ),
             // Hero Section
             _buildHeroSection(context),
             const SizedBox(height: AppConstants.largePadding),
-            
             // Features Section
             _buildFeaturesSection(context),
             const SizedBox(height: AppConstants.largePadding),
-            
             // Public Communities Preview
             _buildPublicCommunitiesPreview(context, publicCommunitiesAsync),
             const SizedBox(height: AppConstants.largePadding),
-            
-            // Call to Action
-            _buildCallToAction(context),
+            // Add events placeholder
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.symmetric(vertical: 12),
+              padding: const EdgeInsets.all(AppConstants.largePadding),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                ),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.event, size: 40, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Upcoming Public Events',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Stay tuned! Exciting public events will appear here soon.',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
       ),
     );
   }
 
+  Widget _buildProfileCard(BuildContext context, UserModel user) {
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.defaultPadding),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(30),
+            ),
+            child: Center(
+              child: Text(
+                (user.displayName != null && user.displayName!.isNotEmpty)
+                  ? user.displayName!.substring(0, 1).toUpperCase()
+                  : '?',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: AppConstants.defaultPadding),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                user.displayName ?? 'User',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              if (user.email != null && user.email!.isNotEmpty)
+                Text(
+                  user.email!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                  ),
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeroSection(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(AppConstants.largePadding),
+      padding: const EdgeInsets.symmetric(horizontal: AppConstants.defaultPadding, vertical: AppConstants.defaultPadding),
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -73,54 +166,58 @@ class PublicHomeScreen extends ConsumerWidget {
         borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(20),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(50),
+              borderRadius: BorderRadius.circular(32),
             ),
             child: Icon(
               Icons.people,
-              size: 60,
+              size: 36,
               color: Theme.of(context).colorScheme.primary,
             ),
           ),
-          const SizedBox(height: AppConstants.defaultPadding),
+          const SizedBox(height: 8),
           Text(
             'Join the MOJO Community',
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
               color: Theme.of(context).colorScheme.onSurface,
             ),
             textAlign: TextAlign.center,
           ),
-          const SizedBox(height: AppConstants.smallPadding),
+          const SizedBox(height: 4),
           Text(
             'Discover amazing communities, connect with like-minded people, and create meaningful experiences together.',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
             ),
             textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: AppConstants.defaultPadding),
+          const SizedBox(height: 8),
           SizedBox(
-            width: double.infinity,
+            width: 160,
+            height: 36,
             child: ElevatedButton(
               onPressed: () {
                 NavigationService.navigateToPhoneAuth();
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: Theme.of(context).colorScheme.primary,
-                padding: const EdgeInsets.symmetric(vertical: 16),
+                padding: EdgeInsets.zero,
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
               ),
               child: const Text(
                 'Get Started',
                 style: TextStyle(
-                  fontSize: 18,
+                  fontSize: 14,
                   fontWeight: FontWeight.bold,
                   color: Colors.white,
                 ),
@@ -345,24 +442,6 @@ class PublicHomeScreen extends ConsumerWidget {
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              const Spacer(),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: Text(
-                                  'Sign up to join',
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.bold,
-                                    color: Theme.of(context).colorScheme.primary,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
                             ],
                           ),
                         ),
@@ -423,21 +502,6 @@ class PublicHomeScreen extends ConsumerWidget {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () {
-                      NavigationService.navigateToPhoneAuth();
-                    },
-                    icon: const Icon(Icons.login, size: 18),
-                    label: const Text('Sign Up'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
                   child: OutlinedButton.icon(
                     onPressed: () {
                       NavigationService.navigateToPhoneAuth();
@@ -492,27 +556,6 @@ class PublicHomeScreen extends ConsumerWidget {
           const SizedBox(height: AppConstants.defaultPadding),
           Row(
             children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: () {
-                    NavigationService.navigateToPhoneAuth();
-                  },
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'Sign Up',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: AppConstants.smallPadding),
               Expanded(
                 child: ElevatedButton(
                   onPressed: () {

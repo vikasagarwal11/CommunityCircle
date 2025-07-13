@@ -772,14 +772,11 @@ class NavigationService {
       await _trackNavigationEvent('community_details', parameters: {
         'navigation_type': 'navigate_to_community_details',
         'community_id': communityId,
-        'has_community_data': community != null,
+        'has_community_data': (community != null).toString(), // Fix: must be string
       });
       
       if (community != null) {
-        return await pushNamed<T>(AppRoutes.communityDetails, arguments: {
-          'communityId': communityId,
-          'community': community.toMap(),
-        });
+        return await pushNamed<T>(AppRoutes.communityDetails, arguments: communityId); // Pass only ID
       }
       return await pushNamed<T>(AppRoutes.communityDetails, arguments: communityId);
     } catch (e) {
@@ -876,7 +873,7 @@ class NavigationService {
       _logger.i('👤 Navigating to profile');
       await _trackNavigationEvent('profile', parameters: {
         'navigation_type': 'navigate_to_profile',
-        'has_user_data': user != null,
+        'has_user_data': (user != null).toString(), // Fix: must be string
       });
       
       if (user != null) {
@@ -899,7 +896,7 @@ class NavigationService {
       await _trackNavigationEvent('chat', parameters: {
         'navigation_type': 'navigate_to_chat',
         'community_id': communityId,
-        'has_channel_id': channelId != null,
+        'has_channel_id': (channelId != null).toString(), // Fix: must be string
       });
       
       return await pushNamed<T>(AppRoutes.chat, arguments: {

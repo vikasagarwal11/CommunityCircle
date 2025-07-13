@@ -197,7 +197,15 @@ class AppRoutes {
           builder: (_) => ProfileScreen(userId: userId),
         );
       case chat:
-        final communityId = settings.arguments as String?;
+        final args = settings.arguments;
+        String? communityId;
+        
+        if (args is String) {
+          communityId = args;
+        } else if (args is Map<String, dynamic>) {
+          communityId = args['communityId'] as String?;
+        }
+        
         if (communityId == null) {
           return MaterialPageRoute(
             builder: (_) => const Scaffold(
@@ -208,7 +216,7 @@ class AppRoutes {
           );
         }
         return MaterialPageRoute(
-          builder: (_) => ChatScreen(communityId: communityId),
+          builder: (_) => ChatScreen(communityId: communityId!),
         );
       case adminManagement:
         final args = settings.arguments;

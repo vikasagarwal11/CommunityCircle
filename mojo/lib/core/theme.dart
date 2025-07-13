@@ -120,6 +120,7 @@ class AppTheme {
       onSurfaceVariant: AppColors.onSurfaceVariant,
       background: AppColors.background,
       onBackground: AppColors.onBackground,
+      surfaceContainerHighest: AppColors.surfaceVariant,
     ),
     
     // Typography

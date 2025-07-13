@@ -9,6 +9,8 @@ import '../core/constants.dart';
 import '../core/navigation_service.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/error_widget.dart';
+import '../widgets/animated_reaction_button.dart';
+import '../widgets/reaction_picker.dart';
 import 'dart:async';
 import '../providers/database_providers.dart';
 
@@ -151,7 +153,7 @@ class ChatScreen extends HookConsumerWidget {
                     final message = messages[index];
                     final isOwnMessage = userAsync.value?.id == message.userId;
                     
-                    return _buildMessageTile(
+                    return _buildMessageWithReactions(
                       context,
                       message,
                       isOwnMessage,
@@ -161,9 +163,69 @@ class ChatScreen extends HookConsumerWidget {
                 );
               },
               loading: () => const LoadingWidget(),
-              error: (error, stack) => CustomErrorWidget(
-                message: 'Error loading messages: $error',
-              ),
+              error: (error, stack) {
+                final errorMsg = error.toString();
+                if (errorMsg.contains('permission-denied')) {
+                  final colorScheme = Theme.of(context).colorScheme;
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 0),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: colorScheme.error.withOpacity(0.12),
+                              shape: BoxShape.circle,
+                            ),
+                            padding: const EdgeInsets.all(24),
+                            child: Icon(Icons.lock, color: colorScheme.error, size: 48),
+                          ),
+                          const SizedBox(height: 32),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
+                            decoration: BoxDecoration(
+                              color: colorScheme.error.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(24),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: colorScheme.error.withOpacity(0.06),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              children: [
+                                Text(
+                                  'You do not have permission to view messages in this community.',
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    color: colorScheme.error,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'Please ensure you have joined and been approved.',
+                                  textAlign: TextAlign.center,
+                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: colorScheme.error.withOpacity(0.85),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+                return CustomErrorWidget(
+                  message: 'Error loading messages: $error',
+                );
+              },
             ),
           ),
           
@@ -200,14 +262,15 @@ class ChatScreen extends HookConsumerWidget {
             error: (_, __) => const SizedBox(),
           ),
           
-          // Chat input
-          _buildChatInput(
-            context,
-            messageController,
-            isTyping,
-            showEmojiPicker,
-            ref,
-          ),
+          // Only show input if not permission denied
+          if (!(messagesAsync.hasError && messagesAsync.error.toString().contains('permission-denied')))
+            _buildChatInput(
+              context,
+              messageController,
+              isTyping,
+              showEmojiPicker,
+              ref,
+            ),
         ],
       ),
     );
@@ -373,29 +436,22 @@ class ChatScreen extends HookConsumerWidget {
                         Wrap(
                           spacing: 4,
                           children: message.reactions.entries.map((entry) {
-                            return Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 6,
-                                vertical: 2,
-                              ),
-                              decoration: BoxDecoration(
-                                color: colorScheme.onSurface.withOpacity(0.1),
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Text(entry.key),
-                                  const SizedBox(width: 2),
-                                  Text(
-                                    '${entry.value.length}',
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: colorScheme.onSurface.withOpacity(0.7),
-                                    ),
-                                  ),
-                                ],
-                              ),
+                            final emoji = entry.key;
+                            final count = entry.value.length;
+                            final userAsync = ref.watch(authNotifierProvider);
+                            final isSelected = userAsync.when(
+                              data: (user) => user != null && entry.value.contains(user.id),
+                              loading: () => false,
+                              error: (_, __) => false,
+                            );
+                            
+                            return AnimatedReactionButton(
+                              emoji: emoji,
+                              count: count,
+                              isSelected: isSelected,
+                              onTap: () {
+                                _handleReactionTap(context, ref, message, emoji);
+                              },
                             );
                           }).toList(),
                         ),
@@ -728,5 +784,82 @@ class ChatScreen extends HookConsumerWidget {
     } else {
       return 'now';
     }
+  }
+
+  // Handle reaction tap
+  void _handleReactionTap(BuildContext context, WidgetRef ref, MessageModel message, String emoji) {
+    final userAsync = ref.read(authNotifierProvider);
+    userAsync.when(
+      data: (user) {
+        if (user == null) return;
+        
+        final chatNotifier = ref.read(chatNotifierProvider.notifier);
+        final hasReaction = message.reactions[emoji]?.contains(user.id) ?? false;
+        
+        if (hasReaction) {
+          // Remove reaction
+          chatNotifier.removeReaction(
+            messageId: message.id,
+            emoji: emoji,
+          );
+        } else {
+          // Add reaction
+          chatNotifier.addReaction(
+            messageId: message.id,
+            emoji: emoji,
+          );
+        }
+      },
+      loading: () => null,
+      error: (_, __) => null,
+    );
+  }
+
+  // Show reaction picker
+  void _showReactionPicker(BuildContext context, WidgetRef ref, MessageModel message) {
+    final userAsync = ref.read(authNotifierProvider);
+    userAsync.when(
+      data: (user) {
+        if (user == null) return;
+        
+        showDialog(
+          context: context,
+          barrierDismissible: true,
+          builder: (context) => Dialog(
+            backgroundColor: Colors.transparent,
+            child: ReactionPicker(
+              onReactionSelected: (emoji) {
+                final chatNotifier = ref.read(chatNotifierProvider.notifier);
+                chatNotifier.addReaction(
+                  messageId: message.id,
+                  emoji: emoji,
+                );
+              },
+              onClose: () {
+                Navigator.of(context).pop();
+              },
+              selectedReaction: null, // TODO: Get user's current reaction
+            ),
+          ),
+        );
+      },
+      loading: () => null,
+      error: (_, __) => null,
+    );
+  }
+
+  // Add long press gesture to message for reaction picker
+  Widget _buildMessageWithReactions(
+    BuildContext context,
+    MessageModel message,
+    bool isOwnMessage,
+    WidgetRef ref,
+  ) {
+    return GestureDetector(
+      onLongPress: () {
+        _showReactionPicker(context, ref, message);
+      },
+      child: _buildMessageTile(context, message, isOwnMessage, ref),
+    );
   }
 } 
