@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:logger/logger.dart';
 import '../models/user_model.dart';
 import '../models/community_model.dart';
@@ -414,7 +415,7 @@ class DatabaseService {
         final data = operation['data'] as Map<String, dynamic>;
         final action = operation['action'] as String;
 
-        final docRef = _firestore.collection(collection).doc(docId);
+        final docRef = _firestore.collection(collection).doc(docId ?? '');
         
         switch (action) {
           case 'set':
@@ -447,6 +448,75 @@ class DatabaseService {
     } catch (e) {
       _logger.e('Error in transaction: $e');
       rethrow;
+    }
+  }
+
+  // FCM Token Management
+  Future<void> updateUserFCMToken(String userId, String? token) async {
+    try {
+      _logger.d('Updating FCM token for user: $userId');
+      await _users.doc(userId).update({
+        'fcmToken': token,
+        'lastTokenUpdate': FieldValue.serverTimestamp(),
+      });
+      _logger.i('FCM token updated successfully for user: $userId');
+    } catch (e) {
+      _logger.e('Error updating FCM token: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<String>> getFCMTokensForUsers(List<String> userIds) async {
+    try {
+      _logger.d('Fetching FCM tokens for ${userIds.length} users');
+      final query = await _users
+          .where(FieldPath.documentId, whereIn: userIds)
+          .where('fcmToken', isNotEqualTo: null)
+          .get();
+      
+      final tokens = query.docs
+          .map((doc) => (doc.data() as Map<String, dynamic>)['fcmToken'] as String?)
+          .where((token) => token != null && token.isNotEmpty)
+          .cast<String>()
+          .toList();
+      
+      _logger.i('Fetched ${tokens.length} FCM tokens');
+      return tokens;
+    } catch (e) {
+      _logger.e('Error fetching FCM tokens: $e');
+      rethrow;
+    }
+  }
+
+  Future<List<String>> getFCMTokensForCommunityMembers(String communityId) async {
+    try {
+      _logger.d('Fetching FCM tokens for community members: $communityId');
+      final community = await getCommunity(communityId);
+      if (community == null) {
+        _logger.w('Community not found: $communityId');
+        return [];
+      }
+
+      final tokens = await getFCMTokensForUsers(community.members);
+      _logger.i('Fetched ${tokens.length} FCM tokens for community members');
+      return tokens;
+    } catch (e) {
+      _logger.e('Error fetching FCM tokens for community members: $e');
+      rethrow;
+    }
+  }
+
+  // Get current user (helper method for notification service)
+  Future<UserModel?> getCurrentUser() async {
+    try {
+      final auth = FirebaseAuth.instance;
+      if (auth.currentUser != null) {
+        return await getUser(auth.currentUser!.uid);
+      }
+      return null;
+    } catch (e) {
+      _logger.e('Error getting current user: $e');
+      return null;
     }
   }
 } 

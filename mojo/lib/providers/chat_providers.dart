@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/chat_service.dart';
 import '../models/message_model.dart';
 import '../providers/auth_providers.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 // Chat service provider
 final chatServiceProvider = Provider<ChatService>((ref) {
@@ -269,4 +270,63 @@ final chatSettingsProvider = StateProvider<Map<String, dynamic>>((ref) => {
   'showReadReceipts': true,
   'messageSound': true,
   'vibration': true,
+}); 
+
+// Paginated messages notifier for infinite scroll
+class PaginatedMessagesNotifier extends StateNotifier<AsyncValue<List<MessageModel>>> {
+  final ChatService _chatService;
+  final String communityId;
+  final int pageSize;
+
+  List<MessageModel> _messages = [];
+  DocumentSnapshot? _lastDoc;
+  bool _hasMore = true;
+  bool _isLoading = false;
+
+  PaginatedMessagesNotifier(this._chatService, this.communityId, {this.pageSize = 20})
+      : super(const AsyncValue.loading()) {
+    loadInitialMessages();
+  }
+
+  List<MessageModel> get messages => _messages;
+  bool get hasMore => _hasMore;
+  bool get isLoading => _isLoading;
+
+  Future<void> loadInitialMessages() async {
+    state = const AsyncValue.loading();
+    _messages = [];
+    _lastDoc = null;
+    _hasMore = true;
+    await loadMoreMessages();
+  }
+
+  Future<void> loadMoreMessages() async {
+    if (!_hasMore || _isLoading) return;
+    _isLoading = true;
+    try {
+      final docs = await _chatService.fetchMessagesPage(
+        communityId: communityId,
+        limit: pageSize,
+        startAfterDoc: _lastDoc,
+      );
+      if (docs.isNotEmpty) {
+        _lastDoc = docs.last;
+        final newMessages = docs.map((doc) => MessageModel.fromMap(doc.data(), doc.id)).toList();
+        _messages.addAll(newMessages);
+        state = AsyncValue.data(List.from(_messages));
+        if (docs.length < pageSize) _hasMore = false;
+      } else {
+        _hasMore = false;
+        state = AsyncValue.data(List.from(_messages));
+      }
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+    _isLoading = false;
+  }
+}
+
+final paginatedMessagesProvider = StateNotifierProvider.family<PaginatedMessagesNotifier, AsyncValue<List<MessageModel>>, String>((ref, communityId) {
+  final chatService = ref.watch(chatServiceProvider);
+  return PaginatedMessagesNotifier(chatService, communityId);
 }); 

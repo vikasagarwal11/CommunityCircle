@@ -9,6 +9,7 @@ import '../core/navigation_service.dart';
 import '../models/community_model.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/error_widget.dart';
+import 'notification_test_widget.dart';
 
 // User role provider for role-based UI
 final userRoleProvider = FutureProvider<String>((ref) async {
@@ -116,6 +117,9 @@ class HomeScreen extends ConsumerWidget {
                     loading: () => const SizedBox(),
                     error: (_, __) => const SizedBox(),
                   ),
+                  const SizedBox(height: AppConstants.defaultPadding),
+                  // Notification Test Widget (temporary for testing)
+                  const NotificationTestWidget(),
                 ],
               ),
             );

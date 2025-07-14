@@ -750,6 +750,25 @@ class NavigationService {
     }
   }
 
+  // Generic navigation method for dynamic routes
+  static Future<T?> navigateTo<T>(String route, {Object? arguments}) async {
+    try {
+      _logger.i('🧭 Navigating to: $route');
+      await _trackNavigationEvent('dynamic_navigation', parameters: {
+        'navigation_type': 'navigate_to',
+        'route': route,
+        'has_arguments': (arguments != null).toString(),
+      });
+      return await pushNamed<T>(route, arguments: arguments);
+    } catch (e) {
+      _logger.e('❌ Error navigating to $route: $e');
+      await _trackNavigationError('dynamic_navigation', e.toString(), parameters: {
+        'route': route,
+      });
+      return Future.value(null);
+    }
+  }
+
   // Navigate to phone auth with logging and analytics
   static Future<T?> navigateToPhoneAuth<T>() async {
     try {

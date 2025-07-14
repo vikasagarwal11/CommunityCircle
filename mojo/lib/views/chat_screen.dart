@@ -14,6 +14,24 @@ import '../widgets/reaction_picker.dart';
 import 'dart:async';
 import '../providers/database_providers.dart';
 
+// Debounce utility (modular, reusable)
+class Debouncer {
+  final int milliseconds;
+  VoidCallback? action;
+  Timer? _timer;
+
+  Debouncer({required this.milliseconds});
+
+  void run(VoidCallback action) {
+    _timer?.cancel();
+    _timer = Timer(Duration(milliseconds: milliseconds), action);
+  }
+
+  void dispose() {
+    _timer?.cancel();
+  }
+}
+
 class ChatScreen extends HookConsumerWidget {
   final String communityId;
   
@@ -24,7 +42,8 @@ class ChatScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final messagesAsync = ref.watch(messagesProvider(communityId));
+    final paginatedMessagesAsync = ref.watch(paginatedMessagesProvider(communityId));
+    final paginatedNotifier = ref.read(paginatedMessagesProvider(communityId).notifier);
     final communityAsync = ref.watch(communityProvider(communityId));
     final typingUsersAsync = ref.watch(typingUsersProvider(communityId));
     final userAsync = ref.watch(authNotifierProvider);
@@ -37,9 +56,26 @@ class ChatScreen extends HookConsumerWidget {
     final replyToMessage = ref.watch(replyToMessageProvider);
     final selectedMessage = ref.watch(selectedMessageProvider);
 
-    // Auto-scroll to bottom when new messages arrive
+    // Debouncer for typing indicator
+    final debouncer = useMemoized(() => Debouncer(milliseconds: 500));
+    useEffect(() => debouncer.dispose, []);
+
+    // Infinite scroll: load more messages when scrolled to top
     useEffect(() {
-      if (messagesAsync.hasValue && messagesAsync.value!.isNotEmpty) {
+      void onScroll() {
+        if (scrollController.position.pixels >= scrollController.position.maxScrollExtent - 100 &&
+            paginatedNotifier.hasMore &&
+            !paginatedNotifier.isLoading) {
+          paginatedNotifier.loadMoreMessages();
+        }
+      }
+      scrollController.addListener(onScroll);
+      return () => scrollController.removeListener(onScroll);
+    }, [scrollController, paginatedNotifier]);
+
+    // Auto-scroll to bottom when new messages arrive (only on initial load or new message sent)
+    useEffect(() {
+      if (paginatedMessagesAsync.hasValue && paginatedMessagesAsync.value!.isNotEmpty) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (scrollController.hasClients) {
             scrollController.animateTo(
@@ -51,24 +87,22 @@ class ChatScreen extends HookConsumerWidget {
         });
       }
       return null;
-    }, [messagesAsync]);
+    }, [paginatedMessagesAsync]);
 
-    // Handle typing indicator
+    // Handle typing indicator (auto-clear after 3 seconds)
     useEffect(() {
       if (isTyping.value) {
-        chatNotifier.setTypingIndicator(
+        ref.read(chatNotifierProvider.notifier).setTypingIndicator(
           communityId: communityId,
           isTyping: true,
         );
-        
         final timer = Timer(const Duration(seconds: 3), () {
           isTyping.value = false;
-          chatNotifier.setTypingIndicator(
+          ref.read(chatNotifierProvider.notifier).setTypingIndicator(
             communityId: communityId,
             isTyping: false,
           );
         });
-        
         return timer.cancel;
       }
       return null;
@@ -138,7 +172,7 @@ class ChatScreen extends HookConsumerWidget {
           
           // Messages list
           Expanded(
-            child: messagesAsync.when(
+            child: paginatedMessagesAsync.when(
               data: (messages) {
                 if (messages.isEmpty) {
                   return _buildEmptyState(context);
@@ -148,8 +182,14 @@ class ChatScreen extends HookConsumerWidget {
                   controller: scrollController,
                   reverse: true,
                   padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                  itemCount: messages.length,
+                  itemCount: messages.length + (paginatedNotifier.hasMore ? 1 : 0),
                   itemBuilder: (context, index) {
+                    if (index == messages.length && paginatedNotifier.hasMore) {
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16.0),
+                        child: Center(child: CircularProgressIndicator()),
+                      );
+                    }
                     final message = messages[index];
                     final isOwnMessage = userAsync.value?.id == message.userId;
                     
@@ -163,69 +203,9 @@ class ChatScreen extends HookConsumerWidget {
                 );
               },
               loading: () => const LoadingWidget(),
-              error: (error, stack) {
-                final errorMsg = error.toString();
-                if (errorMsg.contains('permission-denied')) {
-                  final colorScheme = Theme.of(context).colorScheme;
-                  return Center(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 0),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: colorScheme.error.withOpacity(0.12),
-                              shape: BoxShape.circle,
-                            ),
-                            padding: const EdgeInsets.all(24),
-                            child: Icon(Icons.lock, color: colorScheme.error, size: 48),
-                          ),
-                          const SizedBox(height: 32),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                            decoration: BoxDecoration(
-                              color: colorScheme.error.withOpacity(0.08),
-                              borderRadius: BorderRadius.circular(24),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: colorScheme.error.withOpacity(0.06),
-                                  blurRadius: 12,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              children: [
-                                Text(
-                                  'You do not have permission to view messages in this community.',
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                    color: colorScheme.error,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  'Please ensure you have joined and been approved.',
-                                  textAlign: TextAlign.center,
-                                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                                    color: colorScheme.error.withOpacity(0.85),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  );
-                }
-                return CustomErrorWidget(
-                  message: 'Error loading messages: $error',
-                );
-              },
+              error: (error, _) => CustomErrorWidget(
+                message: 'Error loading messages: $error',
+              ),
             ),
           ),
           
@@ -263,13 +243,14 @@ class ChatScreen extends HookConsumerWidget {
           ),
           
           // Only show input if not permission denied
-          if (!(messagesAsync.hasError && messagesAsync.error.toString().contains('permission-denied')))
+          if (!(paginatedMessagesAsync.hasError && paginatedMessagesAsync.error.toString().contains('permission-denied')))
             _buildChatInput(
               context,
               messageController,
               isTyping,
               showEmojiPicker,
               ref,
+              debouncer,
             ),
         ],
       ),
@@ -574,6 +555,7 @@ class ChatScreen extends HookConsumerWidget {
     ValueNotifier<bool> isTyping,
     ValueNotifier<bool> showEmojiPicker,
     WidgetRef ref,
+    Debouncer debouncer,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
     return Container(
@@ -601,7 +583,13 @@ class ChatScreen extends HookConsumerWidget {
             child: TextField(
               controller: controller,
               onChanged: (value) {
-                isTyping.value = value.isNotEmpty;
+                if (value.isNotEmpty) {
+                  debouncer.run(() {
+                    isTyping.value = true;
+                  });
+                } else {
+                  isTyping.value = false;
+                }
               },
               decoration: InputDecoration(
                 hintText: 'Type a message...',

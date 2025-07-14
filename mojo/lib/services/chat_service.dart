@@ -343,4 +343,24 @@ class ChatService {
       _logger.e('Error setting typing indicator: $e');
     }
   }
+
+  // Paginated fetch for messages in a community (for infinite scroll)
+  Future<List<QueryDocumentSnapshot<Map<String, dynamic>>>> fetchMessagesPage({
+    required String communityId,
+    int limit = 20,
+    DocumentSnapshot? startAfterDoc,
+  }) async {
+    Query<Map<String, dynamic>> query = _firestore
+        .collection(AppConstants.messagesCollection)
+        .where('communityId', isEqualTo: communityId)
+        .orderBy('timestamp', descending: true)
+        .limit(limit);
+
+    if (startAfterDoc != null) {
+      query = query.startAfterDocument(startAfterDoc);
+    }
+
+    final snapshot = await query.get();
+    return snapshot.docs;
+  }
 } 

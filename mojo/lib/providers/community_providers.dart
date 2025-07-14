@@ -96,7 +96,7 @@ final searchCommunitiesProvider = StreamProvider.family<List<CommunityModel>, Co
     // Show all public communities, sorted by member count
     return communityService.getPublicCommunities(limit: 100).map((communities) {
       final sorted = [...communities];
-      sorted.sort((a, b) => (b.memberCount ?? 0).compareTo(a.memberCount ?? 0));
+      sorted.sort((a, b) => b.memberCount.compareTo(a.memberCount));
       return sorted;
     });
   }

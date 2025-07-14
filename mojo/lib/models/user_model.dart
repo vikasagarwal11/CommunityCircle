@@ -19,6 +19,8 @@ class UserModel {
   final Map<String, dynamic>? businessProfile; // For business users
   final List<String> badges; // Achievement badges
   int totalPoints; // Gamification points
+  final String? fcmToken; // FCM token for push notifications
+  final DateTime? lastTokenUpdate; // When FCM token was last updated
   final Map<String, dynamic>? metadata;
 
   UserModel({
@@ -40,6 +42,8 @@ class UserModel {
     this.businessProfile,
     this.badges = const [],
     this.totalPoints = 0,
+    this.fcmToken,
+    this.lastTokenUpdate,
     this.metadata,
   });
 
@@ -69,6 +73,10 @@ class UserModel {
       businessProfile: map['businessProfile'],
       badges: List<String>.from(map['badges'] ?? []),
       totalPoints: map['totalPoints'] ?? 0,
+      fcmToken: map['fcmToken'],
+      lastTokenUpdate: map['lastTokenUpdate'] != null 
+          ? (map['lastTokenUpdate'] as Timestamp).toDate() 
+          : null,
       metadata: map['metadata'],
     );
   }
@@ -93,6 +101,8 @@ class UserModel {
       'businessProfile': businessProfile,
       'badges': badges,
       'totalPoints': totalPoints,
+      'fcmToken': fcmToken,
+      'lastTokenUpdate': lastTokenUpdate,
       'metadata': metadata,
     };
   }
@@ -116,6 +126,8 @@ class UserModel {
     Map<String, dynamic>? businessProfile,
     List<String>? badges,
     int? totalPoints,
+    String? fcmToken,
+    DateTime? lastTokenUpdate,
     Map<String, dynamic>? metadata,
   }) {
     return UserModel(
@@ -137,6 +149,8 @@ class UserModel {
       businessProfile: businessProfile ?? this.businessProfile,
       badges: badges ?? this.badges,
       totalPoints: totalPoints ?? this.totalPoints,
+      fcmToken: fcmToken ?? this.fcmToken,
+      lastTokenUpdate: lastTokenUpdate ?? this.lastTokenUpdate,
       metadata: metadata ?? this.metadata,
     );
   }
