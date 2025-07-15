@@ -1,8 +1,10 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Users collection - allow authenticated users to read for search functionality
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
     }
     match /communities/{community_id} {
       allow read: if resource.data.visibility == "public" || request.auth.uid in resource.data.members;
@@ -54,13 +56,42 @@ service cloud.firestore {
     match /messages/{message_id} {
       allow read, write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/communities/$(resource.data.community_id)).data.members && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != "anonymous";
     }
-    match /private_chats/{chat_id} {
-      allow read: if request.auth != null && (request.auth.uid in resource.data.user_ids || request.auth.uid == get(/databases/$(database)/documents/communities/$(resource.data.community_id)).data.admin_uid);
-      allow write: if request.auth != null && request.auth.uid in resource.data.user_ids && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != "anonymous";
-      match /messages/{message_id} {
-        allow read: if request.auth != null && (request.auth.uid in get(/databases/$(database)/documents/private_chats/$(chat_id)).data.user_ids || request.auth.uid == get(/databases/$(database)/documents/communities/$(get(/databases/$(database)/documents/private_chats/$(chat_id)).data.community_id)).data.admin_uid);
-        allow write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/private_chats/$(chat_id)).data.user_ids && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != "anonymous";
+    // Personal chats collection (1:1 messaging)
+    match /personal_chats/{chatDocId} {
+      function isParticipant() {
+        // Split the chatDocId to get the participant UIDs
+        let uids = chatDocId.split('_');
+        return request.auth.uid == uids[0] || request.auth.uid == uids[1];
       }
+
+      // Allow read and write if the authenticated user is a participant in the chat
+      allow read, write: if request.auth != null && isParticipant();
+
+      // Messages subcollection
+      match /messages/{messageId} {
+        function isChatParticipant() {
+          let uids = chatDocId.split('_');
+          return request.auth.uid == uids[0] || request.auth.uid == uids[1];
+        }
+        allow read: if request.auth != null && isChatParticipant();
+        allow create: if request.auth != null && isChatParticipant() && request.resource.data.senderId == request.auth.uid;
+        allow update, delete: if request.auth != null && isChatParticipant() && request.auth.uid == resource.data.senderId;
+      }
+      
+      // Typing indicators subcollection
+      match /typing/{userId} {
+        function isChatParticipant() {
+          let uids = chatDocId.split('_');
+          return request.auth.uid == uids[0] || request.auth.uid == uids[1];
+        }
+        allow read, write: if request.auth != null && isChatParticipant();
+      }
+    }
+    
+    // Allow listing personal_chats collection for authenticated users
+    // This is needed for the personalChatsProvider to work
+    match /personal_chats/{chatDocId} {
+      allow list: if request.auth != null;
     }
     match /reports/{report_id} {
       allow read, write: if request.auth != null && (request.auth.uid == get(/databases/$(database)/documents/communities/$(resource.data.community_id)).data.admin_uid || request.auth.uid == resource.data.user_id);

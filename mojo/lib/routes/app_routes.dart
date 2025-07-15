@@ -9,6 +9,8 @@ import '../views/public_home_screen.dart';
 import '../views/create_community_screen.dart';
 import '../views/profile_screen.dart';
 import '../views/chat_screen.dart';
+import '../views/personal_chat_screen.dart';
+import '../views/message_search_screen.dart';
 import '../views/admin_management_screen.dart';
 import '../views/join_requests_review_screen.dart';
 import '../models/community_model.dart';
@@ -36,6 +38,8 @@ class AppRoutes {
   
   // Chat routes
   static const String chat = '/chat';
+  static const String personalChat = '/personal-chat';
+  static const String messageSearch = '/message-search';
   
   // Event routes
   static const String eventDetails = '/event-details';
@@ -217,6 +221,50 @@ class AppRoutes {
         }
         return MaterialPageRoute(
           builder: (_) => ChatScreen(communityId: communityId!),
+        );
+      case personalChat:
+        final args = settings.arguments;
+        String? otherUserId;
+        
+        if (args is String) {
+          otherUserId = args;
+        } else if (args is Map<String, dynamic>) {
+          otherUserId = args['otherUserId'] as String?;
+        }
+        
+        if (otherUserId == null) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(
+                child: Text('User ID is required'),
+              ),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => PersonalChatScreen(otherUserId: otherUserId!),
+        );
+      case messageSearch:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final chatId = args?['chatId'] as String?;
+        final otherUserId = args?['otherUserId'] as String?;
+        final otherUserName = args?['otherUserName'] as String?;
+        
+        if (chatId == null || otherUserId == null || otherUserName == null) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(
+                child: Text('Missing required parameters'),
+              ),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => MessageSearchScreen(
+            chatId: chatId,
+            otherUserId: otherUserId,
+            otherUserName: otherUserName,
+          ),
         );
       case adminManagement:
         final args = settings.arguments;

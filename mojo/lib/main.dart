@@ -11,6 +11,9 @@ import 'routes/app_routes.dart';
 import 'views/phone_auth_screen.dart';
 import 'views/home_screen.dart';
 import 'views/public_home_screen.dart';
+import 'views/profile_screen.dart';
+import 'views/challenge_hub_screen.dart';
+import 'views/chat_hub_screen.dart';
 
 /*void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -88,10 +91,10 @@ class _MainScaffoldState extends State<MainScaffold> {
 
   static final List<Widget> _screens = <Widget>[
     HomeScreen(),
-    _SimplePlaceholder(icon: Icons.chat, label: 'Chats'),
+    ChatHubScreen(),
     _SimplePlaceholder(icon: Icons.event, label: 'Events'),
-    _SimplePlaceholder(icon: Icons.emoji_events, label: 'Challenges'),
-    _SimplePlaceholder(icon: Icons.person, label: 'Profile'),
+    ChallengeHubScreen(), // Use the real Challenge Hub here
+    ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -116,8 +119,8 @@ class _MainScaffoldState extends State<MainScaffold> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.chat),
-            label: 'Chats',
+            icon: Icon(Icons.message),
+            label: 'Messages',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.event),

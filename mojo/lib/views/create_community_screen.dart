@@ -160,6 +160,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
     final selectedCoverFile = useState<File?>(null); // for cover image
     final joinQuestions = useState<List<String>>([]); // NEW: join questions
     final rules = useState<List<String>>([]); // NEW: community rules
+    final tags = useState<List<String>>([]); // NEW: community tags
 
     final formValidation = ref.watch(communityFormValidationProvider);
     final isFormValid = ref.watch(communityFormIsValidProvider);
@@ -186,6 +187,9 @@ class CreateCommunityScreen extends HookConsumerWidget {
               _buildNameField(context, nameController, formValidation, ref),
               const SizedBox(height: 16),
               _buildDescriptionField(context, descriptionController, formValidation, ref),
+              const SizedBox(height: 16),
+              // NEW: Tags field
+              _buildTagsField(context, tags),
               const SizedBox(height: 16),
               // NEW: Welcome Message field
               _buildWelcomeMessageField(context, welcomeMessageController),
@@ -234,12 +238,68 @@ class CreateCommunityScreen extends HookConsumerWidget {
           badgeIcon, // NEW
           joinQuestions, // NEW
           rules, // NEW
+          tags, // NEW
           isFormValid,
           isLoading,
           selectedBadgeFile,
           selectedCoverFile,
         ),
       ),
+    );
+  }
+
+  // NEW: Tags field
+  Widget _buildTagsField(BuildContext context, ValueNotifier<List<String>> tags) {
+    final tagController = useTextEditingController();
+    
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Tags',
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: AppConstants.smallPadding),
+        Text(
+          'Add tags to help people discover your community. Separate tags with commas.',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+          ),
+        ),
+        const SizedBox(height: AppConstants.smallPadding),
+        TextField(
+          controller: tagController,
+          decoration: InputDecoration(
+            hintText: 'e.g., technology, mobile, development',
+            prefixIcon: const Icon(Icons.tag),
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onSubmitted: (value) {
+            if (value.trim().isNotEmpty) {
+              final newTags = value.split(',').map((tag) => tag.trim()).where((tag) => tag.isNotEmpty).toList();
+              tags.value = [...tags.value, ...newTags];
+              tagController.clear();
+            }
+          },
+        ),
+        if (tags.value.isNotEmpty) ...[
+          const SizedBox(height: AppConstants.smallPadding),
+          Wrap(
+            spacing: 8,
+            children: tags.value.map((tag) => Chip(
+              label: Text(tag),
+              deleteIcon: const Icon(Icons.close, size: 16),
+              onDeleted: () {
+                tags.value = tags.value.where((t) => t != tag).toList();
+              },
+            )).toList(),
+          ),
+        ],
+      ],
     );
   }
 
@@ -809,6 +869,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
     ValueNotifier<String?> badgeIcon, // NEW
     ValueNotifier<List<String>> joinQuestions, // NEW
     ValueNotifier<List<String>> rules, // NEW
+    ValueNotifier<List<String>> tags, // NEW
     bool isFormValid,
     ValueNotifier<bool> isLoading,
     ValueNotifier<File?> selectedBadgeFile, // NEW
@@ -863,6 +924,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
                     isBusiness: isBusiness.value,
                     joinQuestions: joinQuestions.value, // NEW
                     rules: rules.value, // NEW
+                    tags: tags.value, // NEW
                     theme: {
                       'color': selectedColor.value,
                       'banner_url': finalCoverImageUrl ?? '',

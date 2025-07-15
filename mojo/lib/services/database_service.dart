@@ -8,6 +8,7 @@ import '../models/message_model.dart';
 import '../models/moment_model.dart';
 import '../models/poll_model.dart';
 import '../models/challenge_model.dart';
+import '../core/constants.dart';
 
 class DatabaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -518,5 +519,36 @@ class DatabaseService {
       _logger.e('Error getting current user: $e');
       return null;
     }
+  }
+
+  // Get community members
+  Stream<List<UserModel>> getCommunityMembers(String communityId) {
+    return _firestore
+        .collection(AppConstants.communitiesCollection)
+        .doc(communityId)
+        .snapshots()
+        .asyncMap((communityDoc) async {
+          if (!communityDoc.exists) return <UserModel>[];
+          
+          final communityData = communityDoc.data()!;
+          final memberIds = List<String>.from(communityData['members'] ?? []);
+          
+          if (memberIds.isEmpty) return <UserModel>[];
+          
+          // Fetch all member user documents
+          final userDocs = await Future.wait(
+            memberIds.map((userId) => _firestore
+                .collection(AppConstants.usersCollection)
+                .doc(userId)
+                .get())
+          );
+          
+          final users = userDocs
+              .where((doc) => doc.exists)
+              .map((doc) => UserModel.fromMap(doc.data()!))
+              .toList();
+          
+          return users;
+        });
   }
 } 

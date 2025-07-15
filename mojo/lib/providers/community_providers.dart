@@ -171,6 +171,7 @@ class CommunityActionsNotifier extends StateNotifier<AsyncValue<void>> {
     List<String>? joinQuestions,
     List<String>? rules,
     String? welcomeMessage, // NEW: Custom welcome message
+    List<String>? tags, // NEW: Community tags
     Map<String, String>? theme,
   }) async {
     state = const AsyncValue.loading();
@@ -187,6 +188,7 @@ class CommunityActionsNotifier extends StateNotifier<AsyncValue<void>> {
         joinQuestions: joinQuestions,
         rules: rules,
         welcomeMessage: welcomeMessage, // NEW
+        tags: tags, // NEW
         theme: theme,
       );
       

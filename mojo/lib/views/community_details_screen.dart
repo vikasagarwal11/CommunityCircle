@@ -554,11 +554,11 @@ class CommunityDetailsScreen extends ConsumerWidget {
     {bool forTabs = true}
   ) {
     final tabs = <Widget>[
-      const Tab(text: 'Chat', icon: Icon(Icons.chat_bubble_outline)),
+      const Tab(text: 'Overview', icon: Icon(Icons.info_outline)),
       const Tab(text: 'Events', icon: Icon(Icons.event_outlined)),
     ];
     final views = <Widget>[
-      _buildChatTab(context, ref, community),
+      _buildOverviewTab(context, ref, community),
       _buildEventsTab(context, ref, community),
     ];
     membershipAsync.when(
@@ -625,94 +625,108 @@ class CommunityDetailsScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildChatTab(BuildContext context, WidgetRef ref, CommunityModel community) {
+  Widget _buildOverviewTab(BuildContext context, WidgetRef ref, CommunityModel community) {
     return Container(
       padding: const EdgeInsets.all(AppConstants.defaultPadding),
       child: Column(
         children: [
-          // Chat header
-          Container(
-            padding: const EdgeInsets.all(AppConstants.smallPadding),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.chat_bubble_outline, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: AppConstants.smallPadding),
-                Text(
-                  'Community Chat',
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.bold,
+          // Community info card
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppConstants.defaultPadding),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Theme.of(context).colorScheme.primary),
+                      const SizedBox(width: AppConstants.smallPadding),
+                      Text(
+                        'About',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const Spacer(),
-                Text(
-                  '${community.members.length} members',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface,
+                  const SizedBox(height: AppConstants.defaultPadding),
+                  Text(
+                    community.description,
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                ),
-              ],
+                  const SizedBox(height: AppConstants.defaultPadding),
+                  // Tags
+                  if (community.tags.isNotEmpty) ...[
+                    Text(
+                      'Tags:',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: AppConstants.smallPadding),
+                    Wrap(
+                      spacing: AppConstants.smallPadding,
+                      children: community.tags.map((tag) => Chip(
+                        label: Text(tag),
+                        backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                        labelStyle: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      )).toList(),
+                    ),
+                  ],
+                ],
+              ),
             ),
           ),
           const SizedBox(height: AppConstants.defaultPadding),
-          // Chat messages placeholder
-          Expanded(
-            child: Center(
+          // Quick actions
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(AppConstants.defaultPadding),
               child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(50),
-                    ),
-                    child: Icon(
-                      Icons.chat_bubble_outline,
-                      size: 60,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                  const SizedBox(height: AppConstants.largePadding),
                   Text(
-                    'Join the conversation!',
-                    style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
+                    'Quick Actions',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const SizedBox(height: AppConstants.smallPadding),
-                  Text(
-                    'Connect with ${community.members.length} members',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppConstants.largePadding),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        NavigationService.navigateToChat(community.id);
-                      },
-                      icon: const Icon(Icons.chat_bubble_outline),
-                      label: const Text('Open Chat'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(
-                          vertical: AppConstants.defaultPadding,
+                  const SizedBox(height: AppConstants.defaultPadding),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: ElevatedButton.icon(
+                          onPressed: () {
+                            NavigationService.navigateToChat(community.id);
+                          },
+                          icon: const Icon(Icons.chat_bubble_outline),
+                          label: const Text('Open Chat'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            foregroundColor: Colors.white,
+                          ),
                         ),
                       ),
-                    ),
+                      const SizedBox(width: AppConstants.defaultPadding),
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () {
+                            // TODO: Navigate to events
+                            NavigationService.showSnackBar(message: 'Events coming soon!');
+                          },
+                          icon: const Icon(Icons.event_outlined),
+                          label: const Text('Events'),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
             ),
           ),
+          const Spacer(),
         ],
       ),
     );

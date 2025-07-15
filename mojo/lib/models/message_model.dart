@@ -11,6 +11,7 @@ class MessageModel {
   final DateTime timestamp;
   final Map<String, List<String>> reactions; // emoji -> [userId1, userId2, ...]
   final List<String> mentions; // userIds mentioned with @
+  final List<String> readBy; // userIds who have read the message
   final Map<String, dynamic>? metadata;
 
   MessageModel({
@@ -24,6 +25,7 @@ class MessageModel {
     required this.timestamp,
     required this.reactions,
     required this.mentions,
+    required this.readBy,
     this.metadata,
   });
 
@@ -41,6 +43,7 @@ class MessageModel {
             (key, value) => MapEntry(key, List<String>.from(value)),
           ) ?? {},
       mentions: List<String>.from(map['mentions'] ?? []),
+      readBy: List<String>.from(map['readBy'] ?? []),
       metadata: map['metadata'],
     );
   }
@@ -56,6 +59,7 @@ class MessageModel {
       'timestamp': timestamp,
       'reactions': reactions,
       'mentions': mentions,
+      'readBy': readBy,
       'metadata': metadata,
     };
   }
@@ -71,6 +75,7 @@ class MessageModel {
     DateTime? timestamp,
     Map<String, List<String>>? reactions,
     List<String>? mentions,
+    List<String>? readBy,
     Map<String, dynamic>? metadata,
   }) {
     return MessageModel(
@@ -84,6 +89,7 @@ class MessageModel {
       timestamp: timestamp ?? this.timestamp,
       reactions: reactions ?? this.reactions,
       mentions: mentions ?? this.mentions,
+      readBy: readBy ?? this.readBy,
       metadata: metadata ?? this.metadata,
     );
   }
@@ -93,8 +99,10 @@ class MessageModel {
   bool get isThreadReply => threadId != null;
   bool get hasReactions => reactions.isNotEmpty;
   bool get hasMentions => mentions.isNotEmpty;
+  bool get hasReadReceipts => readBy.isNotEmpty;
   int get reactionCount => reactions.values.fold(0, (sum, users) => sum + users.length);
   int get mentionCount => mentions.length;
+  int get readCount => readBy.length;
 
   // Reaction helpers
   bool hasReaction(String emoji, String userId) {
@@ -119,6 +127,21 @@ class MessageModel {
 
   int getReactionCount(String emoji) {
     return reactions[emoji]?.length ?? 0;
+  }
+
+  // Read receipt helpers
+  bool isReadBy(String userId) {
+    return readBy.contains(userId);
+  }
+
+  void markAsRead(String userId) {
+    if (!readBy.contains(userId)) {
+      readBy.add(userId);
+    }
+  }
+
+  List<String> getUnreadBy(List<String> communityMembers) {
+    return communityMembers.where((memberId) => !readBy.contains(memberId)).toList();
   }
 
   @override

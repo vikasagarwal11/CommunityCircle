@@ -16,6 +16,7 @@ class CommunityModel {
   final List<String> joinQuestions; // NEW: Custom join questions
   final List<String> rules; // NEW: Community rules/guidelines
   final String welcomeMessage; // NEW: Custom welcome message for new members
+  final List<String> tags; // NEW: Community tags for search
   final DateTime createdAt;
   final Map<String, String> theme;
   final Map<String, dynamic> metadata;
@@ -36,6 +37,7 @@ class CommunityModel {
     required this.joinQuestions, // NEW
     required this.rules, // NEW
     required this.welcomeMessage, // NEW
+    required this.tags, // NEW
     required this.createdAt,
     required this.theme,
     required this.metadata,
@@ -58,6 +60,7 @@ class CommunityModel {
       joinQuestions: List<String>.from(data['join_questions'] ?? []), // NEW
       rules: List<String>.from(data['rules'] ?? []), // NEW
       welcomeMessage: data['welcome_message'] ?? '', // NEW
+      tags: List<String>.from(data['tags'] ?? []), // NEW
       createdAt: (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
       theme: Map<String, String>.from(data['theme'] ?? {}),
       metadata: Map<String, dynamic>.from(data['metadata'] ?? {}),
@@ -80,6 +83,7 @@ class CommunityModel {
       'join_questions': joinQuestions, // NEW
       'rules': rules, // NEW
       'welcome_message': welcomeMessage, // NEW
+      'tags': tags, // NEW
       'created_at': Timestamp.fromDate(createdAt),
       'theme': theme,
       'metadata': metadata,
@@ -102,6 +106,7 @@ class CommunityModel {
     List<String>? joinQuestions, // NEW
     List<String>? rules, // NEW
     String? welcomeMessage, // NEW
+    List<String>? tags, // NEW
     DateTime? createdAt,
     Map<String, String>? theme,
     Map<String, dynamic>? metadata,
@@ -122,6 +127,7 @@ class CommunityModel {
       joinQuestions: joinQuestions ?? this.joinQuestions, // NEW
       rules: rules ?? this.rules, // NEW
       welcomeMessage: welcomeMessage ?? this.welcomeMessage, // NEW
+      tags: tags ?? this.tags, // NEW
       createdAt: createdAt ?? this.createdAt,
       theme: theme ?? this.theme,
       metadata: metadata ?? this.metadata,
@@ -138,6 +144,7 @@ class CommunityModel {
   bool get hasJoinQuestions => joinQuestions.isNotEmpty; // NEW
   bool get hasRules => rules.isNotEmpty; // NEW
   bool get hasWelcomeMessage => welcomeMessage.isNotEmpty; // NEW
+  bool get hasTags => tags.isNotEmpty; // NEW
 
   // Check if user is member
   bool isMember(String userId) {
@@ -168,6 +175,24 @@ class CommunityModel {
   // Get theme color
   String get themeColor => theme['color'] ?? '#2196F3';
   String get bannerUrl => theme['banner_url'] ?? '';
+
+  // Simple search method
+  bool matchesSearch(String query) {
+    if (query.isEmpty) return true;
+    
+    final lowercaseQuery = query.toLowerCase();
+    
+    // Search in name
+    if (name.toLowerCase().contains(lowercaseQuery)) return true;
+    
+    // Search in description
+    if (description.toLowerCase().contains(lowercaseQuery)) return true;
+    
+    // Search in tags
+    if (tags.any((tag) => tag.toLowerCase().contains(lowercaseQuery))) return true;
+    
+    return false;
+  }
 
   @override
   String toString() {

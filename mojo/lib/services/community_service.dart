@@ -25,6 +25,7 @@ class CommunityService {
     List<String>? joinQuestions,
     List<String>? rules,
     String? welcomeMessage, // NEW: Custom welcome message
+    List<String>? tags, // NEW: Community tags
     Map<String, String>? theme,
   }) async {
     try {
@@ -63,6 +64,7 @@ class CommunityService {
         'join_questions': joinQuestions ?? [],
         'rules': rules ?? [],
         'welcome_message': welcomeMessage ?? '', // NEW
+        'tags': tags ?? [], // NEW
         'created_at': Timestamp.now(),
         'theme': theme ?? {'color': '#2196F3', 'banner_url': ''},
         'metadata': {
@@ -202,7 +204,8 @@ class CommunityService {
       final filtered = communities.where((community) {
         final searchLower = query.toLowerCase();
         return community.name.toLowerCase().contains(searchLower) ||
-               community.description.toLowerCase().contains(searchLower);
+               community.description.toLowerCase().contains(searchLower) ||
+               community.tags.any((tag) => tag.toLowerCase().contains(searchLower));
       }).take(limit).toList();
 
       // Always emit a list, even if empty

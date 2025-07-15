@@ -25,15 +25,13 @@ final currentUserProvider = FutureProvider<UserModel?>((ref) async {
 
 // Auth state provider (loading, authenticated, unauthenticated)
 final authStateProvider = StreamProvider<AuthState>((ref) {
-  final userStream = ref.watch(firebaseUserProvider.stream);
+  final userAsync = ref.watch(firebaseUserProvider);
   
-  return userStream.map((user) {
-    if (user != null) {
-      return AuthState.authenticated;
-    } else {
-      return AuthState.unauthenticated;
-    }
-  });
+  return userAsync.when(
+    data: (user) => Stream.value(user != null ? AuthState.authenticated : AuthState.unauthenticated),
+    loading: () => Stream.value(AuthState.loading),
+    error: (_, __) => Stream.value(AuthState.unauthenticated),
+  );
 });
 
 // Phone number provider for OTP flow

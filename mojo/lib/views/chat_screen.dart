@@ -4,6 +4,8 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import '../providers/chat_providers.dart';
 import '../providers/auth_providers.dart';
 import '../models/message_model.dart';
+import '../models/community_model.dart';
+import '../models/user_model.dart';
 import '../core/constants.dart';
 
 import '../core/navigation_service.dart';
@@ -11,8 +13,12 @@ import '../widgets/loading_widget.dart';
 import '../widgets/error_widget.dart';
 import '../widgets/animated_reaction_button.dart';
 import '../widgets/reaction_picker.dart';
+import '../widgets/swipe_to_reply_message.dart';
+import '../widgets/read_receipt_widget.dart';
+import '../widgets/chat_input_widget.dart';
 import 'dart:async';
 import '../providers/database_providers.dart';
+import '../../providers/user_providers.dart';
 
 // Debounce utility (modular, reusable)
 class Debouncer {
@@ -42,10 +48,10 @@ class ChatScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final paginatedMessagesAsync = ref.watch(paginatedMessagesProvider(communityId));
-    final paginatedNotifier = ref.read(paginatedMessagesProvider(communityId).notifier);
+    final messagesAsync = ref.watch(messagesProvider(communityId));
     final communityAsync = ref.watch(communityProvider(communityId));
     final typingUsersAsync = ref.watch(typingUsersProvider(communityId));
+    final communityMembersAsync = ref.watch(communityMembersProvider(communityId));
     final userAsync = ref.watch(authNotifierProvider);
     final chatNotifier = ref.watch(chatNotifierProvider.notifier);
     
@@ -60,22 +66,9 @@ class ChatScreen extends HookConsumerWidget {
     final debouncer = useMemoized(() => Debouncer(milliseconds: 500));
     useEffect(() => debouncer.dispose, []);
 
-    // Infinite scroll: load more messages when scrolled to top
+    // Auto-scroll to bottom when new messages arrive
     useEffect(() {
-      void onScroll() {
-        if (scrollController.position.pixels >= scrollController.position.maxScrollExtent - 100 &&
-            paginatedNotifier.hasMore &&
-            !paginatedNotifier.isLoading) {
-          paginatedNotifier.loadMoreMessages();
-        }
-      }
-      scrollController.addListener(onScroll);
-      return () => scrollController.removeListener(onScroll);
-    }, [scrollController, paginatedNotifier]);
-
-    // Auto-scroll to bottom when new messages arrive (only on initial load or new message sent)
-    useEffect(() {
-      if (paginatedMessagesAsync.hasValue && paginatedMessagesAsync.value!.isNotEmpty) {
+      if (messagesAsync.hasValue && messagesAsync.value!.isNotEmpty) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (scrollController.hasClients) {
             scrollController.animateTo(
@@ -87,7 +80,47 @@ class ChatScreen extends HookConsumerWidget {
         });
       }
       return null;
-    }, [paginatedMessagesAsync]);
+    }, [messagesAsync]);
+
+    // Auto-scroll to bottom when new messages arrive (only on initial load or new message sent)
+    useEffect(() {
+      if (messagesAsync.hasValue && messagesAsync.value!.isNotEmpty) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (scrollController.hasClients) {
+            scrollController.animateTo(
+              0,
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
+      return null;
+    }, [messagesAsync]);
+
+    // Auto-mark messages as read when viewed
+    useEffect(() {
+      final messages = messagesAsync.value;
+      final currentUser = userAsync.value;
+      
+      if (messages != null && currentUser != null && messages.isNotEmpty) {
+        // Mark visible messages as read
+        final unreadMessages = messages.where((message) => 
+          message.userId != currentUser.id && 
+          !message.isReadBy(currentUser.id)
+        ).toList();
+        
+        if (unreadMessages.isNotEmpty) {
+          // Mark messages as read with a slight delay to avoid spam
+          Future.delayed(const Duration(milliseconds: 500), () {
+            for (final message in unreadMessages) {
+              chatNotifier.markAsRead(message.id);
+            }
+          });
+        }
+      }
+      return null;
+    }, [messagesAsync, userAsync]);
 
     // Handle typing indicator (auto-clear after 3 seconds)
     useEffect(() {
@@ -172,7 +205,7 @@ class ChatScreen extends HookConsumerWidget {
           
           // Messages list
           Expanded(
-            child: paginatedMessagesAsync.when(
+            child: messagesAsync.when(
               data: (messages) {
                 if (messages.isEmpty) {
                   return _buildEmptyState(context);
@@ -182,14 +215,8 @@ class ChatScreen extends HookConsumerWidget {
                   controller: scrollController,
                   reverse: true,
                   padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                  itemCount: messages.length + (paginatedNotifier.hasMore ? 1 : 0),
+                  itemCount: messages.length,
                   itemBuilder: (context, index) {
-                    if (index == messages.length && paginatedNotifier.hasMore) {
-                      return const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16.0),
-                        child: Center(child: CircularProgressIndicator()),
-                      );
-                    }
                     final message = messages[index];
                     final isOwnMessage = userAsync.value?.id == message.userId;
                     
@@ -198,6 +225,8 @@ class ChatScreen extends HookConsumerWidget {
                       message,
                       isOwnMessage,
                       ref,
+                      communityAsync,
+                      communityMembersAsync,
                     );
                   },
                 );
@@ -243,14 +272,32 @@ class ChatScreen extends HookConsumerWidget {
           ),
           
           // Only show input if not permission denied
-          if (!(paginatedMessagesAsync.hasError && paginatedMessagesAsync.error.toString().contains('permission-denied')))
-            _buildChatInput(
-              context,
-              messageController,
-              isTyping,
-              showEmojiPicker,
-              ref,
-              debouncer,
+          if (!(messagesAsync.hasError && messagesAsync.error.toString().contains('permission-denied')))
+            ChatInputWidget(
+              communityId: communityId,
+              replyToMessage: replyToMessage,
+              onSendMessage: (text, mentions) async {
+                try {
+                  await ref.read(chatNotifierProvider.notifier).sendMessage(
+                    communityId: communityId,
+                    text: text,
+                    threadId: replyToMessage?.id,
+                    mentions: mentions,
+                  );
+                  ref.read(replyToMessageProvider.notifier).state = null;
+                } catch (e) {
+                  NavigationService.showSnackBar(
+                    message: 'Failed to send message: $e',
+                    backgroundColor: Theme.of(context).colorScheme.error,
+                  );
+                }
+              },
+              onCancelReply: () {
+                ref.read(replyToMessageProvider.notifier).state = null;
+              },
+              onAttachmentPressed: () {
+                _showAttachmentOptions(context, ref);
+              },
             ),
         ],
       ),
@@ -300,6 +347,8 @@ class ChatScreen extends HookConsumerWidget {
     MessageModel message,
     bool isOwnMessage,
     WidgetRef ref,
+    AsyncValue<CommunityModel?> communityAsync,
+    AsyncValue<List<UserModel>> communityMembersAsync,
   ) {
     final colorScheme = Theme.of(context).colorScheme;
     return Padding(
@@ -329,12 +378,24 @@ class ChatScreen extends HookConsumerWidget {
               crossAxisAlignment: isOwnMessage ? CrossAxisAlignment.end : CrossAxisAlignment.start,
               children: [
                 if (!isOwnMessage) ...[
-                  Text(
-                    message.userId ?? '', // TODO: Get user display name
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.onSurface.withOpacity(0.7),
+                  // Show sender's display name
+                  ref.watch(userByIdProvider(message.userId)).when(
+                    data: (user) => Text(
+                      user?.displayName ?? message.userId,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface.withOpacity(0.7),
+                      ),
+                    ),
+                    loading: () => const Text('...', style: TextStyle(fontSize: 12)),
+                    error: (_, __) => Text(
+                      message.userId,
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                        color: colorScheme.onSurface.withOpacity(0.7),
+                      ),
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -372,13 +433,30 @@ class ChatScreen extends HookConsumerWidget {
                           decoration: BoxDecoration(
                             color: colorScheme.onSurface.withOpacity(0.05),
                             borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(
-                            'Replying to message...',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: colorScheme.onSurface.withOpacity(0.7),
+                            border: Border.all(
+                              color: colorScheme.primary.withOpacity(0.3),
+                              width: 1,
                             ),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.reply,
+                                size: 14,
+                                color: colorScheme.primary,
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Replying to message...',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: colorScheme.primary,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ],
@@ -443,7 +521,7 @@ class ChatScreen extends HookConsumerWidget {
                 
                 const SizedBox(height: 4),
                 
-                // Message info
+                // Message info and read receipts
                 Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
@@ -462,6 +540,22 @@ class ChatScreen extends HookConsumerWidget {
                           fontSize: 10,
                           color: colorScheme.onSurface.withOpacity(0.5),
                         ),
+                      ),
+                    ],
+                    
+                    // Read receipts (only for communities with <50 members)
+                    if (communityAsync.hasValue && 
+                        communityAsync.value!.memberCount < 50 &&
+                        isOwnMessage) ...[
+                      const SizedBox(width: 8),
+                      communityMembersAsync.when(
+                        data: (members) => ReadReceiptWidget(
+                          message: message,
+                          communityMembers: members,
+                          showDetailedReceipts: communityAsync.value!.memberCount < 20,
+                        ),
+                        loading: () => const SizedBox.shrink(),
+                        error: (_, __) => const SizedBox.shrink(),
                       ),
                     ],
                   ],
@@ -517,23 +611,90 @@ class ChatScreen extends HookConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Replying to ${replyTo.userId}',
-                  style: TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                    color: colorScheme.onSurface.withOpacity(0.7),
-                  ),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.reply,
+                      size: 14,
+                      color: colorScheme.primary,
+                    ),
+                    const SizedBox(width: 4),
+                    // Show sender's display name in reply preview
+                    ref.watch(userByIdProvider(replyTo.userId)).when(
+                      data: (user) => Text(
+                        'Replying to ${user?.displayName ?? replyTo.userId}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                      loading: () => const Text('Replying...', style: TextStyle(fontSize: 12)),
+                      error: (_, __) => Text(
+                        'Replying to ${replyTo.userId}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  replyTo.text ?? '',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: colorScheme.onSurface.withOpacity(0.7),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.onSurface.withOpacity(0.05),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: colorScheme.onSurface.withOpacity(0.1),
+                    ),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  child: Row(
+                    children: [
+                      // User avatar
+                      CircleAvatar(
+                        radius: 12,
+                        backgroundColor: colorScheme.primary.withOpacity(0.1),
+                        child: Text(
+                          replyTo.userId.substring(0, 1).toUpperCase(),
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: colorScheme.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      // Message content
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              replyTo.userId,
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.bold,
+                                color: colorScheme.onSurface.withOpacity(0.8),
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              replyTo.text ?? '',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: colorScheme.onSurface.withOpacity(0.7),
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -836,18 +997,28 @@ class ChatScreen extends HookConsumerWidget {
     );
   }
 
-  // Add long press gesture to message for reaction picker
+  // Add long press gesture to message for reaction picker and swipe-to-reply
   Widget _buildMessageWithReactions(
     BuildContext context,
     MessageModel message,
     bool isOwnMessage,
     WidgetRef ref,
+    AsyncValue<CommunityModel?> communityAsync,
+    AsyncValue<List<UserModel>> communityMembersAsync,
   ) {
-    return GestureDetector(
-      onLongPress: () {
-        _showReactionPicker(context, ref, message);
+    return SwipeToReplyMessage(
+      message: message,
+      isOwnMessage: isOwnMessage,
+      onReply: () {
+        // Focus on the text input when reply is triggered
+        // This will be handled by the reply preview widget
       },
-      child: _buildMessageTile(context, message, isOwnMessage, ref),
+      child: GestureDetector(
+        onLongPress: () {
+          _showReactionPicker(context, ref, message);
+        },
+        child: _buildMessageTile(context, message, isOwnMessage, ref, communityAsync, communityMembersAsync),
+      ),
     );
   }
 } 

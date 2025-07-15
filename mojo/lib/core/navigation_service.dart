@@ -911,9 +911,9 @@ class NavigationService {
   // Navigate to chat with logging and analytics
   static Future<T?> navigateToChat<T>(String communityId, {String? channelId}) async {
     try {
-      _logger.i('💬 Navigating to chat: $communityId${channelId != null ? ' (channel: $channelId)' : ''}');
+      _logger.i('💬 Navigating to community chat: $communityId${channelId != null ? ' (channel: $channelId)' : ''}');
       await _trackNavigationEvent('chat', parameters: {
-        'navigation_type': 'navigate_to_chat',
+        'navigation_type': 'navigate_to_community_chat',
         'community_id': communityId,
         'has_channel_id': (channelId != null).toString(), // Fix: must be string
       });
@@ -926,6 +926,56 @@ class NavigationService {
       _logger.e('❌ Error navigating to chat: $e');
       await _trackNavigationError('chat', e.toString(), parameters: {
         'community_id': communityId,
+      });
+      return Future.value(null);
+    }
+  }
+
+  // Navigate to personal chat with logging and analytics
+  static Future<T?> navigateToPersonalChat<T>(String otherUserId) async {
+    try {
+      _logger.i('💬 Navigating to personal chat with user: $otherUserId');
+      await _trackNavigationEvent('personal_chat', parameters: {
+        'navigation_type': 'navigate_to_personal_chat',
+        'other_user_id': otherUserId,
+      });
+      
+      return await pushNamed<T>(AppRoutes.personalChat, arguments: {
+        'otherUserId': otherUserId,
+      });
+    } catch (e) {
+      _logger.e('❌ Error navigating to personal chat: $e');
+      await _trackNavigationError('personal_chat', e.toString(), parameters: {
+        'other_user_id': otherUserId,
+      });
+      return Future.value(null);
+    }
+  }
+
+  // Navigate to message search with logging and analytics
+  static Future<T?> navigateToMessageSearch<T>({
+    required String chatId,
+    required String otherUserId,
+    required String otherUserName,
+  }) async {
+    try {
+      _logger.i('🔍 Navigating to message search in chat: $chatId');
+      await _trackNavigationEvent('message_search', parameters: {
+        'navigation_type': 'navigate_to_message_search',
+        'chat_id': chatId,
+        'other_user_id': otherUserId,
+      });
+      
+      return await pushNamed<T>(AppRoutes.messageSearch, arguments: {
+        'chatId': chatId,
+        'otherUserId': otherUserId,
+        'otherUserName': otherUserName,
+      });
+    } catch (e) {
+      _logger.e('❌ Error navigating to message search: $e');
+      await _trackNavigationError('message_search', e.toString(), parameters: {
+        'chat_id': chatId,
+        'other_user_id': otherUserId,
       });
       return Future.value(null);
     }
