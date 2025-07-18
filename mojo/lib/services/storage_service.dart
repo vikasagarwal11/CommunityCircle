@@ -196,6 +196,47 @@ class StorageService {
     }
   }
 
+  // Upload event poster
+  Future<String?> uploadEventPoster({
+    required String communityId,
+    required File imageFile,
+    String? eventId,
+  }) async {
+    try {
+      _logger.i('Uploading event poster for community: $communityId');
+      
+      final fileName = 'poster_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = _storage.ref()
+          .child('communities')
+          .child(communityId)
+          .child('events')
+          .child(eventId ?? 'temp')
+          .child('posters')
+          .child(fileName);
+
+      final uploadTask = ref.putFile(
+        imageFile,
+        SettableMetadata(
+          contentType: 'image/jpeg',
+          customMetadata: {
+            'communityId': communityId,
+            'eventId': eventId ?? 'temp',
+            'uploadedAt': DateTime.now().toIso8601String(),
+          },
+        ),
+      );
+
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      
+      _logger.i('Event poster uploaded successfully: $downloadUrl');
+      return downloadUrl;
+    } catch (e) {
+      _logger.e('Error uploading event poster: $e');
+      return null;
+    }
+  }
+
   // Delete file from storage
   Future<void> deleteFile(String fileUrl) async {
     try {

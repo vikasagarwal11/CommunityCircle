@@ -126,23 +126,43 @@ final communityBannedUsersProvider = StreamProvider.family<List<UserModel>, Stri
   return communityService.getCommunityBannedUsersStream(communityId);
 });
 
-// Member search provider
+// Member search provider with debouncing
 final memberSearchProvider = StateProvider.family<String, String>((ref, communityId) => '');
 
-// Filtered members provider
+// Debounced search provider for better performance
+final debouncedSearchProvider = StateProvider.family<String, String>((ref, communityId) => '');
+
+// Filtered members provider with enhanced search
 final filteredMembersProvider = Provider.family<List<UserModel>, String>((ref, communityId) {
   final membersAsync = ref.watch(communityMembersProvider(communityId));
-  final searchQuery = ref.watch(memberSearchProvider(communityId));
+  final searchQuery = ref.watch(debouncedSearchProvider(communityId));
   
   return membersAsync.when(
     data: (members) {
       if (searchQuery.isEmpty) return members;
       
+      final query = searchQuery.toLowerCase().trim();
+      final queryWords = query.split(' ').where((word) => word.isNotEmpty).toList();
+      
       return members.where((member) {
-        final query = searchQuery.toLowerCase();
-        return member.displayName?.toLowerCase().contains(query) == true ||
-               member.email?.toLowerCase().contains(query) == true ||
-               member.phoneNumber.toLowerCase().contains(query);
+        // Search in display name, email, and phone number
+        final displayName = member.displayName?.toLowerCase() ?? '';
+        final email = member.email?.toLowerCase() ?? '';
+        final phone = member.phoneNumber.toLowerCase();
+        
+        // If single word query, check if it's contained in any field
+        if (queryWords.length == 1) {
+          return displayName.contains(query) ||
+                 email.contains(query) ||
+                 phone.contains(query);
+        }
+        
+        // For multi-word queries, check if all words are found in any field
+        return queryWords.every((word) =>
+          displayName.contains(word) ||
+          email.contains(word) ||
+          phone.contains(word)
+        );
       }).toList();
     },
     loading: () => [],

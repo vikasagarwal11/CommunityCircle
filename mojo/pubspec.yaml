@@ -29,15 +29,17 @@ dependencies:
   # Utilities
   logger: ^2.0.2+1
   equatable: ^2.0.5
+  intl: ^0.20.2
 
   # UI & Interactions
   lottie: ^3.3.1  # Update to latest
-  table_calendar: ^3.0.9
+  table_calendar: ^3.2.0
   image_picker: ^1.0.7
   flutter_local_notifications: ^17.2.2
 
   # Fonts
   google_fonts: ^6.2.1
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:
@@ -46,3 +48,6 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  
+  assets:
+    - assets/animations/

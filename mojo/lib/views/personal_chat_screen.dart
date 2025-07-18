@@ -6,6 +6,8 @@ import '../providers/auth_providers.dart';
 import '../providers/chat_providers.dart';
 import '../providers/database_providers.dart';
 import '../providers/user_providers.dart';
+import '../providers/call_providers.dart';
+import '../providers/group_chat_providers.dart';
 import '../models/personal_message_model.dart';
 import '../models/user_model.dart';
 import '../core/constants.dart';
@@ -752,6 +754,35 @@ class PersonalChatScreen extends HookConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Call options
+            ListTile(
+              leading: const Icon(Icons.call),
+              title: const Text('Audio Call'),
+              onTap: () {
+                NavigationService.goBack();
+                _startCall(context, ref, 'audio');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.videocam),
+              title: const Text('Video Call'),
+              onTap: () {
+                NavigationService.goBack();
+                _startCall(context, ref, 'video');
+              },
+            ),
+            const Divider(),
+            // Group chat options
+            ListTile(
+              leading: const Icon(Icons.group_add),
+              title: const Text('Add to Group'),
+              onTap: () {
+                NavigationService.goBack();
+                _showAddToGroupOptions(context, ref);
+              },
+            ),
+            const Divider(),
+            // Other options
             ListTile(
               leading: const Icon(Icons.search),
               title: const Text('Search Messages'),
@@ -803,6 +834,104 @@ class PersonalChatScreen extends HookConsumerWidget {
           ],
         ),
       ),
+    );
+  }
+
+  void _startCall(BuildContext context, WidgetRef ref, String callType) async {
+    try {
+      final user = ref.read(authNotifierProvider).asData?.value;
+      if (user == null) {
+        NavigationService.showSnackBar(message: 'Please log in to make calls.');
+        return;
+      }
+
+      final personalChatAsync = ref.read(startPersonalChatProvider(otherUserId));
+      personalChatAsync.when(
+        data: (chat) async {
+          if (chat != null) {
+            // Start the call
+            await ref.read(callStateProvider.notifier).startCall(
+              chatId: chat.id,
+              callType: callType,
+              participants: [user.id, otherUserId],
+            );
+            
+            // Navigate to call screen
+            NavigationService.navigateToCall(
+              callId: '${chat.id}_${DateTime.now().millisecondsSinceEpoch}',
+              chatId: chat.id,
+              callType: callType,
+            );
+          } else {
+            NavigationService.showSnackBar(message: 'Chat not ready. Please try again.');
+          }
+        },
+        loading: () => NavigationService.showSnackBar(message: 'Loading chat...'),
+        error: (_, __) => NavigationService.showSnackBar(message: 'Error loading chat'),
+      );
+    } catch (e) {
+      NavigationService.showSnackBar(
+        message: 'Error starting call: $e',
+        backgroundColor: Theme.of(context).colorScheme.error,
+      );
+    }
+  }
+
+  void _showAddToGroupOptions(BuildContext context, WidgetRef ref) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(AppConstants.defaultPadding),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.group_add),
+              title: const Text('Create Group Chat'),
+              subtitle: const Text('Convert this chat to a group and add more people'),
+              onTap: () {
+                NavigationService.goBack();
+                _navigateToAddParticipants(context, ref, true);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_add),
+              title: const Text('Add to Existing Group'),
+              subtitle: const Text('Add this person to an existing group chat'),
+              onTap: () {
+                NavigationService.goBack();
+                _navigateToGroupSelection(context, ref);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _navigateToAddParticipants(BuildContext context, WidgetRef ref, bool isConvertingToGroup) {
+    final personalChatAsync = ref.read(startPersonalChatProvider(otherUserId));
+    personalChatAsync.when(
+      data: (chat) {
+        if (chat != null) {
+          NavigationService.navigateToAddParticipants(
+            chatId: chat.id,
+            isConvertingToGroup: isConvertingToGroup,
+            currentGroupName: isConvertingToGroup ? 'New Group' : null,
+          );
+        } else {
+          NavigationService.showSnackBar(message: 'Chat not ready. Please try again.');
+        }
+      },
+      loading: () => NavigationService.showSnackBar(message: 'Loading chat...'),
+      error: (_, __) => NavigationService.showSnackBar(message: 'Error loading chat'),
+    );
+  }
+
+  void _navigateToGroupSelection(BuildContext context, WidgetRef ref) {
+    NavigationService.navigateToGroupSelection(
+      otherUserId: otherUserId,
+      otherUserName: ref.read(userByIdProvider(otherUserId)).asData?.value?.displayName ?? 'User',
     );
   }
 

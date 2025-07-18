@@ -309,28 +309,99 @@ class AdminManagementScreen extends HookConsumerWidget {
               _buildStatCard(
                 context,
                 'Events',
-                '${stats['event_count'] ?? 0}',
+                '${stats['recent_events'] ?? 0}',
                 Icons.event,
                 Theme.of(context).colorScheme.secondary,
               ),
               _buildStatCard(
                 context,
-                'Moments',
-                '${stats['moment_count'] ?? 0}',
-                Icons.flash_on,
+                'Messages',
+                '${stats['recent_messages'] ?? 0}',
+                Icons.chat,
                 Theme.of(context).colorScheme.tertiary,
               ),
               _buildStatCard(
                 context,
-                'Messages',
-                '${stats['message_count'] ?? 0}',
-                Icons.chat,
+                'Active',
+                '${stats['active_members'] ?? 0}',
+                Icons.trending_up,
                 Theme.of(context).colorScheme.primary,
               ),
             ],
           ),
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (_, __) => const Center(child: Text('Error loading stats')),
+          error: (error, stack) => Container(
+            padding: const EdgeInsets.all(AppConstants.defaultPadding),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.errorContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Column(
+              children: [
+                Icon(
+                  Icons.error_outline,
+                  color: Theme.of(context).colorScheme.error,
+                  size: 32,
+                ),
+                const SizedBox(height: AppConstants.smallPadding),
+                Text(
+                  'Unable to load stats',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: AppConstants.smallPadding),
+                Text(
+                  'Check your connection and try again',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error.withOpacity(0.7),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppConstants.defaultPadding),
+                // Fallback stats using community data
+                GridView.count(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  crossAxisCount: 2,
+                  crossAxisSpacing: AppConstants.defaultPadding,
+                  mainAxisSpacing: AppConstants.defaultPadding,
+                  childAspectRatio: 1.5,
+                  children: [
+                    _buildStatCard(
+                      context,
+                      'Members',
+                      '${community.members.length}',
+                      Icons.people,
+                      Theme.of(context).colorScheme.primary,
+                    ),
+                    _buildStatCard(
+                      context,
+                      'Type',
+                      community.isBusiness ? 'Business' : 'Social',
+                      Icons.business,
+                      Theme.of(context).colorScheme.secondary,
+                    ),
+                    _buildStatCard(
+                      context,
+                      'Visibility',
+                      community.visibility,
+                      Icons.visibility,
+                      Theme.of(context).colorScheme.tertiary,
+                    ),
+                    _buildStatCard(
+                      context,
+                      'Created',
+                      _formatDate(community.createdAt),
+                      Icons.calendar_today,
+                      Theme.of(context).colorScheme.primary,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
         ),
       ],
     );
@@ -1412,6 +1483,26 @@ class AdminManagementScreen extends HookConsumerWidget {
     );
   }
 
+  // Helper method to format date
+  String _formatDate(DateTime date) {
+    final now = DateTime.now();
+    final difference = now.difference(date);
+    
+    if (difference.inDays == 0) {
+      return 'Today';
+    } else if (difference.inDays == 1) {
+      return 'Yesterday';
+    } else if (difference.inDays < 7) {
+      return '${difference.inDays}d ago';
+    } else if (difference.inDays < 30) {
+      final weeks = (difference.inDays / 7).floor();
+      return '${weeks}w ago';
+    } else {
+      final months = (difference.inDays / 30).floor();
+      return '${months}m ago';
+    }
+  }
+
   // Action handlers
   void _showHelpDialog(BuildContext context) {
     showDialog(
@@ -1772,8 +1863,128 @@ class AdminManagementScreen extends HookConsumerWidget {
   }
 
   void _editDescription(BuildContext context) {
-    NavigationService.showSnackBar(
-      message: 'Edit description coming soon!',
+    final descriptionController = TextEditingController(text: community.description);
+    final isLoading = useState(false);
+    
+    showDialog(
+      context: context,
+      builder: (context) => HookConsumer(
+        builder: (context, ref, child) {
+          return AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.description, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                const Text('Edit Description'),
+              ],
+            ),
+            content: SizedBox(
+              width: 400,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Update your community description:',
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: descriptionController,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      hintText: 'Enter community description...',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: Theme.of(context).colorScheme.primary,
+                          width: 2,
+                        ),
+                      ),
+                      filled: true,
+                      fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${descriptionController.text.length} characters',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: isLoading.value ? null : () async {
+                  final newDescription = descriptionController.text.trim();
+                  if (newDescription.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Description cannot be empty'),
+                        backgroundColor: Colors.orange,
+                      ),
+                    );
+                    return;
+                  }
+                  
+                  if (newDescription == community.description) {
+                    Navigator.pop(context);
+                    return;
+                  }
+                  
+                  isLoading.value = true;
+                  
+                  try {
+                    await ref.read(communityActionsProvider.notifier).updateCommunity(
+                      communityId: community.id,
+                      description: newDescription,
+                    );
+                    
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Description updated successfully!'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error updating description: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  } finally {
+                    isLoading.value = false;
+                  }
+                },
+                child: isLoading.value
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Save'),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -2002,4 +2213,5 @@ class AdminManagementScreen extends HookConsumerWidget {
       ),
     );
   }
+
 } 

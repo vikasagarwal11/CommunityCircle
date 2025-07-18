@@ -136,5 +136,10 @@ service cloud.firestore {
     match /typing_indicators/{communityId} {
       allow read, write: if isCommunityMember(communityId);
     }
+
+    // Calls collection - allow all operations for authenticated users
+    match /calls/{call_id} {
+      allow read, write: if request.auth != null;
+    }
   }
 }

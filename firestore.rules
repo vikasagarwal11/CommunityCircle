@@ -1,12 +1,31 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Users collection - allow authenticated users to read for search functionality
     match /users/{uid} {
-      allow read, write: if request.auth != null && request.auth.uid == uid;
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.uid == uid;
     }
+
+    // Communities collection
     match /communities/{community_id} {
-      allow read: if resource.data.visibility == "public" || request.auth.uid in resource.data.members;
-      allow write: if request.auth != null && (request.auth.uid == resource.data.admin_uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ["admin", "business"]);
+      allow read: if resource.data.visibility == "public" 
+        || request.auth.uid in resource.data.members
+        || request.auth.uid == resource.data.admin_uid;
+      allow create: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != "anonymous";
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.admin_uid || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ["admin", "business"] ||
+        (
+          request.resource.data.members.size() == resource.data.members.size() + 1 &&
+          request.resource.data.members.hasAll(resource.data.members) &&
+          request.resource.data.members[request.resource.data.members.size() - 1] == request.auth.uid &&
+          request.resource.data.metadata.member_count == resource.data.metadata.member_count + 1
+        )
+      );
+      
+      // Community subcollections
       match /requests/{request_id} {
         allow read, write: if request.auth.uid == resource.data.user_id || request.auth.uid == get(/databases/$(database)/documents/communities/$(community_id)).data.admin_uid;
       }
@@ -29,17 +48,35 @@ service cloud.firestore {
         allow read: if request.auth.uid in get(/databases/$(database)/documents/communities/$(community_id)).data.members;
         allow write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/communities/$(community_id)).data.members && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != "anonymous";
       }
+      match /typing/{user_id} {
+        allow read, write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/communities/$(community_id)).data.members;
+      }
     }
+
+    // Events collection
     match /events/{event_id} {
       allow read: if resource.data.visibility == "public" || request.auth.uid in get(/databases/$(database)/documents/communities/$(resource.data.community_id)).data.members;
-      allow write: if request.auth != null && (request.auth.uid == resource.data.creator_uid || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ["admin", "business"]);
+      allow create: if request.auth != null && (
+        request.auth.uid == request.resource.data.creator_uid || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ["admin", "business"] ||
+        request.auth.uid == get(/databases/$(database)/documents/communities/$(request.resource.data.community_id)).data.admin_uid
+      );
+      allow update, delete: if request.auth != null && (
+        request.auth.uid == resource.data.creator_uid || 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ["admin", "business"] ||
+        request.auth.uid == get(/databases/$(database)/documents/communities/$(resource.data.community_id)).data.admin_uid
+      );
       match /{subcollection=**} {
         allow read, write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/communities/$(get(/databases/$(database)/documents/events/$(event_id)).data.community_id)).data.members && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != "anonymous";
       }
     }
+
+    // Messages collection (top-level)
     match /messages/{message_id} {
       allow read, write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/communities/$(resource.data.community_id)).data.members && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != "anonymous";
     }
+
+    // Private chats collection
     match /private_chats/{chat_id} {
       allow read: if request.auth != null && (request.auth.uid in resource.data.user_ids || request.auth.uid == get(/databases/$(database)/documents/communities/$(resource.data.community_id)).data.admin_uid);
       allow write: if request.auth != null && request.auth.uid in resource.data.user_ids && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != "anonymous";
@@ -48,12 +85,64 @@ service cloud.firestore {
         allow write: if request.auth != null && request.auth.uid in get(/databases/$(database)/documents/private_chats/$(chat_id)).data.user_ids && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role != "anonymous";
       }
     }
+
+    // Personal chats collection
+    match /personal_chats/{chat_id} {
+      allow read: if request.auth != null && (
+        request.auth.uid in resource.data.participants || 
+        request.auth.uid == resource.data.user1Id || 
+        request.auth.uid == resource.data.user2Id
+      );
+      allow write: if request.auth != null && (
+        request.auth.uid in resource.data.participants || 
+        request.auth.uid == resource.data.user1Id || 
+        request.auth.uid == resource.data.user2Id
+      );
+      match /messages/{message_id} {
+        allow read: if request.auth != null && (
+          request.auth.uid in get(/databases/$(database)/documents/personal_chats/$(chat_id)).data.participants || 
+          request.auth.uid == get(/databases/$(database)/documents/personal_chats/$(chat_id)).data.user1Id || 
+          request.auth.uid == get(/databases/$(database)/documents/personal_chats/$(chat_id)).data.user2Id
+        );
+        allow write: if request.auth != null && (
+          request.auth.uid in get(/databases/$(database)/documents/personal_chats/$(chat_id)).data.participants || 
+          request.auth.uid == get(/databases/$(database)/documents/personal_chats/$(chat_id)).data.user1Id || 
+          request.auth.uid == get(/databases/$(database)/documents/personal_chats/$(chat_id)).data.user2Id
+        );
+      }
+    }
+
+    // Reports collection
     match /reports/{report_id} {
       allow read, write: if request.auth != null && (request.auth.uid == get(/databases/$(database)/documents/communities/$(resource.data.community_id)).data.admin_uid || request.auth.uid == resource.data.user_id);
     }
+
+    // Config collection
     match /config/inappropriate_keywords {
       allow read: if true;
       allow write: if false;
+    }
+
+    // User join answers
+    match /users/{userId}/join_answers/{communityId} {
+      allow write: if request.auth != null && request.auth.uid == userId;
+      allow read: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Helper function to check if user is a member of a community
+    function isCommunityMember(communityId) {
+      return request.auth != null &&
+        request.auth.uid in get(/databases/$(database)/documents/communities/$(communityId)).data.members;
+    }
+
+    // Top-level typing indicators collection
+    match /typing_indicators/{communityId} {
+      allow read, write: if isCommunityMember(communityId);
+    }
+
+    // Calls collection - allow all operations for debugging
+    match /calls/{call_id} {
+      allow read, write: if request.auth != null;
     }
   }
 }

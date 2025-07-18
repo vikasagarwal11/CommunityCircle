@@ -981,6 +981,87 @@ class NavigationService {
     }
   }
 
+  // Navigate to add participants
+  static Future<T?> navigateToAddParticipants<T>({
+    required String chatId,
+    bool isConvertingToGroup = false,
+    String? currentGroupName,
+  }) async {
+    try {
+      _logger.i('👥 Navigating to add participants');
+      await _trackNavigationEvent('add_participants', parameters: {
+        'navigation_type': 'navigate_to_add_participants',
+        'chat_id': chatId,
+        'is_converting_to_group': isConvertingToGroup.toString(),
+      });
+      return await pushNamed<T>(AppRoutes.addParticipants, arguments: {
+        'chatId': chatId,
+        'isConvertingToGroup': isConvertingToGroup.toString(),
+        'currentGroupName': currentGroupName,
+      });
+    } catch (e) {
+      _logger.e('❌ Error navigating to add participants: $e');
+      await _trackNavigationError('add_participants', e.toString());
+      return Future.value(null);
+    }
+  }
+
+  // Navigate to group selection
+  static Future<T?> navigateToGroupSelection<T>({
+    required String otherUserId,
+    required String otherUserName,
+  }) async {
+    try {
+      _logger.i('👥 Navigating to group selection');
+      await _trackNavigationEvent('group_selection', parameters: {
+        'navigation_type': 'navigate_to_group_selection',
+        'other_user_id': otherUserId,
+      });
+      return await pushNamed<T>(AppRoutes.groupSelection, arguments: {
+        'otherUserId': otherUserId,
+        'otherUserName': otherUserName,
+      });
+    } catch (e) {
+      _logger.e('❌ Error navigating to group selection: $e');
+      await _trackNavigationError('group_selection', e.toString());
+      return Future.value(null);
+    }
+  }
+
+  // Navigate to call screen
+  static Future<T?> navigateToCall<T>({
+    required String callId,
+    required String chatId,
+    required String callType,
+    bool isIncoming = false,
+  }) async {
+    try {
+      _logger.i('📞 Navigating to call screen: $callType call');
+      await _trackNavigationEvent('call_screen', parameters: {
+        'navigation_type': 'navigate_to_call',
+        'call_id': callId,
+        'chat_id': chatId,
+        'call_type': callType,
+        'is_incoming': isIncoming.toString(),
+      });
+      
+      return await pushNamed<T>(AppRoutes.call, arguments: {
+        'callId': callId,
+        'chatId': chatId,
+        'callType': callType,
+        'isIncoming': isIncoming,
+      });
+    } catch (e) {
+      _logger.e('❌ Error navigating to call screen: $e');
+      await _trackNavigationError('call_screen', e.toString(), parameters: {
+        'call_id': callId,
+        'chat_id': chatId,
+        'call_type': callType,
+      });
+      return Future.value(null);
+    }
+  }
+
   // Navigate to create community with logging and analytics
   static Future<T?> navigateToCreateCommunity<T>() async {
     try {
@@ -1070,6 +1151,11 @@ class NavigationService {
     }
   }
 
+  // Navigate to event list
+  static Future<T?> navigateToEventList<T>({String? communityId}) {
+    return pushNamed<T>(AppRoutes.eventList, arguments: communityId);
+  }
+
   // Navigate to event details
   static Future<T?> navigateToEventDetails<T>(String eventId, {String? communityId}) {
     return pushNamed<T>(AppRoutes.eventDetails, arguments: {
@@ -1081,6 +1167,19 @@ class NavigationService {
   // Navigate to create event
   static Future<T?> navigateToCreateEvent<T>(String communityId) {
     return pushNamed<T>(AppRoutes.createEvent, arguments: communityId);
+  }
+
+  // Navigate to calendar
+  static Future<T?> navigateToCalendar<T>({String? communityId}) {
+    return pushNamed<T>(AppRoutes.calendar, arguments: communityId);
+  }
+
+  // Navigate to event communication
+  static Future<T?> navigateToEventCommunication<T>(String eventId, {String? communityId}) {
+    return pushNamed<T>(AppRoutes.eventCommunication, arguments: {
+      'eventId': eventId,
+      'communityId': communityId,
+    });
   }
 
   // Navigate to moment details

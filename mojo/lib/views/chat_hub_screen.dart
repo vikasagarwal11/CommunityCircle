@@ -23,8 +23,6 @@ class ChatHubScreen extends HookConsumerWidget {
     final userCommunitiesAsync = ref.watch(userCommunitiesProvider);
     final searchQuery = useState('');
     final filteredCommunities = useState<List<CommunityModel>>([]);
-    final selectedTabIndex = useState(0); // 0 = Communities, 1 = Personal
-    final tabController = useTabController(initialLength: 2);
 
     // Filter communities based on search
     useEffect(() {
@@ -47,18 +45,11 @@ class ChatHubScreen extends HookConsumerWidget {
       return null;
     }, [searchQuery.value, userCommunitiesAsync]);
 
-    // Listen to tab changes
-    useEffect(() {
-      void listener() {
-        selectedTabIndex.value = tabController.index;
-      }
-      tabController.addListener(listener);
-      return () => tabController.removeListener(listener);
-    }, [tabController]);
+
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Messages'),
+        title: const Text('Community Chats'),
         backgroundColor: Theme.of(context).colorScheme.background,
         elevation: 0,
         actions: [
@@ -78,36 +69,12 @@ class ChatHubScreen extends HookConsumerWidget {
       ),
       body: Column(
         children: [
-          // Tab Bar
-          Container(
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-                ),
-              ),
-            ),
-            child: TabBar(
-              controller: tabController,
-              tabs: const [
-                Tab(text: 'Communities'),
-                Tab(text: 'Personal'),
-              ],
-              labelColor: Theme.of(context).colorScheme.primary,
-              unselectedLabelColor: Theme.of(context).colorScheme.onSurfaceVariant,
-              indicatorColor: Theme.of(context).colorScheme.primary,
-            ),
-          ),
-          
           // Search bar
           _buildSearchBar(context, searchQuery),
           
-          // Content based on selected tab
+          // Community chats list
           Expanded(
-            child: selectedTabIndex.value == 0
-                ? _buildCommunitiesTab(context, ref, userAsync, filteredCommunities)
-                : _buildPersonalTab(context, ref, userAsync),
+            child: _buildCommunitiesTab(context, ref, userAsync, filteredCommunities),
           ),
         ],
       ),
@@ -201,181 +168,9 @@ class ChatHubScreen extends HookConsumerWidget {
     );
   }
 
-  Widget _buildPersonalTab(
-    BuildContext context,
-    WidgetRef ref,
-    AsyncValue<UserModel?> userAsync,
-  ) {
-    final personalChatsAsync = ref.watch(personalChatsProvider);
-    
-    return Stack(
-      children: [
-        userAsync.when(
-          data: (user) {
-            if (user == null) {
-              return const Center(
-                child: Text('Please log in to view personal messages'),
-              );
-            }
 
-            return personalChatsAsync.when(
-              data: (personalChats) {
-                if (personalChats.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.person_outline,
-                          size: 64,
-                          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                        ),
-                        const SizedBox(height: AppConstants.defaultPadding),
-                        Text(
-                          'No personal messages yet',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: AppConstants.smallPadding),
-                        Text(
-                          'Start 1:1 conversations with other users',
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: AppConstants.largePadding),
-                      ],
-                    ),
-                  );
-                }
 
-                return ListView.builder(
-                  padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                  itemCount: personalChats.length,
-                  itemBuilder: (context, index) {
-                    final chat = personalChats[index];
-                    return _buildPersonalChatTile(context, ref, chat, user);
-                  },
-                );
-              },
-              loading: () => const LoadingWidget(),
-              error: (error, stack) => CustomErrorWidget(
-                message: 'Failed to load personal chats',
-                error: error.toString(),
-              ),
-            );
-          },
-          loading: () => const LoadingWidget(),
-          error: (error, stack) => CustomErrorWidget(
-            message: 'Failed to load user data',
-            error: error.toString(),
-          ),
-        ),
-        Positioned(
-          bottom: 24,
-          right: 24,
-          child: FloatingActionButton(
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const UserSearchScreen()),
-              );
-            },
-            child: const Icon(Icons.person_add),
-            tooltip: 'Find People',
-          ),
-        ),
-      ],
-    );
-  }
 
-  Widget _buildPersonalChatTile(BuildContext context, WidgetRef ref, PersonalChatModel chat, UserModel currentUser) {
-    // Determine the other user's ID and data
-    final otherUserId = chat.user1Id == currentUser.id ? chat.user2Id : chat.user1Id;
-    final otherUserData = chat.user1Id == currentUser.id ? chat.user2Data : chat.user1Data;
-    
-    // Get other user's display name
-    final otherUserName = otherUserData['displayName'] ?? otherUserData['email'] ?? 'Unknown User';
-    final otherUserEmail = otherUserData['email'] ?? '';
-    
-    return Card(
-      margin: const EdgeInsets.symmetric(
-        horizontal: AppConstants.defaultPadding,
-        vertical: AppConstants.smallPadding,
-      ),
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-          backgroundImage: otherUserData['profilePictureUrl'] != null 
-              ? NetworkImage(otherUserData['profilePictureUrl'])
-              : null,
-          child: otherUserData['profilePictureUrl'] == null
-              ? Text(
-                  otherUserName.substring(0, 1).toUpperCase(),
-                  style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                  ),
-                )
-              : null,
-        ),
-        title: Text(
-          otherUserName,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (chat.lastMessage != null) ...[
-              Text(
-                chat.lastMessage!.text,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-              ),
-              const SizedBox(height: 4),
-            ],
-            Row(
-              children: [
-                Text(
-                  _formatTime(chat.lastMessageTime),
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
-                  ),
-                ),
-                if (chat.unreadCount > 0) ...[
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    child: Text(
-                      '${chat.unreadCount}',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ],
-              ],
-            ),
-          ],
-        ),
-        onTap: () {
-          NavigationService.navigateToPersonalChat(otherUserId);
-        },
-        onLongPress: () {
-          _showPersonalChatOptions(context, ref, chat, otherUserId);
-        },
-      ),
-    );
-  }
 
   Widget _buildCommunityChatTile(BuildContext context, WidgetRef ref, CommunityModel community) {
     return Card(
@@ -572,51 +367,7 @@ class ChatHubScreen extends HookConsumerWidget {
     );
   }
 
-  void _showPersonalChatOptions(BuildContext context, WidgetRef ref, PersonalChatModel chat, String otherUserId) {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(AppConstants.defaultPadding),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.search),
-              title: const Text('Search Messages'),
-              onTap: () {
-                NavigationService.goBack();
-                NavigationService.showSnackBar(message: 'Search coming soon!');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.person),
-              title: const Text('View Profile'),
-              onTap: () {
-                NavigationService.goBack();
-                NavigationService.showSnackBar(message: 'Profile view coming soon!');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.block),
-              title: const Text('Block User'),
-              onTap: () {
-                NavigationService.goBack();
-                NavigationService.showSnackBar(message: 'Block functionality coming soon!');
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.delete),
-              title: const Text('Delete Chat'),
-              onTap: () {
-                NavigationService.goBack();
-                NavigationService.showSnackBar(message: 'Delete chat coming soon!');
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+
 
   void _showCommunityOptions(BuildContext context, WidgetRef ref, CommunityModel community) {
     showModalBottomSheet(

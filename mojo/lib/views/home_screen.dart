@@ -1,17 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_providers.dart';
 import '../providers/community_providers.dart';
-import '../services/auth_service.dart';
 import '../core/constants.dart';
-import '../core/theme.dart';
 import '../core/navigation_service.dart';
 import '../models/community_model.dart';
 import '../widgets/loading_widget.dart';
 import '../widgets/error_widget.dart';
 import '../widgets/simple_search_field.dart';
-import 'notification_test_widget.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 // User role provider for role-based UI
 final userRoleProvider = FutureProvider<String>((ref) async {

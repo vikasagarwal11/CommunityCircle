@@ -18,7 +18,9 @@ import '../widgets/read_receipt_widget.dart';
 import '../widgets/chat_input_widget.dart';
 import 'dart:async';
 import '../providers/database_providers.dart';
-import '../../providers/user_providers.dart';
+import '../providers/user_providers.dart';
+import '../providers/shared_chat_providers.dart';
+import '../core/logger.dart';
 
 // Debounce utility (modular, reusable)
 class Debouncer {
@@ -40,6 +42,7 @@ class Debouncer {
 
 class ChatScreen extends HookConsumerWidget {
   final String communityId;
+  static final Logger _logger = Logger('ChatScreen');
   
   const ChatScreen({
     super.key,
@@ -48,13 +51,66 @@ class ChatScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final messagesAsync = ref.watch(messagesProvider(communityId));
-    final communityAsync = ref.watch(communityProvider(communityId));
+    final currentUserAsync = ref.watch(authNotifierProvider);
+    final messagesAsync = ref.watch(communityMessagesProvider(communityId));
     final typingUsersAsync = ref.watch(typingUsersProvider(communityId));
-    final communityMembersAsync = ref.watch(communityMembersProvider(communityId));
-    final userAsync = ref.watch(authNotifierProvider);
-    final chatNotifier = ref.watch(chatNotifierProvider.notifier);
+    final communityAsync = ref.watch(communityProvider(communityId));
     
+    // State for member selection
+    final memberSearchQuery = useState('');
+    final filteredMembers = useState<List<UserModel>>([]);
+    final showMemberSelection = useState(false);
+
+    // Filter members when search query changes
+    useEffect(() {
+      if (showMemberSelection.value) {
+        final communityMembersAsync = ref.read(communityMembersProvider(communityId));
+        communityMembersAsync.when(
+          data: (members) {
+            currentUserAsync.when(
+              data: (currentUser) {
+                if (currentUser == null) return;
+                
+                final filtered = members.where((member) {
+                  // Exclude current user
+                  if (member.id == currentUser.id) return false;
+                  
+                  // Filter by search query
+                  if (memberSearchQuery.value.isNotEmpty) {
+                    final query = memberSearchQuery.value.toLowerCase();
+                    return (member.displayName?.toLowerCase().contains(query) ?? false) ||
+                           (member.email?.toLowerCase().contains(query) ?? false);
+                  }
+                  return true;
+                }).toList();
+                
+                filteredMembers.value = filtered;
+              },
+              loading: () => null,
+              error: (_, __) => null,
+            );
+          },
+          loading: () => null,
+          error: (_, __) => null,
+        );
+      }
+      return null;
+    }, [memberSearchQuery.value, showMemberSelection.value]);
+
+    // Show member selection modal when state changes
+    useEffect(() {
+      if (showMemberSelection.value) {
+        _showMemberSelection(
+          context, 
+          ref, 
+          memberSearchQuery, 
+          filteredMembers,
+          showMemberSelection,
+        );
+      }
+      return null;
+    }, [showMemberSelection.value]);
+
     final messageController = useTextEditingController();
     final scrollController = useScrollController();
     final isTyping = useState(false);
@@ -101,7 +157,7 @@ class ChatScreen extends HookConsumerWidget {
     // Auto-mark messages as read when viewed
     useEffect(() {
       final messages = messagesAsync.value;
-      final currentUser = userAsync.value;
+      final currentUser = currentUserAsync.value;
       
       if (messages != null && currentUser != null && messages.isNotEmpty) {
         // Mark visible messages as read
@@ -114,13 +170,13 @@ class ChatScreen extends HookConsumerWidget {
           // Mark messages as read with a slight delay to avoid spam
           Future.delayed(const Duration(milliseconds: 500), () {
             for (final message in unreadMessages) {
-              chatNotifier.markAsRead(message.id);
+              ref.read(chatNotifierProvider.notifier).markAsRead(message.id);
             }
           });
         }
       }
       return null;
-    }, [messagesAsync, userAsync]);
+    }, [messagesAsync, currentUserAsync]);
 
     // Handle typing indicator (auto-clear after 3 seconds)
     useEffect(() {
@@ -184,6 +240,13 @@ class ChatScreen extends HookConsumerWidget {
         elevation: 0,
         actions: [
           IconButton(
+            icon: const Icon(Icons.person_add),
+            onPressed: () {
+              showMemberSelection.value = true;
+            },
+            tooltip: 'Message Member',
+          ),
+          IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
               // TODO: Implement message search
@@ -200,33 +263,30 @@ class ChatScreen extends HookConsumerWidget {
       ),
       body: Column(
         children: [
-          // Reply preview
-          if (replyToMessage != null) _buildReplyPreview(context, replyToMessage, ref),
-          
           // Messages list
           Expanded(
             child: messagesAsync.when(
               data: (messages) {
                 if (messages.isEmpty) {
-                  return _buildEmptyState(context);
+                  return const Center(
+                    child: Text('No messages yet'),
+                  );
                 }
-                
+
                 return ListView.builder(
-                  controller: scrollController,
                   reverse: true,
-                  padding: const EdgeInsets.all(AppConstants.defaultPadding),
                   itemCount: messages.length,
                   itemBuilder: (context, index) {
                     final message = messages[index];
-                    final isOwnMessage = userAsync.value?.id == message.userId;
+                    final isOwnMessage = currentUserAsync.value?.id == message.userId;
                     
                     return _buildMessageWithReactions(
                       context,
+                      ref,
                       message,
                       isOwnMessage,
-                      ref,
                       communityAsync,
-                      communityMembersAsync,
+                      ref.read(communityMembersProvider(communityId)),
                     );
                   },
                 );
@@ -237,68 +297,13 @@ class ChatScreen extends HookConsumerWidget {
               ),
             ),
           ),
-          
+
           // Typing indicator
-          typingUsersAsync.when(
-            data: (typingUsers) {
-              if (typingUsers.isEmpty) return const SizedBox();
-              final colorScheme = Theme.of(context).colorScheme;
-              return Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppConstants.defaultPadding,
-                  vertical: AppConstants.smallPadding,
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    const SizedBox(width: AppConstants.smallPadding),
-                    Text(
-                      '${typingUsers.length} ${typingUsers.length == 1 ? 'person' : 'people'} typing...',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: colorScheme.onSurface.withOpacity(0.7),
-                      ),
-                    ),
-                  ],
-                ),
-              );
-            },
-            loading: () => const SizedBox(),
-            error: (_, __) => const SizedBox(),
-          ),
-          
-          // Only show input if not permission denied
-          if (!(messagesAsync.hasError && messagesAsync.error.toString().contains('permission-denied')))
-            ChatInputWidget(
-              communityId: communityId,
-              replyToMessage: replyToMessage,
-              onSendMessage: (text, mentions) async {
-                try {
-                  await ref.read(chatNotifierProvider.notifier).sendMessage(
-                    communityId: communityId,
-                    text: text,
-                    threadId: replyToMessage?.id,
-                    mentions: mentions,
-                  );
-                  ref.read(replyToMessageProvider.notifier).state = null;
-                } catch (e) {
-                  NavigationService.showSnackBar(
-                    message: 'Failed to send message: $e',
-                    backgroundColor: Theme.of(context).colorScheme.error,
-                  );
-                }
-              },
-              onCancelReply: () {
-                ref.read(replyToMessageProvider.notifier).state = null;
-              },
-              onAttachmentPressed: () {
-                _showAttachmentOptions(context, ref);
-              },
-            ),
+          if (typingUsersAsync.value?.isNotEmpty == true)
+            _buildTypingIndicator(context, ref, typingUsersAsync.value!),
+
+          // Message input
+          _buildMessageInput(context, ref, messageController),
         ],
       ),
     );
@@ -497,7 +502,7 @@ class ChatScreen extends HookConsumerWidget {
                           children: message.reactions.entries.map((entry) {
                             final emoji = entry.key;
                             final count = entry.value.length;
-                            final userAsync = ref.watch(authNotifierProvider);
+                            final userAsync = ref.read(authNotifierProvider);
                             final isSelected = userAsync.when(
                               data: (user) => user != null && entry.value.contains(user.id),
                               loading: () => false,
@@ -829,12 +834,40 @@ class ChatScreen extends HookConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
+            // Call options
+            ListTile(
+              leading: const Icon(Icons.call),
+              title: const Text('Audio Call'),
+              onTap: () {
+                NavigationService.goBack();
+                _startCall(context, ref, 'audio');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.videocam),
+              title: const Text('Video Call'),
+              onTap: () {
+                NavigationService.goBack();
+                _startCall(context, ref, 'video');
+              },
+            ),
+            const Divider(),
+            // Other options
             ListTile(
               leading: const Icon(Icons.search),
               title: const Text('Search Messages'),
               onTap: () {
                 NavigationService.goBack();
                 // TODO: Implement search
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_add),
+              title: const Text('Message Member'),
+              subtitle: const Text('Start 1:1 conversation'),
+              onTap: () {
+                NavigationService.goBack();
+                _showMemberSelectionModal(context, ref);
               },
             ),
             ListTile(
@@ -857,6 +890,384 @@ class ChatScreen extends HookConsumerWidget {
         ),
       ),
     );
+  }
+
+  void _startCall(BuildContext context, WidgetRef ref, String callType) async {
+    try {
+      final user = ref.read(authNotifierProvider).asData?.value;
+      if (user == null) {
+        NavigationService.showSnackBar(message: 'Please log in to make calls.');
+        return;
+      }
+
+      // Get community members for the call
+      final communityMembersAsync = ref.read(communityMembersProvider(communityId));
+      communityMembersAsync.when(
+        data: (members) async {
+          if (members.isNotEmpty) {
+            // Start the call with all community members
+            final participants = members.map((member) => member.id).toList();
+            
+            // Use the shared chat service
+            final sharedChatService = ref.read(sharedChatServiceProvider);
+            await sharedChatService.startCall(
+              chatId: communityId,
+              callType: callType,
+              participants: participants,
+              chatType: 'community',
+            );
+            
+            // Navigate to call screen
+            NavigationService.navigateToCall(
+              callId: '${communityId}_${DateTime.now().millisecondsSinceEpoch}',
+              chatId: communityId,
+              callType: callType,
+            );
+          } else {
+            NavigationService.showSnackBar(message: 'No members available for call.');
+          }
+        },
+        loading: () => NavigationService.showSnackBar(message: 'Loading members...'),
+        error: (_, __) => NavigationService.showSnackBar(message: 'Error loading members'),
+      );
+    } catch (e) {
+      _logger.e('Error starting call: $e');
+      NavigationService.showSnackBar(
+        message: 'Failed to start call: ${e.toString()}',
+        backgroundColor: Theme.of(context).colorScheme.error,
+      );
+    }
+  }
+
+  void _showMemberSelection(
+    BuildContext context, 
+    WidgetRef ref, 
+    ValueNotifier<String> searchQuery, 
+    ValueNotifier<List<UserModel>> filteredMembers,
+    ValueNotifier<bool> showMemberSelection,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        padding: const EdgeInsets.all(AppConstants.defaultPadding),
+        child: Column(
+          children: [
+            // Header
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    Navigator.pop(context);
+                    showMemberSelection.value = false;
+                  },
+                ),
+                Expanded(
+                  child: Text(
+                    'Message Member',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppConstants.defaultPadding),
+            
+            // Search bar
+            TextField(
+              onChanged: (value) => searchQuery.value = value,
+              decoration: InputDecoration(
+                hintText: 'Search members...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: searchQuery.value.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () => searchQuery.value = '',
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surface,
+              ),
+            ),
+            const SizedBox(height: AppConstants.defaultPadding),
+            
+            // Members list
+            Expanded(
+              child: ref.read(communityMembersProvider(communityId)).when(
+                data: (members) {
+                  if (filteredMembers.value.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.people_outline,
+                            size: 64,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                          ),
+                          const SizedBox(height: AppConstants.defaultPadding),
+                          Text(
+                            searchQuery.value.isNotEmpty 
+                                ? 'No members found'
+                                : 'No members available',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          if (searchQuery.value.isNotEmpty) ...[
+                            const SizedBox(height: AppConstants.smallPadding),
+                            Text(
+                              'Try a different search term',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: filteredMembers.value.length,
+                    itemBuilder: (context, index) {
+                      final member = filteredMembers.value[index];
+                      return _buildMemberTile(context, ref, member);
+                    },
+                  );
+                },
+                loading: () => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+                error: (error, stack) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      const SizedBox(height: AppConstants.defaultPadding),
+                      Text(
+                        'Failed to load members',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppConstants.smallPadding),
+                      Text(
+                        error.toString(),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showMemberSelectionModal(BuildContext context, WidgetRef ref) {
+    final searchQuery = useState('');
+    final filteredMembers = useState<List<UserModel>>([]);
+    
+    // Filter members when search query changes
+    useEffect(() {
+      final communityMembersAsync = ref.read(communityMembersProvider(communityId));
+      communityMembersAsync.when(
+        data: (members) {
+          if (searchQuery.value.isNotEmpty) {
+            final query = searchQuery.value.toLowerCase();
+            filteredMembers.value = members.where((member) {
+              return (member.displayName?.toLowerCase().contains(query) ?? false) ||
+                     (member.email?.toLowerCase().contains(query) ?? false);
+            }).toList();
+          } else {
+            filteredMembers.value = members;
+          }
+        },
+        loading: () => filteredMembers.value = [],
+        error: (_, __) => filteredMembers.value = [],
+      );
+    }, [searchQuery.value]);
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        padding: const EdgeInsets.all(AppConstants.defaultPadding),
+        child: Column(
+          children: [
+            // Header
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () => Navigator.pop(context),
+                ),
+                Expanded(
+                  child: Text(
+                    'Message Member',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppConstants.defaultPadding),
+            
+            // Search bar
+            TextField(
+              onChanged: (value) => searchQuery.value = value,
+              decoration: InputDecoration(
+                hintText: 'Search members...',
+                prefixIcon: const Icon(Icons.search),
+                suffixIcon: searchQuery.value.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () => searchQuery.value = '',
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                filled: true,
+                fillColor: Theme.of(context).colorScheme.surface,
+              ),
+            ),
+            const SizedBox(height: AppConstants.defaultPadding),
+            
+            // Members list
+            Expanded(
+              child: ref.read(communityMembersProvider(communityId)).when(
+                data: (members) {
+                  if (filteredMembers.value.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.people_outline,
+                            size: 64,
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+                          ),
+                          const SizedBox(height: AppConstants.defaultPadding),
+                          Text(
+                            searchQuery.value.isNotEmpty 
+                                ? 'No members found'
+                                : 'No members available',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          if (searchQuery.value.isNotEmpty) ...[
+                            const SizedBox(height: AppConstants.smallPadding),
+                            Text(
+                              'Try a different search term',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    );
+                  }
+
+                  return ListView.builder(
+                    itemCount: filteredMembers.value.length,
+                    itemBuilder: (context, index) {
+                      final member = filteredMembers.value[index];
+                      return _buildMemberTile(context, ref, member);
+                    },
+                  );
+                },
+                loading: () => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+                error: (error, stack) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                      const SizedBox(height: AppConstants.defaultPadding),
+                      Text(
+                        'Failed to load members',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: AppConstants.smallPadding),
+                      Text(
+                        error.toString(),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMemberTile(BuildContext context, WidgetRef ref, UserModel member) {
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+        child: Text(
+          member.displayName?.substring(0, 1).toUpperCase() ?? 'U',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.primary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+      ),
+      title: Text(
+        member.displayName ?? 'Unknown User',
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+      subtitle: Text(
+        member.email ?? '',
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+        ),
+      ),
+      trailing: IconButton(
+        icon: const Icon(Icons.chat_bubble_outline),
+        onPressed: () {
+          Navigator.pop(context);
+          _startPersonalChat(context, ref, member);
+        },
+      ),
+      onTap: () {
+        Navigator.pop(context);
+        _startPersonalChat(context, ref, member);
+      },
+    );
+  }
+
+  void _startPersonalChat(BuildContext context, WidgetRef ref, UserModel member) {
+    // Navigate to personal chat with the selected member
+    NavigationService.navigateToPersonalChat(member.id);
   }
 
   void _showAttachmentOptions(BuildContext context, WidgetRef ref) {
@@ -1000,9 +1411,9 @@ class ChatScreen extends HookConsumerWidget {
   // Add long press gesture to message for reaction picker and swipe-to-reply
   Widget _buildMessageWithReactions(
     BuildContext context,
+    WidgetRef ref,
     MessageModel message,
     bool isOwnMessage,
-    WidgetRef ref,
     AsyncValue<CommunityModel?> communityAsync,
     AsyncValue<List<UserModel>> communityMembersAsync,
   ) {
@@ -1018,6 +1429,74 @@ class ChatScreen extends HookConsumerWidget {
           _showReactionPicker(context, ref, message);
         },
         child: _buildMessageTile(context, message, isOwnMessage, ref, communityAsync, communityMembersAsync),
+      ),
+    );
+  }
+
+  Widget _buildTypingIndicator(BuildContext context, WidgetRef ref, List<String> typingUsers) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppConstants.defaultPadding,
+        vertical: AppConstants.smallPadding,
+      ),
+      child: Row(
+        children: [
+          const SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          const SizedBox(width: AppConstants.smallPadding),
+          Text(
+            '${typingUsers.length} ${typingUsers.length == 1 ? 'person' : 'people'} typing...',
+            style: TextStyle(
+              fontSize: 12,
+              color: colorScheme.onSurface.withOpacity(0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageInput(BuildContext context, WidgetRef ref, TextEditingController controller) {
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.defaultPadding),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          top: BorderSide(
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+          ),
+        ),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: controller,
+              decoration: InputDecoration(
+                hintText: 'Type a message...',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 12,
+                ),
+              ),
+              maxLines: null,
+            ),
+          ),
+          const SizedBox(width: AppConstants.smallPadding),
+          IconButton(
+            icon: const Icon(Icons.send),
+            onPressed: () {
+              // TODO: Implement send message
+            },
+          ),
+        ],
       ),
     );
   }

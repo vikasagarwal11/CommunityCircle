@@ -13,6 +13,15 @@ import '../views/personal_chat_screen.dart';
 import '../views/message_search_screen.dart';
 import '../views/admin_management_screen.dart';
 import '../views/join_requests_review_screen.dart';
+import '../views/add_participants_screen.dart';
+import '../views/group_selection_screen.dart';
+import '../views/call_screen.dart';
+import '../views/mock_call_screen.dart';
+import '../views/event_list_screen.dart';
+import '../views/create_event_screen.dart';
+import '../views/event_details_screen.dart';
+import '../views/calendar_screen.dart';
+import '../views/event_communication_screen.dart';
 import '../models/community_model.dart';
 
 
@@ -40,10 +49,16 @@ class AppRoutes {
   static const String chat = '/chat';
   static const String personalChat = '/personal-chat';
   static const String messageSearch = '/message-search';
+  static const String addParticipants = '/add-participants';
+  static const String groupSelection = '/group-selection';
+  static const String call = '/call';
   
   // Event routes
+  static const String eventList = '/event-list';
   static const String eventDetails = '/event-details';
   static const String createEvent = '/create-event';
+  static const String calendar = '/calendar';
+  static const String eventCommunication = '/event-communication';
   
   // Moment routes
   static const String momentDetails = '/moment-details';
@@ -266,6 +281,76 @@ class AppRoutes {
             otherUserName: otherUserName,
           ),
         );
+      case addParticipants:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final chatId = args?['chatId'] as String?;
+        final isConvertingToGroupStr = args?['isConvertingToGroup'] as String? ?? 'false';
+        final isConvertingToGroup = isConvertingToGroupStr == 'true';
+        final currentGroupName = args?['currentGroupName'] as String?;
+        
+        if (chatId == null) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(
+                child: Text('Chat ID is required'),
+              ),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => AddParticipantsScreen(
+            chatId: chatId,
+            isConvertingToGroup: isConvertingToGroup,
+            currentGroupName: currentGroupName,
+          ),
+        );
+      case groupSelection:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final otherUserId = args?['otherUserId'] as String?;
+        final otherUserName = args?['otherUserName'] as String?;
+        
+        if (otherUserId == null || otherUserName == null) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(
+                child: Text('User information is required'),
+              ),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => GroupSelectionScreen(
+            otherUserId: otherUserId,
+            otherUserName: otherUserName,
+          ),
+        );
+      case call:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final callId = args?['callId'] as String?;
+        final chatId = args?['chatId'] as String?;
+        final callType = args?['callType'] as String?;
+        final isIncoming = args?['isIncoming'] as bool? ?? false;
+        
+        if (callId == null || chatId == null || callType == null) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(
+                child: Text('Missing call parameters'),
+              ),
+            ),
+          );
+        }
+        
+        // Use MockCallScreen for simulator testing
+        return MaterialPageRoute(
+          builder: (_) => MockCallScreen(
+            callId: callId,
+            chatId: chatId,
+            callType: callType,
+            chatType: 'personal', // Default to personal, can be updated
+            participants: [chatId], // Simplified for mock
+          ),
+        );
       case adminManagement:
         final args = settings.arguments;
         CommunityModel? community;
@@ -340,6 +425,63 @@ class AppRoutes {
               ),
             ),
           ),
+        );
+      case eventList:
+        final communityId = settings.arguments as String?;
+        return MaterialPageRoute(
+          builder: (_) => EventListScreen(communityId: communityId),
+        );
+      case eventDetails:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final eventId = args?['eventId'] as String?;
+        final communityId = args?['communityId'] as String?;
+        
+        if (eventId == null) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(
+                child: Text('Event ID is required'),
+              ),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => EventDetailsScreen(eventId: eventId, communityId: communityId),
+        );
+      case createEvent:
+        final communityId = settings.arguments as String?;
+        if (communityId == null) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(
+                child: Text('Community ID is required'),
+              ),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => CreateEventScreen(communityId: communityId),
+        );
+      case calendar:
+        return MaterialPageRoute(
+          builder: (_) => const CalendarScreen(),
+        );
+      case eventCommunication:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final eventId = args?['eventId'] as String?;
+        final communityId = args?['communityId'] as String?;
+        
+        if (eventId == null) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(
+                child: Text('Event ID is required'),
+              ),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => EventCommunicationScreen(eventId: eventId, communityId: communityId),
         );
       case notifications:
       case help:

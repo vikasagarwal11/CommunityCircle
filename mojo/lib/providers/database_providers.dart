@@ -26,7 +26,19 @@ final userProvider = FutureProvider.family<UserModel?, String>((ref, userId) asy
   return await databaseService.getUser(userId);
 });
 
-final currentUserProvider = StateProvider<UserModel?>((ref) => null);
+// All users provider
+final usersProvider = StreamProvider<List<UserModel>>((ref) {
+  return FirebaseFirestore.instance
+      .collection('users')
+      .snapshots()
+      .map((snapshot) {
+        return snapshot.docs.map((doc) {
+          final data = doc.data();
+          data['id'] = doc.id; // Add the document ID to the data
+          return UserModel.fromMap(data);
+        }).toList();
+      });
+});
 
 // Community Providers
 final communityProvider = FutureProvider.family<CommunityModel?, String>((ref, communityId) async {
