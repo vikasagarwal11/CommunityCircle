@@ -46,7 +46,7 @@ class MyApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       navigatorKey: NavigationService.navigatorKey,
-      onGenerateRoute: AppRoutes.onGenerateRoute,
+      onGenerateRoute: AppRoutes.generateRoute,
       home: Consumer(
         builder: (context, ref, child) {
           final userAsync = ref.watch(authNotifierProvider);
