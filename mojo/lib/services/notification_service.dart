@@ -5,6 +5,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:logger/logger.dart';
 
 import '../services/database_service.dart';
+import '../models/event_model.dart';
+import '../models/user_model.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -258,6 +260,239 @@ class NotificationService {
     } catch (e) {
       _logger.e('Failed to unsubscribe from topic $topic: $e');
     }
+  }
+
+  // ===== EVENT REMINDER NOTIFICATIONS =====
+
+  // Schedule event reminder notification
+  Future<void> scheduleEventReminder(EventModel event, UserModel user, {
+    required DateTime reminderTime,
+    String? customMessage,
+  }) async {
+    try {
+      final notificationId = _generateNotificationId('event_reminder', event.id, user.id);
+      
+      final title = 'Event Reminder: ${event.title}';
+      final body = customMessage ?? 
+          'Your event "${event.title}" starts in ${_getTimeUntilEvent(event.date)}';
+      
+      await _scheduleLocalNotification(
+        id: notificationId,
+        title: title,
+        body: body,
+        scheduledDate: reminderTime,
+        payload: {
+          'type': 'event_reminder',
+          'event_id': event.id,
+          'navigation': '/event/${event.id}',
+        },
+      );
+      
+      _logger.i('Scheduled event reminder for ${event.title} at ${reminderTime}');
+    } catch (e) {
+      _logger.e('Failed to schedule event reminder: $e');
+    }
+  }
+
+  // Cancel event reminder notification
+  Future<void> cancelEventReminder(String eventId, String userId) async {
+    try {
+      final notificationId = _generateNotificationId('event_reminder', eventId, userId);
+      await _localNotifications.cancel(notificationId);
+      _logger.i('Cancelled event reminder for event $eventId');
+    } catch (e) {
+      _logger.e('Failed to cancel event reminder: $e');
+    }
+  }
+
+  // Send RSVP confirmation notification
+  Future<void> sendRSVPConfirmation(EventModel event, UserModel user, String rsvpStatus) async {
+    try {
+      final title = 'RSVP Confirmed';
+      final body = 'You have ${rsvpStatus.toLowerCase()} "${event.title}" on ${_formatEventDate(event.date)}';
+      
+      await _sendLocalNotification(
+        title: title,
+        body: body,
+        payload: {
+          'type': 'rsvp_confirmation',
+          'event_id': event.id,
+          'rsvp_status': rsvpStatus,
+          'navigation': '/event/${event.id}',
+        },
+      );
+      
+      _logger.i('Sent RSVP confirmation for ${event.title}');
+    } catch (e) {
+      _logger.e('Failed to send RSVP confirmation: $e');
+    }
+  }
+
+  // Send event update notification
+  Future<void> sendEventUpdate(EventModel event, List<String> attendeeIds, String updateType) async {
+    try {
+      final title = 'Event Updated';
+      final body = 'Your event "${event.title}" has been updated';
+      
+      // Send to all attendees
+      for (final attendeeId in attendeeIds) {
+        await _sendLocalNotification(
+          title: title,
+          body: body,
+          payload: {
+            'type': 'event_update',
+            'event_id': event.id,
+            'update_type': updateType,
+            'navigation': '/event/${event.id}',
+          },
+        );
+      }
+      
+      _logger.i('Sent event update notification for ${event.title}');
+    } catch (e) {
+      _logger.e('Failed to send event update notification: $e');
+    }
+  }
+
+  // Send check-in reminder
+  Future<void> sendCheckInReminder(EventModel event, List<String> attendeeIds) async {
+    try {
+      final title = 'Check-in Reminder';
+      final body = 'Don\'t forget to check in for "${event.title}"!';
+      
+      for (final attendeeId in attendeeIds) {
+        await _sendLocalNotification(
+          title: title,
+          body: body,
+          payload: {
+            'type': 'check_in_reminder',
+            'event_id': event.id,
+            'navigation': '/event/${event.id}',
+          },
+        );
+      }
+      
+      _logger.i('Sent check-in reminders for ${event.title}');
+    } catch (e) {
+      _logger.e('Failed to send check-in reminders: $e');
+    }
+  }
+
+  // ===== HELPER METHODS =====
+
+  // Schedule a local notification for a specific time
+  Future<void> _scheduleLocalNotification({
+    required int id,
+    required String title,
+    required String body,
+    required DateTime scheduledDate,
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'mojo_events',
+        'MOJO Events',
+        channelDescription: 'Event reminders and updates',
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+      );
+
+      const DarwinNotificationDetails iOSDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      const NotificationDetails details = NotificationDetails(
+        android: androidDetails,
+        iOS: iOSDetails,
+      );
+
+      await _localNotifications.zonedSchedule(
+        id,
+        title,
+        body,
+        _convertToTZDateTime(scheduledDate),
+        details,
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        payload: json.encode(payload),
+      );
+    } catch (e) {
+      _logger.e('Failed to schedule local notification: $e');
+    }
+  }
+
+  // Send an immediate local notification
+  Future<void> _sendLocalNotification({
+    required String title,
+    required String body,
+    required Map<String, dynamic> payload,
+  }) async {
+    try {
+      const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'mojo_events',
+        'MOJO Events',
+        channelDescription: 'Event reminders and updates',
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+      );
+
+      const DarwinNotificationDetails iOSDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      const NotificationDetails details = NotificationDetails(
+        android: androidDetails,
+        iOS: iOSDetails,
+      );
+
+      await _localNotifications.show(
+        DateTime.now().millisecondsSinceEpoch ~/ 1000,
+        title,
+        body,
+        details,
+        payload: json.encode(payload),
+      );
+    } catch (e) {
+      _logger.e('Failed to send local notification: $e');
+    }
+  }
+
+  // Generate unique notification ID
+  int _generateNotificationId(String type, String eventId, String userId) {
+    return '$type-$eventId-$userId'.hashCode;
+  }
+
+  // Convert DateTime to TZDateTime (simplified)
+  dynamic _convertToTZDateTime(DateTime dateTime) {
+    // In a real implementation, you'd use timezone package
+    // For now, return the DateTime as is
+    return dateTime;
+  }
+
+  // Get time until event
+  String _getTimeUntilEvent(DateTime eventTime) {
+    final now = DateTime.now();
+    final difference = eventTime.difference(now);
+    
+    if (difference.inDays > 0) {
+      return '${difference.inDays} day${difference.inDays > 1 ? 's' : ''}';
+    } else if (difference.inHours > 0) {
+      return '${difference.inHours} hour${difference.inHours > 1 ? 's' : ''}';
+    } else {
+      return '${difference.inMinutes} minute${difference.inMinutes > 1 ? 's' : ''}';
+    }
+  }
+
+  // Format event date
+  String _formatEventDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year} at ${date.hour}:${date.minute.toString().padLeft(2, '0')}';
   }
 }
 

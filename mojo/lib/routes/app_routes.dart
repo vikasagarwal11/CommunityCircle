@@ -4,6 +4,7 @@ import '../providers/auth_providers.dart';
 import '../views/phone_auth_screen.dart';
 import '../views/home_screen.dart';
 import '../views/community_details_screen.dart';
+import '../views/edit_community_screen.dart';
 import '../views/search_screen.dart';
 import '../views/public_home_screen.dart';
 import '../views/create_community_screen.dart';
@@ -22,7 +23,12 @@ import '../views/create_event_screen.dart';
 import '../views/event_details_screen.dart';
 import '../views/calendar_screen.dart';
 import '../views/event_communication_screen.dart';
+import '../views/rsvp_management_screen.dart';
+import '../views/notification_preferences_screen.dart';
 import '../models/community_model.dart';
+import '../models/event_model.dart';
+import '../views/edit_event_screen.dart';
+import '../widgets/error_widget.dart';
 
 
 class AppRoutes {
@@ -42,8 +48,10 @@ class AppRoutes {
   // Community routes
   static const String communityDetails = '/community-details';
   static const String createCommunity = '/create-community';
+  static const String editCommunity = '/edit-community';
   static const String adminManagement = '/admin-management';
   static const String joinRequestsReview = '/join-requests-review';
+  static const String editEvent = '/edit-event';
   
   // Chat routes
   static const String chat = '/chat';
@@ -59,6 +67,8 @@ class AppRoutes {
   static const String createEvent = '/create-event';
   static const String calendar = '/calendar';
   static const String eventCommunication = '/event-communication';
+  static const String rsvpManagement = '/rsvp-management';
+  static const String notificationPreferences = '/notification-preferences';
   
   // Moment routes
   static const String momentDetails = '/moment-details';
@@ -207,8 +217,34 @@ class AppRoutes {
           builder: (_) => SearchScreen(initialQuery: initialQuery),
         );
       case createCommunity:
+        final eventTemplate = settings.arguments as Map<String, dynamic>?;
         return MaterialPageRoute(
-          builder: (_) => const CreateCommunityScreen(),
+          builder: (_) => CreateCommunityScreen(eventTemplate: eventTemplate),
+        );
+      case editCommunity:
+        final args = settings.arguments;
+        CommunityModel? community;
+        
+        if (args is CommunityModel) {
+          community = args;
+        } else if (args is Map<String, dynamic>) {
+          final communityData = args['community'] as Map<String, dynamic>?;
+          if (communityData != null) {
+            community = CommunityModel.fromMap(communityData, '');
+          }
+        }
+        
+        if (community == null) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(
+                child: Text('Community not found'),
+              ),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => EditCommunityScreen(community: community!),
         );
       case profile:
         final userId = settings.arguments as String?;
@@ -411,7 +447,7 @@ class AppRoutes {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.construction, size: 64, color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                  Icon(Icons.construction, size: 64, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                   const SizedBox(height: 24),
                   const Text('Coming Soon!', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
@@ -429,7 +465,7 @@ class AppRoutes {
       case eventList:
         final communityId = settings.arguments as String?;
         return MaterialPageRoute(
-          builder: (_) => EventListScreen(communityId: communityId),
+          builder: (_) => EventListScreen(communityId: communityId, isTab: false),
         );
       case eventDetails:
         final args = settings.arguments as Map<String, dynamic>?;
@@ -449,7 +485,10 @@ class AppRoutes {
           builder: (_) => EventDetailsScreen(eventId: eventId, communityId: communityId),
         );
       case createEvent:
-        final communityId = settings.arguments as String?;
+        final args = settings.arguments as Map<String, dynamic>?;
+        final communityId = args?['communityId'] as String?;
+        final templateData = args?['templateData'] as Map<String, dynamic>?;
+        
         if (communityId == null) {
           return MaterialPageRoute(
             builder: (_) => const Scaffold(
@@ -460,7 +499,10 @@ class AppRoutes {
           );
         }
         return MaterialPageRoute(
-          builder: (_) => CreateEventScreen(communityId: communityId),
+          builder: (_) => CreateEventScreen(
+            communityId: communityId,
+            templateData: templateData,
+          ),
         );
       case calendar:
         return MaterialPageRoute(
@@ -483,6 +525,27 @@ class AppRoutes {
         return MaterialPageRoute(
           builder: (_) => EventCommunicationScreen(eventId: eventId, communityId: communityId),
         );
+      case rsvpManagement:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final eventId = args?['eventId'] as String?;
+        final communityId = args?['communityId'] as String?;
+        
+        if (eventId == null) {
+          return MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              body: Center(
+                child: Text('Event ID is required'),
+              ),
+            ),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => RsvpManagementScreen(eventId: eventId, communityId: communityId),
+        );
+      case notificationPreferences:
+        return MaterialPageRoute(
+          builder: (_) => const NotificationPreferencesScreen(),
+        );
       case notifications:
       case help:
       case about:
@@ -502,7 +565,7 @@ class AppRoutes {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.construction, size: 64, color: Theme.of(context).colorScheme.primary.withOpacity(0.3)),
+                  Icon(Icons.construction, size: 64, color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)),
                   const SizedBox(height: 24),
                   const Text('Coming Soon!', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 12),
@@ -516,6 +579,18 @@ class AppRoutes {
               ),
             ),
           ),
+        );
+      case editEvent:
+        final args = settings.arguments as Map<String, dynamic>?;
+        final event = args?['event'] as EventModel?;
+        final community = args?['community'] as CommunityModel?;
+        if (event != null && community != null) {
+          return MaterialPageRoute(
+            builder: (_) => EditEventScreen(event: event!, community: community!),
+          );
+        }
+        return MaterialPageRoute(
+          builder: (_) => ErrorWidget('Event not found'),
         );
       default:
         return MaterialPageRoute(

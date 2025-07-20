@@ -399,15 +399,15 @@ final personalChatsProvider = StreamProvider<List<PersonalChatModel>>((ref) {
       if (user == null) return const Stream.empty();
       final userId = user.id;
       
-      // Get all personal chats and filter on client side
+      // Query personal chats where the user is a participant
       return FirebaseFirestore.instance
           .collection('personal_chats')
+          .where('participants', arrayContains: userId)
           .orderBy('lastMessageTime', descending: true)
           .snapshots()
           .map((snapshot) {
             return snapshot.docs
                 .map((doc) => PersonalChatModel.fromMap(doc.data(), doc.id))
-                .where((chat) => chat.user1Id == userId || chat.user2Id == userId)
                 .toList();
           });
     },

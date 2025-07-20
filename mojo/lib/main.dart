@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'core/theme.dart';
+import 'core/constants.dart';
 import 'core/navigation_service.dart';
 import 'providers/auth_providers.dart';
 import 'providers/notification_providers.dart';
@@ -94,28 +95,36 @@ class _MainScaffoldState extends State<MainScaffold> {
   static final List<Widget> _screens = <Widget>[
     HomeScreen(),
     ChatHubScreen(),
-    PersonalChatHubScreen(),
-    EventListScreen(), // Replace placeholder with actual EventListScreen
+    EventListScreen(isTab: true), // Use as tab
     ChallengeHubScreen(), // Use the real Challenge Hub here
     ProfileScreen(),
   ];
 
   void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
+    if (index != _selectedIndex) {
+      setState(() {
+        _selectedIndex = index;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: _screens[_selectedIndex],
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: _screens,
+      ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
         showSelectedLabels: false,
         showUnselectedLabels: false,
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: Colors.grey,
+        backgroundColor: Colors.white,
+        elevation: 8,
         items: const [
           BottomNavigationBarItem(
             icon: Icon(Icons.home),
@@ -123,11 +132,7 @@ class _MainScaffoldState extends State<MainScaffold> {
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.message),
-            label: 'Community',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Personal',
+            label: 'Chat',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.event),

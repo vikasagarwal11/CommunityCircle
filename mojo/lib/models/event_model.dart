@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
 
 class EventModel {
   final String id;
@@ -17,6 +18,7 @@ class EventModel {
   final Map<String, String> rsvps; // userId -> status
   final Map<String, DateTime> checkIns; // userId -> timestamp
   final Map<String, dynamic>? metadata;
+  final String? category; // Event category: "meeting", "workshop", "social", "webinar", "hackathon"
 
   EventModel({
     required this.id,
@@ -35,6 +37,7 @@ class EventModel {
     required this.rsvps,
     required this.checkIns,
     this.metadata,
+    this.category,
   });
 
   factory EventModel.fromMap(Map<String, dynamic> map, String id) {
@@ -57,6 +60,7 @@ class EventModel {
             (key, value) => MapEntry(key, (value as Timestamp).toDate()),
           ) ?? {},
       metadata: map['metadata'],
+      category: map['category'],
     );
   }
 
@@ -77,6 +81,7 @@ class EventModel {
       'rsvps': rsvps,
       'checkIns': checkIns.map((key, value) => MapEntry(key, value)),
       'metadata': metadata,
+      'category': category,
     };
   }
 
@@ -97,6 +102,7 @@ class EventModel {
     Map<String, String>? rsvps,
     Map<String, DateTime>? checkIns,
     Map<String, dynamic>? metadata,
+    String? category,
   }) {
     return EventModel(
       id: id ?? this.id,
@@ -115,6 +121,7 @@ class EventModel {
       rsvps: rsvps ?? this.rsvps,
       checkIns: checkIns ?? this.checkIns,
       metadata: metadata ?? this.metadata,
+      category: category ?? this.category,
     );
   }
 
@@ -217,6 +224,86 @@ class EventModel {
     }
     return this;
   }
+
+  // Event Categories
+  static const String categoryMeeting = 'meeting';
+  static const String categoryWorkshop = 'workshop';
+  static const String categorySocial = 'social';
+  static const String categoryWebinar = 'webinar';
+  static const String categoryHackathon = 'hackathon';
+
+  // Category helper methods
+  static List<String> get availableCategories => [
+    categoryMeeting,
+    categoryWorkshop,
+    categorySocial,
+    categoryWebinar,
+    categoryHackathon,
+  ];
+
+  static String getCategoryDisplayName(String category) {
+    switch (category) {
+      case categoryMeeting:
+        return 'Meeting';
+      case categoryWorkshop:
+        return 'Workshop';
+      case categorySocial:
+        return 'Social';
+      case categoryWebinar:
+        return 'Webinar';
+      case categoryHackathon:
+        return 'Hackathon';
+      default:
+        return 'Other';
+    }
+  }
+
+  static IconData getCategoryIcon(String category) {
+    switch (category) {
+      case categoryMeeting:
+        return Icons.meeting_room_rounded;
+      case categoryWorkshop:
+        return Icons.workspace_premium_rounded;
+      case categorySocial:
+        return Icons.people_rounded;
+      case categoryWebinar:
+        return Icons.video_call_rounded;
+      case categoryHackathon:
+        return Icons.code_rounded;
+      default:
+        return Icons.event_rounded;
+    }
+  }
+
+  static Color getCategoryColor(String category) {
+    switch (category) {
+      case categoryMeeting:
+        return Colors.blue;
+      case categoryWorkshop:
+        return Colors.green;
+      case categorySocial:
+        return Colors.orange;
+      case categoryWebinar:
+        return Colors.purple;
+      case categoryHackathon:
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  // Instance methods for category
+  String get categoryDisplayName => category != null 
+      ? getCategoryDisplayName(category!) 
+      : 'Other';
+  
+  IconData get categoryIcon => category != null 
+      ? getCategoryIcon(category!) 
+      : Icons.event_rounded;
+  
+  Color get categoryColor => category != null 
+      ? getCategoryColor(category!) 
+      : Colors.grey;
 
   @override
   String toString() {

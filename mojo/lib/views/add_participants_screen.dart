@@ -24,14 +24,15 @@ class AddParticipantsScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final searchQuery = useState('');
     final selectedUsers = useState<Set<String>>({});
+    final searchQuery = useState('');
+    final isSearching = useState(false);
+    final searchResults = useState<List<UserModel>>([]);
     final groupNameController = useTextEditingController(
       text: currentGroupName ?? '',
     );
     final groupDescriptionController = useTextEditingController();
 
-    final userAsync = ref.watch(authNotifierProvider);
     final allUsersAsync = ref.watch(usersProvider);
     final groupChatStateAsync = ref.watch(groupChatStateProvider);
 

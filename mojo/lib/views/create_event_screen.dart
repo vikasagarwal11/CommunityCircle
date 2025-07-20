@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:intl/intl.dart';
 import 'dart:io';
 import '../core/constants.dart';
+import '../core/theme.dart';
 import '../core/logger.dart';
 import '../core/navigation_service.dart';
-import '../core/theme.dart';
 import '../models/event_model.dart';
 import '../models/user_model.dart';
+import '../providers/event_providers.dart';
 import '../providers/auth_providers.dart';
+import '../providers/community_providers.dart';
 import '../providers/database_providers.dart';
 import '../services/storage_service.dart';
 import '../widgets/loading_widget.dart';
@@ -17,10 +19,12 @@ import '../widgets/error_widget.dart';
 
 class CreateEventScreen extends ConsumerStatefulWidget {
   final String communityId;
+  final Map<String, dynamic>? templateData;
 
   const CreateEventScreen({
     super.key,
     required this.communityId,
+    this.templateData,
   });
 
   @override
@@ -54,6 +58,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen>
   bool _approvalRequired = false;
   bool _isBusinessEvent = false;
   bool _hasSpotsLimit = false;
+  String? _selectedCategory; // Event category
   File? _posterImage;
   bool _isLoading = false;
   
@@ -69,6 +74,48 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen>
     super.initState();
     _setupAnimations();
     _setupValidation();
+    _populateFromTemplate();
+  }
+
+  void _populateFromTemplate() {
+    if (widget.templateData != null) {
+      final template = widget.templateData!;
+      
+      // Populate form fields from template
+      if (template['title'] != null) {
+        _titleController.text = template['title'];
+        _isTitleValid = true;
+      }
+      
+      if (template['description'] != null) {
+        _descriptionController.text = template['description'];
+        _isDescriptionValid = true;
+      }
+      
+      if (template['location'] != null) {
+        _locationController.text = template['location'];
+        _isLocationValid = true;
+      }
+      
+      if (template['category'] != null) {
+        _selectedCategory = template['category'];
+      }
+      
+      if (template['visibility'] != null) {
+        _visibility = template['visibility'];
+      }
+      
+      if (template['approvalRequired'] != null) {
+        _approvalRequired = template['approvalRequired'];
+      }
+      
+      if (template['isBusinessEvent'] != null) {
+        _isBusinessEvent = template['isBusinessEvent'];
+      }
+      
+      // Update progress after populating
+      _updateProgress();
+    }
   }
 
   void _setupAnimations() {
@@ -191,6 +238,20 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen>
           _selectedTime.minute,
         );
         _isDateValid = _selectedDate.isAfter(DateTime.now());
+        
+        // Update end date if it's now before the new start date
+        if (_selectedEndDate.isBefore(_selectedDate)) {
+          _selectedEndDate = DateTime(
+            _selectedDate.year,
+            _selectedDate.month,
+            _selectedDate.day,
+            _selectedEndTime.hour,
+            _selectedEndTime.minute,
+          );
+        }
+        
+        // Revalidate end date
+        _validateEndDateTime();
       });
       _updateProgress();
     }
@@ -222,7 +283,11 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen>
           picked.hour,
           picked.minute,
         );
+        
+        // Revalidate end date
+        _validateEndDateTime();
       });
+      _updateProgress();
     }
   }
 
@@ -230,7 +295,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen>
     final DateTime? picked = await showDatePicker(
       context: context,
       initialDate: _selectedEndDate,
-      firstDate: _selectedDate,
+      firstDate: DateTime.now(), // Allow any date, we'll validate later
       lastDate: DateTime.now().add(const Duration(days: 365)),
       builder: (context, child) {
         return Theme(
@@ -253,7 +318,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen>
           _selectedEndTime.hour,
           _selectedEndTime.minute,
         );
-        _isEndDateValid = _selectedEndDate.isAfter(_selectedDate);
+        _validateEndDateTime();
       });
       _updateProgress();
     }
@@ -285,10 +350,16 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen>
           picked.hour,
           picked.minute,
         );
-        _isEndDateValid = _selectedEndDate.isAfter(_selectedDate);
+        _validateEndDateTime();
       });
       _updateProgress();
     }
+  }
+
+  // New method to validate end date/time
+  void _validateEndDateTime() {
+    // End date/time must be after start date/time
+    _isEndDateValid = _selectedEndDate.isAfter(_selectedDate);
   }
 
   Future<void> _pickImage() async {
@@ -366,6 +437,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen>
         createdAt: DateTime.now(),
         rsvps: {},
         checkIns: {},
+        category: _selectedCategory,
         metadata: {
           'isBusinessEvent': _isBusinessEvent,
           'createdBy': user.displayName ?? user.phoneNumber,
@@ -377,6 +449,12 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen>
       await eventNotifier.createEvent(event);
 
       _logger.i('🎬 Event created successfully: ${event.title}');
+      
+      // Refresh providers for real-time updates
+      ref.invalidate(communityEventsProvider(widget.communityId));
+      ref.invalidate(accessibleEventsProvider);
+      ref.invalidate(userCommunitiesProvider);
+      ref.invalidate(publicCommunitiesProvider(const CommunityQueryParams(limit: 20)));
       
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -714,6 +792,10 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen>
           icon: Icons.location_on,
           required: true,
         ),
+        
+        const SizedBox(height: 12),
+        
+        _buildCategoryPicker(),
       ],
     );
   }
@@ -791,6 +873,80 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen>
                 fontSize: 13,
               ),
             ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCategoryPicker() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(
+              Icons.category,
+              size: 14,
+              color: AppColors.primary,
+            ),
+            const SizedBox(width: 6),
+            const Text(
+              'Event Category',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
+                color: AppColors.onSurface,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(
+              color: AppColors.outlineVariant,
+              width: 1,
+            ),
+          ),
+          child: DropdownButtonFormField<String>(
+            value: _selectedCategory,
+            decoration: InputDecoration(
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.all(12),
+              hintStyle: TextStyle(
+                color: AppColors.onSurfaceVariant.withValues(alpha: 0.7),
+                fontSize: 13,
+              ),
+            ),
+            hint: const Text('Select a category'),
+            items: [
+              const DropdownMenuItem(
+                value: null,
+                child: Text('Select a category'),
+              ),
+              ...EventModel.availableCategories.map((category) => DropdownMenuItem(
+                value: category,
+                child: Row(
+                  children: [
+                    Icon(
+                      EventModel.getCategoryIcon(category),
+                      size: 16,
+                      color: EventModel.getCategoryColor(category),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(EventModel.getCategoryDisplayName(category)),
+                  ],
+                ),
+              )),
+            ],
+            onChanged: (value) {
+              setState(() {
+                _selectedCategory = value;
+              });
+            },
           ),
         ),
       ],
@@ -898,7 +1054,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen>
                 const SizedBox(width: 6),
                 Expanded(
                   child: Text(
-                    'End time must be after start time',
+                    'End date/time must be after start date/time',
                     style: TextStyle(
                       color: AppColors.error,
                       fontSize: 11,

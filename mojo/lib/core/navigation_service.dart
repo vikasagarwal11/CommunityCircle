@@ -7,6 +7,7 @@ import '../models/community_model.dart';
 import '../models/user_model.dart';
 import '../routes/app_routes.dart';
 import '../services/auth_service.dart';
+import '../models/event_model.dart';
 
 class NavigationService {
   static final material.GlobalKey<material.NavigatorState> navigatorKey = 
@@ -807,6 +808,25 @@ class NavigationService {
     }
   }
 
+  // Navigate to edit community with logging and analytics
+  static Future<T?> navigateToEditCommunity<T>(CommunityModel community) async {
+    try {
+      _logger.i('✏️ Navigating to edit community: ${community.id}');
+      await _trackNavigationEvent('edit_community', parameters: {
+        'navigation_type': 'navigate_to_edit_community',
+        'community_id': community.id,
+        'community_name': community.name,
+      });
+      return await pushNamed<T>(AppRoutes.editCommunity, arguments: community);
+    } catch (e) {
+      _logger.e('❌ Error navigating to edit community: $e');
+      await _trackNavigationError('edit_community', e.toString(), parameters: {
+        'community_id': community.id,
+      });
+      return Future.value(null);
+    }
+  }
+
   // Navigate to admin management with logging and analytics
   static Future<T?> navigateToAdminManagement<T>(CommunityModel community) async {
     try {
@@ -1063,9 +1083,9 @@ class NavigationService {
   }
 
   // Navigate to create community with logging and analytics
-  static Future<T?> navigateToCreateCommunity<T>() async {
+  static Future<T?> navigateToCreateCommunity<T>({Map<String, dynamic>? eventTemplate}) async {
     try {
-      _logger.i('➕ Navigating to create community');
+      _logger.i('➕ Navigating to create community${eventTemplate != null ? ' with event template' : ''}');
       
       // Check user authentication and role
       final authService = AuthService();
@@ -1111,8 +1131,9 @@ class NavigationService {
       await _trackNavigationEvent('create_community', parameters: {
         'navigation_type': 'navigate_to_create_community',
         'user_role': userRole,
+        'has_event_template': (eventTemplate != null).toString(),
       });
-      return await pushNamed<T>(AppRoutes.createCommunity);
+      return await pushNamed<T>(AppRoutes.createCommunity, arguments: eventTemplate);
     } catch (e) {
       _logger.e('❌ Error navigating to create community: $e');
       await _trackNavigationError('create_community', e.toString());
@@ -1165,8 +1186,26 @@ class NavigationService {
   }
 
   // Navigate to create event
-  static Future<T?> navigateToCreateEvent<T>(String communityId) {
-    return pushNamed<T>(AppRoutes.createEvent, arguments: communityId);
+  static Future<T?> navigateToCreateEvent<T>({String? communityId, Map<String, dynamic>? templateData}) async {
+    try {
+      _logger.i('🎬 Navigating to create event${communityId != null ? ' for community: $communityId' : ''}${templateData != null ? ' with template' : ''}');
+      
+      await _trackNavigationEvent('create_event', parameters: {
+        'navigation_type': 'navigate_to_create_event',
+        'has_community_id': (communityId != null).toString(),
+        'has_template_data': (templateData != null).toString(),
+        'template_type': templateData?['templateType'] ?? 'none',
+      });
+      
+      return await navigatorKey.currentState?.pushNamed(
+        AppRoutes.createEvent,
+        arguments: {'communityId': communityId, 'templateData': templateData},
+      );
+    } catch (e) {
+      _logger.e('❌ Error navigating to create event: $e');
+      await _trackNavigationError('create_event', e.toString());
+      return Future.value(null);
+    }
   }
 
   // Navigate to calendar
@@ -1177,6 +1216,14 @@ class NavigationService {
   // Navigate to event communication
   static Future<T?> navigateToEventCommunication<T>(String eventId, {String? communityId}) {
     return pushNamed<T>(AppRoutes.eventCommunication, arguments: {
+      'eventId': eventId,
+      'communityId': communityId,
+    });
+  }
+
+  // Navigate to RSVP management
+  static Future<T?> navigateToRsvpManagement<T>(String eventId, {String? communityId}) {
+    return pushNamed<T>(AppRoutes.rsvpManagement, arguments: {
       'eventId': eventId,
       'communityId': communityId,
     });
@@ -1540,5 +1587,17 @@ class NavigationService {
   // Navigate to unknown error
   static Future<T?> navigateToUnknownError<T>() {
     return pushNamed<T>(AppRoutes.unknownError);
+  }
+
+  // Navigate to notification preferences
+  static Future<T?> navigateToNotificationPreferences<T>() {
+    return pushNamed<T>(AppRoutes.notificationPreferences);
+  }
+
+  static Future<T?> navigateToEditEvent<T>(EventModel event, CommunityModel community) async {
+    return await navigatorKey.currentState?.pushNamed(
+      AppRoutes.editEvent,
+      arguments: [event, community],
+    );
   }
 } 

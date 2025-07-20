@@ -480,40 +480,45 @@ final paginationProvider = StateProvider<Map<String, dynamic>>((ref) => {
 });
 
 // Community creation form provider
-final communityFormProvider = StateProvider<Map<String, dynamic>>((ref) => {
+final communityFormProvider = StateProvider<Map<String, dynamic>>((ref) => <String, dynamic>{
   'name': '',
   'description': '',
   'coverImage': '',
   'visibility': 'public',
   'approvalRequired': false,
   'isBusiness': false,
-  'theme': {'color': '#2196F3', 'banner_url': ''},
+  'theme': <String, String>{'color': '#2196F3', 'banner_url': ''},
 });
 
 // Community form validation provider
 final communityFormValidationProvider = Provider<Map<String, String>>((ref) {
-  final form = ref.watch(communityFormProvider);
-  final errors = <String, String>{};
-  
-  // Validate name
-  if (form['name'].toString().trim().isEmpty) {
-    errors['name'] = 'Community name is required';
-  } else if (form['name'].toString().length < 3) {
-    errors['name'] = 'Community name must be at least 3 characters';
-  } else if (form['name'].toString().length > 50) {
-    errors['name'] = 'Community name must be less than 50 characters';
+  try {
+    final form = ref.watch(communityFormProvider);
+    final errors = <String, String>{};
+    
+    // Validate name
+    if (form['name'].toString().trim().isEmpty) {
+      errors['name'] = 'Community name is required';
+    } else if (form['name'].toString().length < 3) {
+      errors['name'] = 'Community name must be at least 3 characters';
+    } else if (form['name'].toString().length > 50) {
+      errors['name'] = 'Community name must be less than 50 characters';
+    }
+    
+    // Validate description
+    if (form['description'].toString().trim().isEmpty) {
+      errors['description'] = 'Community description is required';
+    } else if (form['description'].toString().length < 10) {
+      errors['description'] = 'Community description must be at least 10 characters';
+    } else if (form['description'].toString().length > 500) {
+      errors['description'] = 'Community description must be less than 500 characters';
+    }
+    
+    return errors;
+  } catch (e) {
+    print('🔍 CommunityFormValidationProvider error: $e');
+    return <String, String>{};
   }
-  
-  // Validate description
-  if (form['description'].toString().trim().isEmpty) {
-    errors['description'] = 'Community description is required';
-  } else if (form['description'].toString().length < 10) {
-    errors['description'] = 'Community description must be at least 10 characters';
-  } else if (form['description'].toString().length > 500) {
-    errors['description'] = 'Community description must be less than 500 characters';
-  }
-  
-  return errors;
 });
 
 // NEW: Pending join requests provider for admin review
@@ -563,8 +568,13 @@ final userOnboardingStatusProvider = FutureProvider.family<bool, Map<String, Str
 
 // Community form is valid provider
 final communityFormIsValidProvider = Provider<bool>((ref) {
-  final errors = ref.watch(communityFormValidationProvider);
-  return errors.isEmpty;
+  try {
+    final errors = ref.watch(communityFormValidationProvider);
+    return errors.isEmpty;
+  } catch (e) {
+    print('🔍 CommunityFormIsValidProvider error: $e');
+    return false;
+  }
 });
 
 // Bulk actions notifier

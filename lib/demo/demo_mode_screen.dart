@@ -394,11 +394,13 @@ class _DemoModeScreenState extends ConsumerState<DemoModeScreen>
                                         color: Colors.grey[600],
                                       ),
                                       const SizedBox(width: 4),
-                                      Text(
-                                        '${community.memberCount} members',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Colors.grey[600],
+                                      Expanded(
+                                        child: Text(
+                                          '${community.memberCount} members',
+                                          style: TextStyle(
+                                            fontSize: 12,
+                                            color: Colors.grey[600],
+                                          ),
                                         ),
                                       ),
                                     ],

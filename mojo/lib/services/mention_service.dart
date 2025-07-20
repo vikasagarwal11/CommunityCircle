@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:logger/logger.dart';
+import 'package:flutter/foundation.dart';
+import '../models/community_model.dart';
+import '../services/community_service.dart';
 
 class MentionService {
-  final Logger _logger = Logger();
+  final CommunityService _communityService;
+
+  MentionService(this._communityService);
 
   // Extract mentions from text using @ symbol
   List<String> extractMentions(String text) {
@@ -198,5 +203,6 @@ class MentionService {
 
 // Provider for mention service
 final mentionServiceProvider = Provider<MentionService>((ref) {
-  return MentionService();
+  final communityService = CommunityService();
+  return MentionService(communityService);
 }); 

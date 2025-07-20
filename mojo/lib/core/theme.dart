@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'constants.dart';
 
 // Material 3 Design Tokens
 class AppColors {
@@ -120,7 +121,6 @@ class AppTheme {
       onSurfaceVariant: AppColors.onSurfaceVariant,
       background: AppColors.background,
       onBackground: AppColors.onBackground,
-      surfaceContainerHighest: AppColors.surfaceVariant,
     ),
     
     // Typography
@@ -131,13 +131,13 @@ class AppTheme {
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.primary,
         foregroundColor: AppColors.onPrimary,
-        minimumSize: const Size(double.infinity, 56),
+        minimumSize: const Size(88, 56),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
         elevation: 2,
-        shadowColor: AppColors.shadow.withOpacity(0.25),
+        shadowColor: AppColors.shadow.withValues(alpha: 0.25),
       ),
     ),
     
@@ -145,7 +145,7 @@ class AppTheme {
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.primary,
         side: const BorderSide(color: AppColors.primary, width: 1.5),
-        minimumSize: const Size(double.infinity, 56),
+        minimumSize: const Size(88, 56),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -168,7 +168,7 @@ class AppTheme {
     cardTheme: CardThemeData(
       color: AppColors.surface,
       elevation: 2,
-      shadowColor: AppColors.shadow.withOpacity(0.1),
+      shadowColor: AppColors.shadow.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
@@ -200,7 +200,7 @@ class AppTheme {
     // Input Decoration Theme
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppColors.surfaceVariant.withOpacity(0.3),
+      fillColor: AppColors.surfaceVariant.withValues(alpha: 0.3),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
@@ -219,7 +219,7 @@ class AppTheme {
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       labelStyle: TextStyle(color: AppColors.onSurfaceVariant),
-      hintStyle: TextStyle(color: AppColors.onSurfaceVariant.withOpacity(0.7)),
+      hintStyle: TextStyle(color: AppColors.onSurfaceVariant.withValues(alpha: 0.7)),
     ),
     
     // Chip Theme
@@ -318,13 +318,13 @@ class AppTheme {
       style: ElevatedButton.styleFrom(
         backgroundColor: AppColors.darkPrimary,
         foregroundColor: AppColors.darkOnPrimary,
-        minimumSize: const Size(double.infinity, 56),
+        minimumSize: const Size(88, 56),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
         elevation: 2,
-        shadowColor: AppColors.shadow.withOpacity(0.25),
+        shadowColor: AppColors.shadow.withValues(alpha: 0.25),
       ),
     ),
     
@@ -332,7 +332,7 @@ class AppTheme {
       style: OutlinedButton.styleFrom(
         foregroundColor: AppColors.darkPrimary,
         side: const BorderSide(color: AppColors.darkPrimary, width: 1.5),
-        minimumSize: const Size(double.infinity, 56),
+        minimumSize: const Size(88, 56),
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
@@ -355,7 +355,7 @@ class AppTheme {
     cardTheme: CardThemeData(
       color: AppColors.darkSurface,
       elevation: 2,
-      shadowColor: AppColors.shadow.withOpacity(0.3),
+      shadowColor: AppColors.shadow.withValues(alpha: 0.1),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
@@ -387,7 +387,7 @@ class AppTheme {
     // Input Decoration Theme
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
-      fillColor: AppColors.darkSurfaceVariant.withOpacity(0.3),
+      fillColor: AppColors.darkSurfaceVariant.withValues(alpha: 0.3),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
         borderSide: BorderSide.none,
@@ -406,7 +406,7 @@ class AppTheme {
       ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       labelStyle: TextStyle(color: AppColors.darkOnSurfaceVariant),
-      hintStyle: TextStyle(color: AppColors.darkOnSurfaceVariant.withOpacity(0.7)),
+      hintStyle: TextStyle(color: AppColors.darkOnSurfaceVariant.withValues(alpha: 0.7)),
     ),
     
     // Chip Theme
@@ -427,7 +427,7 @@ class AppTheme {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(24),
       ),
-      titleTextStyle: _buildTextTheme(Brightness.dark).headlineSmall?.copyWith(
+      titleTextStyle: _buildTextTheme(Brightness.dark).titleLarge?.copyWith(
         fontWeight: FontWeight.w600,
         color: AppColors.darkOnSurface,
       ),
@@ -460,116 +460,101 @@ class AppTheme {
     ),
   );
 
-  // Build accessible text theme
+  // Helper method to build text theme
   static TextTheme _buildTextTheme(Brightness brightness) {
     final isDark = brightness == Brightness.dark;
-    final baseColor = isDark ? AppColors.darkOnSurface : AppColors.onSurface;
+    final baseTextColor = isDark ? AppColors.darkOnSurface : AppColors.onSurface;
     
     return TextTheme(
       displayLarge: TextStyle(
         fontSize: 57,
         fontWeight: FontWeight.w400,
+        color: baseTextColor,
         letterSpacing: -0.25,
-        color: baseColor,
-        height: 1.12,
       ),
       displayMedium: TextStyle(
         fontSize: 45,
         fontWeight: FontWeight.w400,
+        color: baseTextColor,
         letterSpacing: 0,
-        color: baseColor,
-        height: 1.16,
       ),
       displaySmall: TextStyle(
         fontSize: 36,
         fontWeight: FontWeight.w400,
+        color: baseTextColor,
         letterSpacing: 0,
-        color: baseColor,
-        height: 1.22,
       ),
       headlineLarge: TextStyle(
         fontSize: 32,
         fontWeight: FontWeight.w400,
+        color: baseTextColor,
         letterSpacing: 0,
-        color: baseColor,
-        height: 1.25,
       ),
       headlineMedium: TextStyle(
         fontSize: 28,
         fontWeight: FontWeight.w400,
+        color: baseTextColor,
         letterSpacing: 0,
-        color: baseColor,
-        height: 1.29,
       ),
       headlineSmall: TextStyle(
         fontSize: 24,
         fontWeight: FontWeight.w400,
+        color: baseTextColor,
         letterSpacing: 0,
-        color: baseColor,
-        height: 1.33,
       ),
       titleLarge: TextStyle(
         fontSize: 22,
         fontWeight: FontWeight.w400,
+        color: baseTextColor,
         letterSpacing: 0,
-        color: baseColor,
-        height: 1.27,
       ),
       titleMedium: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w500,
+        color: baseTextColor,
         letterSpacing: 0.15,
-        color: baseColor,
-        height: 1.5,
       ),
       titleSmall: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w500,
+        color: baseTextColor,
         letterSpacing: 0.1,
-        color: baseColor,
-        height: 1.43,
       ),
       bodyLarge: TextStyle(
         fontSize: 16,
         fontWeight: FontWeight.w400,
+        color: baseTextColor,
         letterSpacing: 0.5,
-        color: baseColor,
-        height: 1.5,
       ),
       bodyMedium: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w400,
+        color: baseTextColor,
         letterSpacing: 0.25,
-        color: baseColor,
-        height: 1.43,
       ),
       bodySmall: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w400,
+        color: baseTextColor,
         letterSpacing: 0.4,
-        color: baseColor,
-        height: 1.33,
       ),
       labelLarge: TextStyle(
         fontSize: 14,
         fontWeight: FontWeight.w500,
+        color: baseTextColor,
         letterSpacing: 0.1,
-        color: baseColor,
-        height: 1.43,
       ),
       labelMedium: TextStyle(
         fontSize: 12,
         fontWeight: FontWeight.w500,
+        color: baseTextColor,
         letterSpacing: 0.5,
-        color: baseColor,
-        height: 1.33,
       ),
       labelSmall: TextStyle(
         fontSize: 11,
         fontWeight: FontWeight.w500,
+        color: baseTextColor,
         letterSpacing: 0.5,
-        color: baseColor,
-        height: 1.45,
       ),
     );
   }

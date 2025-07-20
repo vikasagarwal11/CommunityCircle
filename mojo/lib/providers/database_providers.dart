@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../services/database_service.dart';
 import '../services/community_service.dart';
+import '../services/event_service.dart';
 import '../models/user_model.dart';
 import '../models/community_model.dart';
 import '../models/event_model.dart';
@@ -9,6 +10,7 @@ import '../models/message_model.dart';
 import '../models/moment_model.dart';
 import '../models/poll_model.dart';
 import '../models/challenge_model.dart';
+import 'auth_providers.dart';
 
 // Database Service Provider
 final databaseServiceProvider = Provider<DatabaseService>((ref) {
@@ -18,6 +20,11 @@ final databaseServiceProvider = Provider<DatabaseService>((ref) {
 // Community Service Provider
 final communityServiceProvider = Provider<CommunityService>((ref) {
   return CommunityService();
+});
+
+// Event Service Provider
+final eventServiceProvider = Provider<EventService>((ref) {
+  return EventService();
 });
 
 // User Providers
@@ -44,18 +51,6 @@ final usersProvider = StreamProvider<List<UserModel>>((ref) {
 final communityProvider = FutureProvider.family<CommunityModel?, String>((ref, communityId) async {
   final databaseService = ref.watch(databaseServiceProvider);
   return await databaseService.getCommunity(communityId);
-});
-
-// Public communities provider
-final publicCommunitiesProvider = StreamProvider<List<CommunityModel>>((ref) {
-  final communityService = ref.watch(communityServiceProvider);
-  return communityService.getPublicCommunities();
-});
-
-// User's communities provider
-final userCommunitiesProvider = StreamProvider.family<List<CommunityModel>, String>((ref, userId) {
-  final communityService = ref.watch(communityServiceProvider);
-  return communityService.getUserCommunities(userId);
 });
 
 // Business communities provider - create a method for this
@@ -85,19 +80,22 @@ final eventProvider = FutureProvider.family<EventModel?, String>((ref, eventId) 
   return await databaseService.getEvent(eventId);
 });
 
+// Community events provider with real-time updates
 final communityEventsProvider = FutureProvider.family<List<EventModel>, String>((ref, communityId) async {
-  final querySnapshot = await FirebaseFirestore.instance
-      .collection('events')
-      .where('communityId', isEqualTo: communityId)
-      .orderBy('date', descending: true)
-      .get();
+  final eventService = ref.watch(eventServiceProvider);
+  final currentUser = ref.watch(currentUserProvider).value;
+  
+  if (currentUser == null) return [];
+  return await eventService.getCommunityEvents(communityId, currentUser);
+});
 
-  return querySnapshot.docs.map((doc) {
-    return EventModel.fromMap(
-      doc.data(),
-      doc.id,
-    );
-  }).toList();
+// Accessible events provider with real-time updates
+final accessibleEventsProvider = FutureProvider<List<EventModel>>((ref) async {
+  final eventService = ref.watch(eventServiceProvider);
+  final currentUser = ref.watch(currentUserProvider).value;
+  
+  if (currentUser == null) return [];
+  return await eventService.getAccessibleEvents(currentUser);
 });
 
 final upcomingEventsProvider = FutureProvider.family<List<EventModel>, String>((ref, communityId) async {
@@ -305,48 +303,4 @@ class UserNotifier extends StateNotifier<AsyncValue<UserModel?>> {
 final userNotifierProvider = StateNotifierProvider.family<UserNotifier, AsyncValue<UserModel?>, String>((ref, userId) {
   final databaseService = ref.watch(databaseServiceProvider);
   return UserNotifier(databaseService);
-});
-
-// Event Notifier
-class EventNotifier extends StateNotifier<AsyncValue<List<EventModel>>> {
-  final DatabaseService _databaseService;
-
-  EventNotifier(this._databaseService) : super(const AsyncValue.loading());
-
-  Future<void> loadCommunityEvents(String communityId) async {
-    state = const AsyncValue.loading();
-    try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('events')
-          .where('communityId', isEqualTo: communityId)
-          .orderBy('date', descending: true)
-          .get();
-
-      final events = querySnapshot.docs.map((doc) {
-        return EventModel.fromMap(
-          doc.data(),
-          doc.id,
-        );
-      }).toList();
-
-      state = AsyncValue.data(events);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
-  }
-
-  Future<void> createEvent(EventModel event) async {
-    try {
-      await _databaseService.createEvent(event);
-      // Reload events for the community
-      await loadCommunityEvents(event.communityId);
-    } catch (error, stackTrace) {
-      state = AsyncValue.error(error, stackTrace);
-    }
-  }
-}
-
-final eventNotifierProvider = StateNotifierProvider.family<EventNotifier, AsyncValue<List<EventModel>>, String>((ref, communityId) {
-  final databaseService = ref.watch(databaseServiceProvider);
-  return EventNotifier(databaseService);
 }); 

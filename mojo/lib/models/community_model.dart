@@ -176,6 +176,9 @@ class CommunityModel {
   String get themeColor => theme['color'] ?? '#2196F3';
   String get bannerUrl => theme['banner_url'] ?? '';
 
+  // Get event count from metadata
+  int get eventCount => (metadata['event_count'] as int?) ?? 0;
+
   // Simple search method
   bool matchesSearch(String query) {
     if (query.isEmpty) return true;

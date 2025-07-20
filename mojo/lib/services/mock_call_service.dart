@@ -1,6 +1,8 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import '../core/logger.dart';
+import '../models/user_model.dart';
+import '../models/community_model.dart';
 
 class MockCallService {
   final Logger _logger = Logger('MockCallService');

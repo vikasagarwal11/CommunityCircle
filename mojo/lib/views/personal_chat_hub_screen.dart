@@ -88,13 +88,10 @@ class PersonalChatHubScreen extends HookConsumerWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const UserSearchScreen()),
-          );
-        },
+        heroTag: 'personal_chat_fab',
+        onPressed: () => _showCreateChatOptions(context),
         child: const Icon(Icons.person_add),
-        tooltip: 'Find People',
+        tooltip: 'New Chat',
       ),
     );
   }
@@ -372,5 +369,45 @@ class PersonalChatHubScreen extends HookConsumerWidget {
     } else {
       return 'now';
     }
+  }
+
+  void _showCreateChatOptions(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Container(
+        padding: const EdgeInsets.all(AppConstants.defaultPadding),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.person_add),
+              title: const Text('Start New Chat'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.of(context).push(
+                  MaterialPageRoute(builder: (_) => const UserSearchScreen()),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.group_add),
+              title: const Text('Create Group Chat'),
+              onTap: () {
+                Navigator.pop(context);
+                NavigationService.showSnackBar(message: 'Group chats coming soon!');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.contacts),
+              title: const Text('Import Contacts'),
+              onTap: () {
+                Navigator.pop(context);
+                NavigationService.showSnackBar(message: 'Contact import coming soon!');
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 } 

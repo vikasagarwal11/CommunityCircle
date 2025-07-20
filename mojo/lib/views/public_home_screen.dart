@@ -408,7 +408,7 @@ class PublicHomeScreen extends ConsumerWidget {
                                     ),
                                   ),
                                   const SizedBox(width: AppConstants.smallPadding),
-                                  Expanded(
+                                  Flexible(
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [

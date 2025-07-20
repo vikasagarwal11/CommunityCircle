@@ -1,18 +1,19 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/event_model.dart';
 import '../models/user_model.dart';
-import '../core/constants.dart';
 import '../core/logger.dart';
+import '../core/constants.dart';
+import '../services/event_service.dart';
 import '../providers/auth_providers.dart';
 import '../providers/community_providers.dart';
 
-final Logger _logger = Logger('EventProviders');
-
-// Event notifier for managing events
 class EventNotifier extends StateNotifier<AsyncValue<List<EventModel>>> {
   final String communityId;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final Logger _logger = Logger('EventNotifier');
+  final EventService _eventService = EventService();
 
   EventNotifier(this.communityId) : super(const AsyncValue.loading()) {
     _loadEvents();
@@ -22,38 +23,47 @@ class EventNotifier extends StateNotifier<AsyncValue<List<EventModel>>> {
     try {
       state = const AsyncValue.loading();
       
-      final query = _firestore
+      final snapshot = await _firestore
           .collection(AppConstants.eventsCollection)
           .where('communityId', isEqualTo: communityId)
-          .orderBy('date', descending: false);
+          .orderBy('date', descending: true)
+          .get();
 
-      final snapshot = await query.get();
       final events = snapshot.docs
           .map((doc) => EventModel.fromMap(doc.data(), doc.id))
           .toList();
 
       state = AsyncValue.data(events);
       _logger.i('📅 Loaded ${events.length} events for community: $communityId');
-    } catch (e, stack) {
+    } catch (e) {
       _logger.e('❌ Error loading events: $e');
-      state = AsyncValue.error(e, stack);
+      state = AsyncValue.error(e, StackTrace.current);
     }
   }
 
   // Create new event (admin only)
   Future<void> createEvent(EventModel event) async {
     try {
-      final docRef = await _firestore
-          .collection(AppConstants.eventsCollection)
-          .add(event.toMap());
+      // Get current user
+      final user = await _getCurrentUser();
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
 
-      final newEvent = event.copyWith(id: docRef.id);
+      // Use EventService to create event (this will update community event count)
+      final eventId = await _eventService.createEvent(event, user);
       
-      state.whenData((events) {
-        state = AsyncValue.data([newEvent, ...events]);
-      });
+      if (eventId != null) {
+        final newEvent = event.copyWith(id: eventId);
+        
+        state.whenData((events) {
+          state = AsyncValue.data([newEvent, ...events]);
+        });
 
-      _logger.i('🎬 Created event: ${event.title}');
+        _logger.i('🎬 Created event: ${event.title} with ID: $eventId');
+      } else {
+        throw Exception('Failed to create event');
+      }
     } catch (e) {
       _logger.e('❌ Error creating event: $e');
       rethrow;
@@ -83,10 +93,14 @@ class EventNotifier extends StateNotifier<AsyncValue<List<EventModel>>> {
   // Delete event (admin only)
   Future<void> deleteEvent(String eventId) async {
     try {
-      await _firestore
-          .collection(AppConstants.eventsCollection)
-          .doc(eventId)
-          .delete();
+      // Get current user
+      final user = await _getCurrentUser();
+      if (user == null) {
+        throw Exception('User not authenticated');
+      }
+
+      // Use EventService to delete event (this will update community event count)
+      await _eventService.deleteEvent(eventId, user);
 
       state.whenData((events) {
         final filteredEvents = events.where((e) => e.id != eventId).toList();
@@ -191,6 +205,27 @@ class EventNotifier extends StateNotifier<AsyncValue<List<EventModel>>> {
   Future<void> refreshEvents() async {
     await _loadEvents();
   }
+
+  // Helper method to get current user
+  Future<UserModel?> _getCurrentUser() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return null;
+      
+      final userDoc = await _firestore
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      
+      if (userDoc.exists) {
+        return UserModel.fromMap(userDoc.data()!);
+      }
+      return null;
+    } catch (e) {
+      _logger.e('Error getting current user: $e');
+      return null;
+    }
+  }
 }
 
 // Event notifier provider
@@ -256,64 +291,31 @@ final userEventCheckInProvider = Provider.family<bool, String>((ref, eventId) {
     loading: () => false,
     error: (_, __) => false,
   );
-});
+}); 
 
-// User's admin status for community
-final userCommunityAdminProvider = Provider.family<bool, String>((ref, communityId) {
-  final userAsync = ref.watch(authNotifierProvider);
-  final communityAsync = ref.watch(communityDetailsProvider(communityId));
+// Stream-based providers for real-time updates
+final accessibleEventsStreamProvider = StreamProvider<List<EventModel>>((ref) {
+  final currentUserAsync = ref.watch(currentUserProvider);
   
-  return userAsync.when(
+  return currentUserAsync.when(
     data: (user) {
-      if (user == null) return false;
-      
-      return communityAsync.when(
-        data: (community) {
-          return community?.adminUid == user.id;
-        },
-        loading: () => false,
-        error: (_, __) => false,
-      );
+      if (user == null) return Stream.value([]);
+      return EventService().getAccessibleEventsStream(user);
     },
-    loading: () => false,
-    error: (_, __) => false,
+    loading: () => Stream.value([]),
+    error: (_, __) => Stream.value([]),
   );
 });
 
-// User's member status for community
-final userCommunityMemberProvider = Provider.family<bool, String>((ref, communityId) {
-  final userAsync = ref.watch(authNotifierProvider);
-  final communityAsync = ref.watch(communityDetailsProvider(communityId));
+final communityEventsStreamProvider = StreamProvider.family<List<EventModel>, String>((ref, communityId) {
+  final currentUserAsync = ref.watch(currentUserProvider);
   
-  return userAsync.when(
+  return currentUserAsync.when(
     data: (user) {
-      if (user == null) return false;
-      
-      return communityAsync.when(
-        data: (community) {
-          return community?.isMember(user.id) ?? false;
-        },
-        loading: () => false,
-        error: (_, __) => false,
-      );
+      if (user == null) return Stream.value([]);
+      return EventService().getCommunityEventsStream(communityId, user);
     },
-    loading: () => false,
-    error: (_, __) => false,
+    loading: () => Stream.value([]),
+    error: (_, __) => Stream.value([]),
   );
-});
-
-// Event creation permission provider
-final eventCreationPermissionProvider = Provider.family<bool, String>((ref, communityId) {
-  final isAdmin = ref.watch(userCommunityAdminProvider(communityId));
-  
-  // Only admins can create events
-  return isAdmin;
-});
-
-// Event management permission provider (admin only)
-final eventManagementPermissionProvider = Provider.family<bool, String>((ref, communityId) {
-  final isAdmin = ref.watch(userCommunityAdminProvider(communityId));
-  
-  // Only admins can manage events
-  return isAdmin;
 }); 

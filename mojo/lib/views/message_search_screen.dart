@@ -1,13 +1,33 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter_hooks/flutter_hooks.dart';
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../models/message_model.dart';
 import '../models/personal_message_model.dart';
+import '../models/user_model.dart';
+import '../providers/chat_providers.dart';
+import '../providers/user_providers.dart';
+import '../core/theme.dart';
+import '../core/logger.dart';
 import '../core/constants.dart';
 import '../core/navigation_service.dart';
 import '../widgets/loading_widget.dart';
-import '../widgets/error_widget.dart';
+import '../widgets/mention_suggestions_widget.dart';
+import '../widgets/swipe_to_reply_message.dart';
+import '../widgets/read_receipt_widget.dart';
+import '../widgets/reaction_picker.dart';
+import '../widgets/chat_input_widget.dart';
+import '../widgets/animated_reaction_button.dart';
+import '../services/chat_service.dart';
+import '../services/mention_service.dart';
+import '../services/notification_service.dart';
+import '../services/export_service.dart';
+import 'chat_screen.dart';
+import 'personal_chat_screen.dart';
+import 'community_details_screen.dart';
+import 'event_details_screen.dart';
 
 class MessageSearchScreen extends HookConsumerWidget {
   final String chatId;
@@ -43,7 +63,7 @@ class MessageSearchScreen extends HookConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: Text('Search in ${otherUserName}'),
-        backgroundColor: Theme.of(context).colorScheme.background,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -111,7 +131,7 @@ class MessageSearchScreen extends HookConsumerWidget {
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              color: colorScheme.primary.withOpacity(0.1),
+              color: colorScheme.primary.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(50),
             ),
             child: Icon(
@@ -132,7 +152,7 @@ class MessageSearchScreen extends HookConsumerWidget {
           Text(
             'Type to search through your conversation with $otherUserName',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurface.withOpacity(0.7),
+              color: colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -150,7 +170,7 @@ class MessageSearchScreen extends HookConsumerWidget {
           Icon(
             Icons.search_off,
             size: 64,
-            color: colorScheme.onSurface.withOpacity(0.4),
+            color: colorScheme.onSurface.withValues(alpha: 0.4),
           ),
           const SizedBox(height: AppConstants.largePadding),
           Text(
@@ -163,7 +183,7 @@ class MessageSearchScreen extends HookConsumerWidget {
           Text(
             'Try searching with different keywords',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: colorScheme.onSurface.withOpacity(0.7),
+              color: colorScheme.onSurface.withValues(alpha: 0.7),
             ),
             textAlign: TextAlign.center,
           ),
@@ -191,7 +211,7 @@ class MessageSearchScreen extends HookConsumerWidget {
       margin: const EdgeInsets.only(bottom: AppConstants.smallPadding),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: colorScheme.primary.withOpacity(0.1),
+          backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
           child: Text(
             isOwnMessage ? 'You' : otherUserName.substring(0, 1).toUpperCase(),
             style: TextStyle(
@@ -217,7 +237,7 @@ class MessageSearchScreen extends HookConsumerWidget {
               _formatTime(message.timestamp),
               style: TextStyle(
                 fontSize: 12,
-                color: colorScheme.onSurface.withOpacity(0.5),
+                color: colorScheme.onSurface.withValues(alpha: 0.5),
               ),
             ),
           ],
@@ -225,7 +245,7 @@ class MessageSearchScreen extends HookConsumerWidget {
         trailing: Icon(
           Icons.arrow_forward_ios,
           size: 16,
-          color: colorScheme.onSurface.withOpacity(0.5),
+          color: colorScheme.onSurface.withValues(alpha: 0.5),
         ),
         onTap: () {
           // TODO: Navigate to the specific message in the chat

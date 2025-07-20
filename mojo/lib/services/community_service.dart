@@ -388,6 +388,7 @@ class CommunityService {
     String? visibility,
     bool? approvalRequired,
     Map<String, String>? theme,
+    Map<String, dynamic>? updates, // NEW: Generic updates parameter
   }) async {
     try {
       final userId = currentUserId;
@@ -406,18 +407,24 @@ class CommunityService {
         throw Exception('Only admin can update community');
       }
 
-      final updates = <String, dynamic>{};
-      if (name != null) updates['name'] = name;
-      if (description != null) updates['description'] = description;
-      if (coverImage != null) updates['cover_image'] = coverImage;
-      if (visibility != null) updates['visibility'] = visibility;
-      if (approvalRequired != null) updates['approval_required'] = approvalRequired;
-      if (theme != null) updates['theme'] = theme;
+      final updateData = <String, dynamic>{};
+      
+      // Use generic updates if provided, otherwise use individual parameters
+      if (updates != null) {
+        updateData.addAll(updates);
+      } else {
+        if (name != null) updateData['name'] = name;
+        if (description != null) updateData['description'] = description;
+        if (coverImage != null) updateData['cover_image'] = coverImage;
+        if (visibility != null) updateData['visibility'] = visibility;
+        if (approvalRequired != null) updateData['approval_required'] = approvalRequired;
+        if (theme != null) updateData['theme'] = theme;
+      }
 
       await _firestore
           .collection(AppConstants.communitiesCollection)
           .doc(communityId)
-          .update(updates);
+          .update(updateData);
 
       _logger.i('Community updated successfully: $communityId');
     } catch (e) {
@@ -1141,6 +1148,47 @@ class CommunityService {
       for (final doc in query.docs) {
         await doc.reference.delete();
       }
+    }
+  }
+
+  // Initialize event count for existing communities
+  Future<void> initializeEventCounts() async {
+    try {
+      _logger.i('Initializing event counts for all communities');
+      
+      final communitiesQuery = await _firestore
+          .collection(AppConstants.communitiesCollection)
+          .get();
+      
+      for (final communityDoc in communitiesQuery.docs) {
+        final communityData = communityDoc.data();
+        final metadata = Map<String, dynamic>.from(communityData['metadata'] ?? {});
+        
+        // If event_count is not set, calculate it
+        if (!metadata.containsKey('event_count')) {
+          final eventsQuery = await _firestore
+              .collection(AppConstants.eventsCollection)
+              .where('communityId', isEqualTo: communityDoc.id)
+              .count()
+              .get();
+          
+          final eventCount = eventsQuery.count;
+          
+          await _firestore
+              .collection(AppConstants.communitiesCollection)
+              .doc(communityDoc.id)
+              .update({
+            'metadata.event_count': eventCount,
+            'metadata.last_activity': FieldValue.serverTimestamp(),
+          });
+          
+          _logger.i('Initialized event count for community ${communityDoc.id}: $eventCount');
+        }
+      }
+      
+      _logger.i('Event count initialization completed');
+    } catch (e) {
+      _logger.e('Error initializing event counts: $e');
     }
   }
 } 

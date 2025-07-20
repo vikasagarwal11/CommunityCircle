@@ -248,9 +248,9 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
   Widget _buildEventDetails(EventModel event) {
     return CustomScrollView(
       slivers: [
-        // App Bar with Event Poster
+        // Compact App Bar with Event Poster
         SliverAppBar(
-          expandedHeight: 300,
+          expandedHeight: 140, // Reduced from 200 to 140
           pinned: true,
           backgroundColor: Theme.of(context).colorScheme.surface,
           leading: IconButton(
@@ -272,6 +272,7 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
             title: Text(
               event.title,
               style: const TextStyle(
+                fontSize: 15, // Reduced from 16
                 fontWeight: FontWeight.bold,
                 shadows: [
                   Shadow(
@@ -281,41 +282,43 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
                   ),
                 ],
               ),
+              maxLines: 2, // Allow 2 lines for longer titles
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ),
         
-        // Event Content
+        // Event Content - Reduced padding
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.all(AppConstants.defaultPadding),
+            padding: const EdgeInsets.all(12), // Reduced from 16
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Event Info
-                _buildEventInfo(event),
+                // Compact Event Info
+                _buildCompactEventInfo(event),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: 16), // Reduced from 24
                 
-                // RSVP Section
-                _buildRsvpSection(event),
+                // Compact RSVP Section
+                _buildCompactRsvpSection(event),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: 16), // Reduced from 24
                 
                 // Check-in Section
                 _buildCheckInSection(event),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: 16), // Reduced from 24
                 
                 // Attendees Section
                 _buildAttendeesSection(event),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: 16), // Reduced from 24
                 
                 // Event Description
                 _buildDescriptionSection(event),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: 16), // Reduced from 24
                 
                 // Communication Section
                 _buildCommunicationSection(event),
@@ -354,79 +357,76 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
 
   Widget _buildDefaultPoster() {
     return Container(
-                      color: AppColors.primary.withValues(alpha: 0.1),
+      color: AppColors.primary.withValues(alpha: 0.1),
       child: Center(
         child: Icon(
           Icons.event,
-          size: 80,
-                          color: AppColors.primary.withValues(alpha: 0.5),
+          size: 60, // Reduced from 80 to fit smaller space
+          color: AppColors.primary.withValues(alpha: 0.5),
         ),
       ),
     );
   }
 
-  Widget _buildEventInfo(EventModel event) {
+  Widget _buildCompactEventInfo(EventModel event) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12), // Reduced from 16
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8), // Reduced from 12
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Date and time in one row
           Row(
             children: [
               Icon(
                 Icons.calendar_today,
                 color: AppColors.primary,
-                size: 20,
+                size: 16, // Reduced from 20
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6), // Reduced from 8
               Expanded(
                 child: Text(
                   _formatDate(event.date),
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 14, // Reduced from 16
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8), // Reduced from 12
+          // Location and attendees in one row
           Row(
             children: [
               Icon(
                 Icons.location_on,
                 color: AppColors.primary,
-                size: 20,
+                size: 16, // Reduced from 20
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6), // Reduced from 8
               Expanded(
                 child: Text(
                   event.location,
                   style: const TextStyle(
-                    fontSize: 16,
+                    fontSize: 14, // Reduced from 16
                     fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
+              const SizedBox(width: 12),
               Icon(
                 Icons.people,
                 color: AppColors.primary,
-                size: 20,
+                size: 16, // Reduced from 20
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 4),
               Text(
-                '${event.rsvpCount} attending',
+                '${event.rsvpCount}',
                 style: const TextStyle(
-                  fontSize: 16,
+                  fontSize: 14, // Reduced from 16
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -437,7 +437,7 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
     );
   }
 
-  Widget _buildRsvpSection(EventModel event) {
+  Widget _buildCompactRsvpSection(EventModel event) {
     final currentUser = ref.watch(currentUserProvider).value;
     if (currentUser == null) return const SizedBox.shrink();
 
@@ -447,19 +447,19 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
         const Text(
           'RSVP',
           style: TextStyle(
-            fontSize: 20,
+            fontSize: 18, // Reduced from 20
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8), // Reduced from 12
         
-        // RSVP Status Display
+        // Compact RSVP Status Display
         if (_userRsvpStatus != null) ...[
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8), // Reduced from 12
             decoration: BoxDecoration(
               color: _getRsvpStatusColor(_userRsvpStatus!).withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6), // Reduced from 8
               border: Border.all(
                 color: _getRsvpStatusColor(_userRsvpStatus!).withValues(alpha: 0.3),
               ),
@@ -469,29 +469,30 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
                 Icon(
                   _getRsvpStatusIcon(_userRsvpStatus!),
                   color: _getRsvpStatusColor(_userRsvpStatus!),
-                  size: 20,
+                  size: 16, // Reduced from 20
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 6), // Reduced from 8
                 Expanded(
                   child: Text(
                     _getRsvpStatusText(_userRsvpStatus!),
                     style: TextStyle(
                       color: _getRsvpStatusColor(_userRsvpStatus!),
                       fontWeight: FontWeight.w500,
+                      fontSize: 13, // Reduced font size
                     ),
                   ),
                 ),
                 if (_userRsvpStatus == EventModel.rsvpWaitlist) ...[
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2), // Reduced padding
                     decoration: BoxDecoration(
                       color: Colors.orange.withValues(alpha: 0.2),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(8), // Reduced from 12
                     ),
                     child: Text(
-                      '${event.waitlistCount} on waitlist',
+                      '${event.waitlistCount} waitlist',
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 10, // Reduced from 12
                         color: Colors.orange,
                         fontWeight: FontWeight.w500,
                       ),
@@ -501,139 +502,120 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8), // Reduced from 12
         ],
         
-        // RSVP Buttons
-        Row(
+        // Compact RSVP Buttons - 2x2 grid
+        Column(
           children: [
-            Expanded(
-              child: _buildRsvpButton(
-                'Going',
-                Icons.check_circle,
-                Colors.green,
-                _userRsvpStatus == EventModel.rsvpGoing,
-                () => _rsvpToEvent(EventModel.rsvpGoing),
-                event.isFull && _userRsvpStatus != EventModel.rsvpGoing,
-              ),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildCompactRsvpButton(
+                    'Going',
+                    Icons.check_circle,
+                    Colors.green,
+                    _userRsvpStatus == EventModel.rsvpGoing,
+                    () => _rsvpToEvent(EventModel.rsvpGoing),
+                    event.isFull && _userRsvpStatus != EventModel.rsvpGoing,
+                  ),
+                ),
+                const SizedBox(width: 6), // Reduced from 8
+                Expanded(
+                  child: _buildCompactRsvpButton(
+                    'Interested',
+                    Icons.help_outline,
+                    Colors.orange,
+                    _userRsvpStatus == EventModel.rsvpInterested,
+                    () => _rsvpToEvent(EventModel.rsvpInterested),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildRsvpButton(
-                'Interested',
-                Icons.help_outline,
-                Colors.orange,
-                _userRsvpStatus == EventModel.rsvpInterested,
-                () => _rsvpToEvent(EventModel.rsvpInterested),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Row(
-          children: [
-            Expanded(
-              child: _buildRsvpButton(
-                'Not Going',
-                Icons.cancel,
-                Colors.red,
-                _userRsvpStatus == EventModel.rsvpNotGoing,
-                () => _rsvpToEvent(EventModel.rsvpNotGoing),
-              ),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: _buildRsvpButton(
-                'Waitlist',
-                Icons.schedule,
-                Colors.purple,
-                _userRsvpStatus == EventModel.rsvpWaitlist,
-                () => _rsvpToEvent(EventModel.rsvpWaitlist),
-                event.hasAvailableSpots,
-              ),
+            const SizedBox(height: 6), // Reduced from 8
+            Row(
+              children: [
+                Expanded(
+                  child: _buildCompactRsvpButton(
+                    'Not Going',
+                    Icons.cancel,
+                    Colors.red,
+                    _userRsvpStatus == EventModel.rsvpNotGoing,
+                    () => _rsvpToEvent(EventModel.rsvpNotGoing),
+                  ),
+                ),
+                const SizedBox(width: 6), // Reduced from 8
+                Expanded(
+                  child: _buildCompactRsvpButton(
+                    'Waitlist',
+                    Icons.schedule,
+                    Colors.purple,
+                    _userRsvpStatus == EventModel.rsvpWaitlist,
+                    () => _rsvpToEvent(EventModel.rsvpWaitlist),
+                    event.hasAvailableSpots,
+                  ),
+                ),
+              ],
             ),
           ],
         ),
         
-        // Remove RSVP Button
+        // Remove RSVP Button - more compact
         if (_userRsvpStatus != null) ...[
-          const SizedBox(height: 12),
+          const SizedBox(height: 8), // Reduced from 12
           SizedBox(
             width: double.infinity,
             child: OutlinedButton(
               onPressed: _isRsvpLoading ? null : () => _rsvpToEvent('remove'),
-              child: const Text('Remove RSVP'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 8), // Reduced padding
+              ),
+              child: const Text('Remove RSVP', style: TextStyle(fontSize: 13)), // Reduced font size
             ),
           ),
         ],
         
-        // Event Capacity Info
+        // Compact Event Capacity Info
         if (event.hasSpotsLimit) ...[
-          const SizedBox(height: 16),
+          const SizedBox(height: 12), // Reduced from 16
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8), // Reduced from 12
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(6), // Reduced from 8
             ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+            child: Row(
               children: [
-                Row(
-                  children: [
-                    Icon(
-                      Icons.people,
-                      size: 16,
-                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'Event Capacity',
-                      style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                      ),
-                    ),
-                  ],
+                Icon(
+                  Icons.people,
+                  size: 14, // Reduced from 16
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildCapacityItem(
-                        'Going',
-                        event.goingCount,
-                        event.maxSpots ?? 0,
-                        Colors.green,
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: _buildCapacityItem(
-                        'Waitlist',
-                        event.waitlistCount,
-                        null,
-                        Colors.orange,
-                      ),
-                    ),
-                  ],
+                const SizedBox(width: 6), // Reduced from 8
+                Text(
+                  'Capacity: ',
+                  style: TextStyle(
+                    fontSize: 12, // Reduced from 14
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                  ),
                 ),
-                if (event.isFull) ...[
-                  const SizedBox(height: 8),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.red.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'Event is full',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.red,
-                        fontWeight: FontWeight.w500,
-                      ),
+                Text(
+                  '${event.goingCount}/${event.maxSpots}',
+                  style: const TextStyle(
+                    fontSize: 12, // Reduced from 14
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green,
+                  ),
+                ),
+                const Spacer(),
+                if (event.waitlistCount > 0) ...[
+                  Text(
+                    'Waitlist: ${event.waitlistCount}',
+                    style: const TextStyle(
+                      fontSize: 12, // Reduced from 14
+                      fontWeight: FontWeight.w500,
+                      color: Colors.orange,
                     ),
                   ),
                 ],
@@ -645,31 +627,38 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
     );
   }
 
-  Widget _buildRsvpButton(
-    String text,
+  Widget _buildCompactRsvpButton(
+    String label,
     IconData icon,
     Color color,
     bool isSelected,
     VoidCallback onPressed, [
     bool disabled = false,
   ]) {
-    return ElevatedButton(
-      onPressed: (_isRsvpLoading || disabled) ? null : onPressed,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: isSelected ? color : color.withValues(alpha: 0.1),
-        foregroundColor: isSelected ? Colors.white : color,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+    return Container(
+      height: 40, // Reduced from default height
+      child: ElevatedButton(
+        onPressed: disabled ? null : onPressed,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: isSelected ? color : Colors.grey.withValues(alpha: 0.1),
+          foregroundColor: isSelected ? Colors.white : color,
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(6), // Reduced from 8
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), // Reduced padding
         ),
-        elevation: isSelected ? 2 : 0,
-      ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 16),
-          const SizedBox(width: 4),
-          Text(text),
-        ],
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 14), // Reduced from 16
+            const SizedBox(width: 4), // Reduced from 6
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12), // Reduced from 14
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1094,5 +1083,495 @@ class _EventDetailsScreenState extends ConsumerState<EventDetailsScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildReminderSettings(EventModel event) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.blue.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.notifications,
+                size: 16,
+                color: Colors.blue,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Reminder Settings',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.blue,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'You\'ll receive reminders 1 hour, 1 day, and 1 week before the event.',
+            style: TextStyle(
+              fontSize: 12,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrganizerTools(EventModel event) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.orange.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.orange.withValues(alpha: 0.2)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.admin_panel_settings,
+                size: 16,
+                color: Colors.orange,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Organizer Tools',
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: Colors.orange,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _showAttendanceManagement(event),
+                  icon: const Icon(Icons.people, size: 16),
+                  label: const Text('Manage Attendance'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: () => _sendEventReminders(event),
+                  icon: const Icon(Icons.notifications, size: 16),
+                  label: const Text('Send Reminders'),
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => NavigationService.navigateToRsvpManagement(
+                widget.eventId,
+                communityId: widget.communityId,
+              ),
+              icon: const Icon(Icons.analytics, size: 16),
+              label: const Text('Advanced RSVP Management'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAttendanceManagement(EventModel event) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _AttendanceManagementSheet(event: event),
+    );
+  }
+
+  Future<void> _sendEventReminders(EventModel event) async {
+    try {
+      final eventService = EventService();
+      await eventService.sendEventReminders();
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Reminders sent successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error sending reminders: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+}
+
+// Attendance Management Sheet for Organizers
+class _AttendanceManagementSheet extends ConsumerStatefulWidget {
+  final EventModel event;
+
+  const _AttendanceManagementSheet({required this.event});
+
+  @override
+  ConsumerState<_AttendanceManagementSheet> createState() => _AttendanceManagementSheetState();
+}
+
+class _AttendanceManagementSheetState extends ConsumerState<_AttendanceManagementSheet> {
+  final Logger _logger = Logger('AttendanceManagementSheet');
+  Map<String, dynamic>? _attendanceStats;
+  bool _isLoading = true;
+  Set<String> _selectedUserIds = {};
+  String _filterStatus = 'all';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAttendanceStats();
+  }
+
+  Future<void> _loadAttendanceStats() async {
+    try {
+      final eventService = EventService();
+      final stats = await eventService.getEventAttendanceStats(widget.event.id);
+      setState(() {
+        _attendanceStats = stats;
+        _isLoading = false;
+      });
+    } catch (e) {
+      _logger.e('Error loading attendance stats: $e');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.8,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surface,
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.people,
+                  color: AppColors.primary,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Attendance Management',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+                IconButton(
+                  onPressed: () => Navigator.pop(context),
+                  icon: const Icon(Icons.close),
+                ),
+              ],
+            ),
+          ),
+          
+          // Filter Tabs
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: Row(
+              children: [
+                _buildFilterChip('All', 'all'),
+                const SizedBox(width: 8),
+                _buildFilterChip('Going', EventModel.rsvpGoing),
+                const SizedBox(width: 8),
+                _buildFilterChip('Waitlist', EventModel.rsvpWaitlist),
+                const SizedBox(width: 8),
+                _buildFilterChip('Checked In', 'checked_in'),
+              ],
+            ),
+          ),
+          
+          const SizedBox(height: 16),
+          
+          // Content
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _buildAttendanceList(),
+          ),
+          
+          // Bulk Actions
+          if (_selectedUserIds.isNotEmpty) ...[
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surface,
+                border: Border(
+                  top: BorderSide(
+                    color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+                  ),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    '${_selectedUserIds.length} selected',
+                    style: const TextStyle(fontWeight: FontWeight.w500),
+                  ),
+                  const Spacer(),
+                  Flexible(
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          OutlinedButton(
+                            onPressed: () => _performBulkOperation('confirm_all'),
+                            child: const Text('Confirm All'),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton(
+                            onPressed: () => _performBulkOperation('check_in_all'),
+                            child: const Text('Check In All'),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton(
+                            onPressed: () => _performBulkOperation('remove_all'),
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.red,
+                            ),
+                            child: const Text('Remove All'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFilterChip(String label, String value) {
+    final isSelected = _filterStatus == value;
+    return FilterChip(
+      label: Text(label),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() {
+          _filterStatus = value;
+          _selectedUserIds.clear();
+        });
+      },
+      selectedColor: AppColors.primary.withValues(alpha: 0.2),
+      checkmarkColor: AppColors.primary,
+    );
+  }
+
+  Widget _buildAttendanceList() {
+    if (_attendanceStats == null) {
+      return const Center(child: Text('No attendance data available'));
+    }
+
+    final attendeeDetails = _attendanceStats!['attendeeDetails'] as List<Map<String, dynamic>>;
+    final filteredAttendees = attendeeDetails.where((attendee) {
+      switch (_filterStatus) {
+        case 'all':
+          return true;
+        case EventModel.rsvpGoing:
+          return attendee['rsvpStatus'] == EventModel.rsvpGoing;
+        case EventModel.rsvpWaitlist:
+          return attendee['rsvpStatus'] == EventModel.rsvpWaitlist;
+        case 'checked_in':
+          return attendee['isCheckedIn'] == true;
+        default:
+          return true;
+      }
+    }).toList();
+
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      itemCount: filteredAttendees.length,
+      itemBuilder: (context, index) {
+        final attendee = filteredAttendees[index];
+        final userId = attendee['userId'] as String;
+        final isSelected = _selectedUserIds.contains(userId);
+
+        return Card(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: ListTile(
+            leading: Checkbox(
+              value: isSelected,
+              onChanged: (value) {
+                setState(() {
+                  if (value == true) {
+                    _selectedUserIds.add(userId);
+                  } else {
+                    _selectedUserIds.remove(userId);
+                  }
+                });
+              },
+            ),
+            title: Text(attendee['name'] as String),
+            subtitle: Text(attendee['email'] as String),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildStatusChip(attendee['rsvpStatus'] as String),
+                if (attendee['isCheckedIn'] == true) ...[
+                  const SizedBox(width: 8),
+                  Icon(
+                    Icons.check_circle,
+                    color: Colors.green,
+                    size: 16,
+                  ),
+                ],
+              ],
+            ),
+            onTap: () {
+              setState(() {
+                if (isSelected) {
+                  _selectedUserIds.remove(userId);
+                } else {
+                  _selectedUserIds.add(userId);
+                }
+              });
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatusChip(String status) {
+    Color color;
+    String label;
+
+    switch (status) {
+      case EventModel.rsvpGoing:
+        color = Colors.green;
+        label = 'Going';
+        break;
+      case EventModel.rsvpInterested:
+        color = Colors.orange;
+        label = 'Interested';
+        break;
+      case EventModel.rsvpNotGoing:
+        color = Colors.red;
+        label = 'Not Going';
+        break;
+      case EventModel.rsvpWaitlist:
+        color = Colors.purple;
+        label = 'Waitlist';
+        break;
+      default:
+        color = Colors.grey;
+        label = 'Unknown';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(
+          fontSize: 10,
+          color: color,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
+
+  Future<void> _performBulkOperation(String operation) async {
+    try {
+      final currentUser = ref.read(currentUserProvider).value;
+      if (currentUser == null) return;
+
+      final eventService = EventService();
+      await eventService.bulkRsvpOperation(
+        widget.event.id,
+        _selectedUserIds.toList(),
+        operation,
+        currentUser,
+      );
+
+      // Reload stats
+      await _loadAttendanceStats();
+      
+      // Clear selection
+      setState(() {
+        _selectedUserIds.clear();
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Bulk operation completed: $operation'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      _logger.e('Error performing bulk operation: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error performing operation: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 } 

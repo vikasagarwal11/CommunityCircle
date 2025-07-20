@@ -249,8 +249,7 @@ class ChatScreen extends HookConsumerWidget {
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
-              // TODO: Implement message search
-              NavigationService.showSnackBar(message: 'Search coming soon!');
+              _showMessageSearch(context, ref);
             },
           ),
           IconButton(
@@ -787,7 +786,7 @@ class ChatScreen extends HookConsumerWidget {
           IconButton(
             icon: const Icon(Icons.send),
             onPressed: controller.text.trim().isEmpty ? null : () {
-              _sendMessage(context, controller, ref);
+              _sendMessage(context, ref, controller);
             },
             style: IconButton.styleFrom(
               backgroundColor: controller.text.trim().isEmpty 
@@ -803,27 +802,156 @@ class ChatScreen extends HookConsumerWidget {
     );
   }
 
-  void _sendMessage(BuildContext context, TextEditingController controller, WidgetRef ref) async {
-    final text = controller.text.trim();
-    if (text.isEmpty) return;
+  void _showChatSettings(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Chat Settings'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SwitchListTile(
+              title: const Text('Notifications'),
+              subtitle: const Text('Receive message notifications'),
+              value: true, // TODO: Get from settings
+              onChanged: (value) {
+                // TODO: Update notification settings
+              },
+            ),
+            SwitchListTile(
+              title: const Text('Sound'),
+              subtitle: const Text('Play sound for new messages'),
+              value: true, // TODO: Get from settings
+              onChanged: (value) {
+                // TODO: Update sound settings
+              },
+            ),
+            SwitchListTile(
+              title: const Text('Vibration'),
+              subtitle: const Text('Vibrate for new messages'),
+              value: false, // TODO: Get from settings
+              onChanged: (value) {
+                // TODO: Update vibration settings
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.block),
+              title: const Text('Block Community'),
+              subtitle: const Text('Stop receiving messages'),
+              onTap: () {
+                // TODO: Implement block functionality
+                Navigator.pop(context);
+                NavigationService.showSnackBar(
+                  message: 'Block functionality coming soon!',
+                  backgroundColor: Colors.orange,
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.report),
+              title: const Text('Report Community'),
+              subtitle: const Text('Report inappropriate content'),
+              onTap: () {
+                // TODO: Implement report functionality
+                Navigator.pop(context);
+                NavigationService.showSnackBar(
+                  message: 'Report functionality coming soon!',
+                  backgroundColor: Colors.orange,
+                );
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // TODO: Save settings
+              Navigator.pop(context);
+              NavigationService.showSnackBar(
+                message: 'Settings saved!',
+                backgroundColor: Colors.green,
+              );
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
 
-    final replyTo = ref.read(replyToMessageProvider);
-    
-    try {
-      await ref.read(chatNotifierProvider.notifier).sendMessage(
-        communityId: communityId,
-        text: text,
-        threadId: replyTo?.id,
-      );
-      
-      controller.clear();
-      ref.read(replyToMessageProvider.notifier).state = null;
-    } catch (e) {
-      NavigationService.showSnackBar(
-        message: 'Failed to send message: $e',
-        backgroundColor: Theme.of(context).colorScheme.error,
-      );
-    }
+  void _showMessageSearch(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Search Messages'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              decoration: const InputDecoration(
+                hintText: 'Search for messages...',
+                prefixIcon: Icon(Icons.search),
+              ),
+              onChanged: (query) {
+                // TODO: Implement search functionality
+                // This would filter messages based on the query
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // TODO: Navigate to search results
+              Navigator.pop(context);
+              NavigationService.showSnackBar(
+                message: 'Search functionality coming soon!',
+                backgroundColor: Colors.orange,
+              );
+            },
+            child: const Text('Search'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _sendMessage(BuildContext context, WidgetRef ref, TextEditingController controller) {
+    final message = controller.text.trim();
+    if (message.isEmpty) return;
+
+    final userAsync = ref.read(authNotifierProvider);
+    userAsync.when(
+      data: (user) {
+        if (user == null) {
+          NavigationService.showSnackBar(
+            message: 'Please log in to send messages.',
+            backgroundColor: Colors.red,
+          );
+          return;
+        }
+
+        final chatNotifier = ref.read(chatNotifierProvider.notifier);
+        chatNotifier.sendMessage(
+          text: message,
+          communityId: communityId,
+        );
+
+        // Clear the input field
+        controller.clear();
+      },
+      loading: () => null,
+      error: (_, __) => null,
+    );
   }
 
   void _showChatOptions(BuildContext context, WidgetRef ref) {
@@ -883,7 +1011,7 @@ class ChatScreen extends HookConsumerWidget {
               title: const Text('Chat Settings'),
               onTap: () {
                 NavigationService.goBack();
-                // TODO: Implement chat settings
+                _showChatSettings(context, ref);
               },
             ),
           ],
@@ -1493,7 +1621,7 @@ class ChatScreen extends HookConsumerWidget {
           IconButton(
             icon: const Icon(Icons.send),
             onPressed: () {
-              // TODO: Implement send message
+              _sendMessage(context, ref, controller);
             },
           ),
         ],

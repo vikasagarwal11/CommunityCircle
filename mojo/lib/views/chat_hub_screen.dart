@@ -358,7 +358,7 @@ class ChatHubScreen extends HookConsumerWidget {
               title: const Text('Chat Settings'),
               onTap: () {
                 NavigationService.goBack();
-                // TODO: Implement chat settings
+                _showChatHubSettings(context, ref);
               },
             ),
           ],
@@ -367,7 +367,87 @@ class ChatHubScreen extends HookConsumerWidget {
     );
   }
 
-
+  void _showChatHubSettings(BuildContext context, WidgetRef ref) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Chat Settings'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SwitchListTile(
+              title: const Text('Global Notifications'),
+              subtitle: const Text('Receive notifications for all chats'),
+              value: true, // TODO: Get from settings
+              onChanged: (value) {
+                // TODO: Update global notification settings
+              },
+            ),
+            SwitchListTile(
+              title: const Text('Sound'),
+              subtitle: const Text('Play sound for new messages'),
+              value: true, // TODO: Get from settings
+              onChanged: (value) {
+                // TODO: Update sound settings
+              },
+            ),
+            SwitchListTile(
+              title: const Text('Vibration'),
+              subtitle: const Text('Vibrate for new messages'),
+              value: false, // TODO: Get from settings
+              onChanged: (value) {
+                // TODO: Update vibration settings
+              },
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.notifications),
+              title: const Text('Notification Preferences'),
+              subtitle: const Text('Customize notification settings'),
+              onTap: () {
+                // TODO: Navigate to notification preferences
+                Navigator.pop(context);
+                NavigationService.showSnackBar(
+                  message: 'Notification preferences coming soon!',
+                  backgroundColor: Colors.orange,
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.privacy_tip),
+              title: const Text('Privacy Settings'),
+              subtitle: const Text('Manage chat privacy'),
+              onTap: () {
+                // TODO: Navigate to privacy settings
+                Navigator.pop(context);
+                NavigationService.showSnackBar(
+                  message: 'Privacy settings coming soon!',
+                  backgroundColor: Colors.orange,
+                );
+              },
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              // TODO: Save settings
+              Navigator.pop(context);
+              NavigationService.showSnackBar(
+                message: 'Settings saved!',
+                backgroundColor: Colors.green,
+              );
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
 
   void _showCommunityOptions(BuildContext context, WidgetRef ref, CommunityModel community) {
     showModalBottomSheet(
