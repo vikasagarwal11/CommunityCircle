@@ -51,6 +51,9 @@ final connectivityProvider = StreamProvider<ConnectivityResult>((ref) {
 // New: Sorting provider for My Communities (personalization)
 final myCommunitiesSortProvider = StateProvider<String>((ref) => 'name'); // Options: 'name', 'members'
 
+// StateProvider for selected filter (e.g., interests, trending)
+final exploreFilterProvider = StateProvider<String?>((ref) => null);
+
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
 
@@ -146,10 +149,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           error: (_, __) => const SizedBox(),
                         ),
                         const SizedBox(height: AppConstants.largePadding),
-                        // User Interests Section
-                        _buildUserInterests(context, ref),
                         // Enhanced Explore Communities with pagination
-                        _buildEnhancedExploreCommunities(context, paginatedCommunitiesState),
+                        _buildEnhancedExploreCommunities(context, paginatedCommunitiesState, ref),
                       ],
                     ),
                   );
@@ -375,7 +376,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                           width: 180,  // Fixed width for cards in horizontal list
                           child: Animate(
                             effects: [FadeEffect(duration: 300.ms)],
-                            child: _buildEnhancedCommunityCard(context, community),  // Use same card as Explore
+                            child: _buildEnhancedCommunityCard(context, community, true, false, false),
                           ),
                         ),
                       );
@@ -384,7 +385,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ),
                 if (filteredCommunities.length > 8) TextButton(
                   onPressed: () {
-                    // Navigate to full My Communities screen (add this route if not existing)
                     Navigator.pushNamed(context, '/my-communities');
                   },
                   child: const Text('See All My Communities'),
@@ -465,145 +465,173 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  Widget _buildEnhancedExploreCommunities(BuildContext context, PaginatedCommunitiesState state) {
+  void _showFilterDialog(BuildContext context, WidgetRef ref) {
+    final userInterestsAsync = ref.watch(userInterestsProvider);
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Filter Communities'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  title: const Text('All Communities'),
+                  onTap: () {
+                    ref.read(exploreFilterProvider.notifier).state = null;
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  title: const Text('Recommended'),
+                  onTap: () {
+                    ref.read(exploreFilterProvider.notifier).state = 'recommended';
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  title: const Text('Trending'),
+                  onTap: () {
+                    ref.read(exploreFilterProvider.notifier).state = 'trending';
+                    Navigator.pop(context);
+                  },
+                ),
+                if (userInterestsAsync.value?.isNotEmpty ?? false)
+                  ...userInterestsAsync.value!.take(5).map((interest) => ListTile(
+                    title: Text('Interest: $interest'),
+                    onTap: () {
+                      ref.read(exploreFilterProvider.notifier).state = interest;
+                      Navigator.pop(context);
+                    },
+                  )),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildEnhancedExploreCommunities(BuildContext context, PaginatedCommunitiesState state, WidgetRef ref) {
+    final searchQuery = ref.watch(exploreCommunitiesSearchQueryProvider);
+    final recommendedAsync = ref.watch(recommendedCommunitiesProvider);
+    final trendingAsync = ref.watch(trendingCommunitiesProvider);
+    final userInterestsAsync = ref.watch(userInterestsProvider);
+    final selectedFilter = ref.watch(exploreFilterProvider);
+
+    // Apply filter based on user interests or selected filter
+    List<CommunityModel> filteredCommunities = state.communities;
+    if (selectedFilter != null) {
+      filteredCommunities = state.communities.where((community) {
+        return community.tags.contains(selectedFilter) ||
+               community.name.toLowerCase().contains(selectedFilter.toLowerCase()) ||
+               community.description.toLowerCase().contains(selectedFilter.toLowerCase());
+      }).toList();
+    } else if (searchQuery.isEmpty && (userInterestsAsync.value?.isNotEmpty ?? false)) {
+      final interests = userInterestsAsync.value!;
+      filteredCommunities = state.communities.where((community) {
+        return interests.any((interest) =>
+          community.tags.contains(interest) ||
+          community.name.toLowerCase().contains(interest.toLowerCase()) ||
+          community.description.toLowerCase().contains(interest.toLowerCase()));
+      }).toList();
+    } else if (searchQuery.isNotEmpty) {
+      filteredCommunities = state.communities.where((community) {
+        return community.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
+               community.description.toLowerCase().contains(searchQuery.toLowerCase());
+      }).toList();
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Recommended Communities Section
-        Consumer(
-          builder: (context, ref, child) {
-            final recommendedAsync = ref.watch(recommendedCommunitiesProvider);
-            final trendingAsync = ref.watch(trendingCommunitiesProvider);
-            
-            return Column(
-              children: [
-                // Recommended for You
-                recommendedAsync.when(
-                  data: (recommendedCommunities) {
-                    if (recommendedCommunities.isEmpty) return const SizedBox();
-                    
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.recommend,
-                              size: 20,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Recommended for You',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppConstants.smallPadding),
-                        SizedBox(
-                          height: 200,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: recommendedCommunities.length,
-                            itemBuilder: (context, index) {
-                              final community = recommendedCommunities[index];
-                              return Container(
-                                width: 160,
-                                margin: const EdgeInsets.only(right: 12),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    NavigationService.trackUserEngagement(
-                                      'recommended_community_tap',
-                                      parameters: {'community_id': community.id}
-                                    );
-                                    NavigationService.navigateToCommunityDetails(community.id);
-                                  },
-                                  child: _buildHorizontalCommunityCard(context, community),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: AppConstants.largePadding),
-                      ],
-                    );
-                  },
-                  loading: () => const SizedBox(),
-                  error: (_, __) => const SizedBox(),
+        // Header with search icon and filter button
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                'Explore Communities',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
                 ),
-                
-                // Trending Communities
-                trendingAsync.when(
-                  data: (trendingCommunities) {
-                    if (trendingCommunities.isEmpty) return const SizedBox();
-                    
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              Icons.trending_up,
-                              size: 20,
-                              color: Theme.of(context).colorScheme.secondary,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Trending Now',
-                              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                fontWeight: FontWeight.bold,
-                                color: Theme.of(context).colorScheme.secondary,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: AppConstants.smallPadding),
-                        SizedBox(
-                          height: 200,
-                          child: ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: trendingCommunities.length,
-                            itemBuilder: (context, index) {
-                              final community = trendingCommunities[index];
-                              return Container(
-                                width: 160,
-                                margin: const EdgeInsets.only(right: 12),
-                                child: GestureDetector(
-                                  onTap: () {
-                                    NavigationService.trackUserEngagement(
-                                      'trending_community_tap',
-                                      parameters: {'community_id': community.id}
-                                    );
-                                    NavigationService.navigateToCommunityDetails(community.id);
-                                  },
-                                  child: _buildHorizontalCommunityCard(context, community),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                        const SizedBox(height: AppConstants.largePadding),
-                      ],
-                    );
-                  },
-                  loading: () => const SizedBox(),
-                  error: (_, __) => const SizedBox(),
-                ),
-              ],
-            );
-          },
+              ),
+            ),
+            IconButton(
+              icon: Icon(
+                searchQuery.isEmpty ? Icons.search_outlined : Icons.search,
+                color: searchQuery.isEmpty 
+                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
+                    : Theme.of(context).colorScheme.primary,
+              ),
+              onPressed: () => _showInlineSearch(context, ref, 'explore'),
+            ),
+            IconButton(
+              icon: const Icon(Icons.filter_list),
+              color: Theme.of(context).colorScheme.primary,
+              onPressed: () => _showFilterDialog(context, ref),
+            ),
+          ],
         ),
         
-        // Header
-        Text(
-          'Explore Communities',
-          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.bold,
+        // Inline search bar (appears when search is active) with interest suggestions
+        if (searchQuery.isNotEmpty) ...[
+          const SizedBox(height: AppConstants.smallPadding),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                width: 1,
+              ),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.search,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: TextField(
+                    decoration: InputDecoration(
+                      hintText: 'Search explore communities...',
+                      border: InputBorder.none,
+                      isDense: true,
+                      suffixIcon: userInterestsAsync.value?.isNotEmpty ?? false
+                          ? PopupMenuButton<String>(
+                              icon: const Icon(Icons.arrow_drop_down, size: 16),
+                              onSelected: (value) {
+                                ref.read(exploreCommunitiesSearchQueryProvider.notifier).state = value;
+                              },
+                              itemBuilder: (context) => (userInterestsAsync.value ?? {}).take(5).map((interest) {
+                                return PopupMenuItem<String>(
+                                  value: interest,
+                                  child: Text(interest),
+                                );
+                              }).toList(),
+                            )
+                          : null,
+                    ),
+                    onChanged: (value) {
+                      ref.read(exploreCommunitiesSearchQueryProvider.notifier).state = value;
+                    },
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.clear, size: 16),
+                  onPressed: () {
+                    ref.read(exploreCommunitiesSearchQueryProvider.notifier).state = '';
+                  },
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
+        
         const SizedBox(height: AppConstants.smallPadding),
         
         // Error state
@@ -643,8 +671,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           const SizedBox(height: AppConstants.smallPadding),
         ],
         
-        // Communities grid
-        if (state.communities.isEmpty && !state.isLoading && !state.isRefreshing) ...[
+        // Communities grid with personalization
+        if (filteredCommunities.isEmpty && !state.isLoading && !state.isRefreshing) ...[
           // Empty state
           Center(
             child: Padding(
@@ -676,40 +704,42 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
         ] else ...[
-          // Communities grid
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,  // Responsive
+              crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
               childAspectRatio: 0.8,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
             ),
-            itemCount: state.communities.length + (state.hasMore && state.isLoadingMore ? 1 : 0),
+            itemCount: filteredCommunities.length + (state.hasMore && state.isLoadingMore ? 1 : 0),
             itemBuilder: (context, index) {
-              if (index < state.communities.length) {
-                final community = state.communities[index];
+              if (index < filteredCommunities.length) {
+                final community = filteredCommunities[index];
+                final isRecommended = recommendedAsync.value?.contains(community) ?? false;
+                final isTrending = trendingAsync.value?.contains(community) ?? false;
+                final isInterestMatch = (userInterestsAsync.value ?? {}).any((interest) =>
+                  community.tags.contains(interest) ||
+                  community.name.toLowerCase().contains(interest.toLowerCase()) ||
+                  community.description.toLowerCase().contains(interest.toLowerCase()));
                 return GestureDetector(
                   onTap: () {
                     NavigationService.trackUserEngagement('community_tap', parameters: {'community_id': community.id});
                     NavigationService.navigateToCommunityDetails(community.id);
                   },
                   child: Semantics(
-                    label: 'Community ${community.name} with ${community.memberCount} members',
+                    label: 'Community ${community.name} with ${community.memberCount} members${isRecommended ? ', recommended' : ''}${isTrending ? ', trending' : ''}${isInterestMatch ? ', interest match' : ''}',
                     child: Animate(
                       effects: [FadeEffect(duration: 300.ms)],
-                      child: _buildEnhancedCommunityCard(context, community),
+                      child: _buildEnhancedCommunityCard(context, community, isRecommended, isTrending, isInterestMatch),
                     ),
                   ),
                 );
               } else {
-                // Loading indicator at the bottom
                 return Container(
                   padding: const EdgeInsets.all(16),
-                  child: const Center(
-                    child: CircularProgressIndicator(),
-                  ),
+                  child: const Center(child: CircularProgressIndicator()),
                 );
               }
             },
@@ -719,15 +749,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         // Loading state for initial load or refresh
         if ((state.isLoading || state.isRefreshing) && state.communities.isEmpty) ...[
           const SizedBox(height: 32),
-          const Center(
-            child: CircularProgressIndicator(),
-          ),
+          const Center(child: CircularProgressIndicator()),
         ],
       ],
     );
   }
 
-  Widget _buildEnhancedCommunityCard(BuildContext context, CommunityModel community) {
+  Widget _buildEnhancedCommunityCard(BuildContext context, CommunityModel community, bool isRecommended, bool isTrending, bool isInterestMatch) {
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(
@@ -736,23 +764,72 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Community image/cover with caching
-          ClipRRect(
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-            child: CachedNetworkImage(
-              imageUrl: community.coverImage.isNotEmpty ? community.coverImage : '',
-              height: 100,
-              width: double.infinity,
-              fit: BoxFit.cover,
-              placeholder: (context, url) => Container(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                child: const Center(child: CircularProgressIndicator()),
+          Stack(
+            children: [
+              ClipRRect(
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                child: CachedNetworkImage(
+                  imageUrl: community.coverImage.isNotEmpty ? community.coverImage : '',
+                  height: 100,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    child: const Center(child: CircularProgressIndicator()),
+                  ),
+                  errorWidget: (context, url, error) => _buildDefaultCover(context),
+                ),
               ),
-              errorWidget: (context, url, error) => _buildDefaultCover(context),
-            ),
+              if (isRecommended)
+                Positioned(
+                  top: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Recommended',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              if (isTrending)
+                Positioned(
+                  top: 8,
+                  right: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Trending',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              if (isInterestMatch)
+                Positioned(
+                  bottom: 8,
+                  left: 8,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.tertiary.withOpacity(0.8),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'Interest Match',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+            ],
           ),
-          
-          // Community info
           Padding(
             padding: const EdgeInsets.all(12),
             child: Column(
@@ -799,148 +876,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         Icons.group,
         size: 40,
         color: Theme.of(context).colorScheme.primary,
-      ),
-    );
-  }
-
-  // Build user interests display
-  Widget _buildUserInterests(BuildContext context, WidgetRef ref) {
-    return Consumer(
-      builder: (context, ref, child) {
-        final interestsAsync = ref.watch(userInterestsProvider);
-        
-        return interestsAsync.when(
-          data: (interests) {
-            if (interests.isEmpty) return const SizedBox();
-            
-            return Container(
-              margin: const EdgeInsets.only(bottom: AppConstants.defaultPadding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Your Interests',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: AppConstants.smallPadding),
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: interests.take(8).map((interest) => Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                        ),
-                      ),
-                      child: Text(
-                        interest,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.primary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    )).toList(),
-                  ),
-                ],
-              ),
-            );
-          },
-          loading: () => const SizedBox(),
-          error: (_, __) => const SizedBox(),
-        );
-      },
-    );
-  }
-
-  // Build horizontal community card for recommended section
-  Widget _buildHorizontalCommunityCard(BuildContext context, CommunityModel community) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Container(
-        width: 160,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Community image
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(
-                top: Radius.circular(12),
-              ),
-              child: CachedNetworkImage(
-                imageUrl: community.coverImage.isNotEmpty 
-                    ? community.coverImage 
-                    : '',
-                height: 80,
-                width: double.infinity,
-                fit: BoxFit.cover,
-                placeholder: (context, url) => Container(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                  child: const Center(child: CircularProgressIndicator()),
-                ),
-                errorWidget: (context, url, error) => Container(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                  child: Icon(
-                    Icons.group,
-                    size: 30,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                ),
-              ),
-            ),
-            // Community info
-            Padding(
-              padding: const EdgeInsets.all(8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    community.name,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    '${community.memberCount} members',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                    ),
-                  ),
-                  if (community.tags.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Wrap(
-                      spacing: 4,
-                      children: community.tags.take(2).map((tag) => Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          tag,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontSize: 10,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
-                        ),
-                      )).toList(),
-                    ),
-                  ],
-                ],
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }

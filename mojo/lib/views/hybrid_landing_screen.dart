@@ -29,6 +29,10 @@ import 'feed_landing_screen.dart';
 // View mode provider
 final viewModeProvider = StateProvider<ViewMode>((ref) => ViewMode.list);
 
+// Search query providers
+final myCommunitiesSearchQueryProvider = StateProvider<String>((ref) => '');
+final exploreCommunitiesSearchQueryProvider = StateProvider<String>((ref) => '');
+
 enum ViewMode { list, feed }
 
 class HybridLandingScreen extends HookConsumerWidget {
@@ -424,7 +428,6 @@ class HybridLandingScreen extends HookConsumerWidget {
         MaterialPageRoute(
           builder: (context) => SearchScreen(
             initialQuery: type == 'my' ? searchQuery : '',
-            type: type,
           ),
         ),
       );
@@ -671,7 +674,6 @@ class _ExploreCommunitiesSection extends ConsumerWidget {
         MaterialPageRoute(
           builder: (context) => SearchScreen(
             initialQuery: searchQuery,
-            type: 'explore',
           ),
         ),
       );

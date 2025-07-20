@@ -11,7 +11,7 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
 });
 
 // Notification state provider
-final notificationStateProvider = StateNotifierProvider<NotificationStateNotifier, AsyncValue<void>>((ref) {
+final notificationStateProvider = StateNotifierProvider<NotificationStateNotifier, NotificationState>((ref) {
   final notificationService = ref.watch(notificationServiceProvider);
   return NotificationStateNotifier(notificationService);
 });
@@ -196,18 +196,18 @@ class InAppNotificationNotifier extends StateNotifier<InAppNotification?> {
 }
 
 // Notification state notifier
-class NotificationStateNotifier extends StateNotifier<AsyncValue<void>> {
+class NotificationStateNotifier extends StateNotifier<NotificationState> {
   final NotificationService _notificationService;
   bool _isInitialized = false; // Add guard to prevent multiple initializations
 
-  NotificationStateNotifier(this._notificationService) : super(const AsyncValue.data(null));
+  NotificationStateNotifier(this._notificationService) : super(const NotificationState());
 
   Future<void> initialize() async {
     // Prevent multiple initializations
     if (_isInitialized) return;
     
     try {
-      state = const AsyncValue.loading();
+      state = state.copyWith(isInitialized: false, error: null);
       
       // Add delay to prevent blocking main thread
       await Future.delayed(const Duration(milliseconds: 100));
@@ -221,9 +221,19 @@ class NotificationStateNotifier extends StateNotifier<AsyncValue<void>> {
       );
       _isInitialized = true;
       
-      state = const AsyncValue.data(null);
+      // Get FCM token
+      final fcmToken = await _notificationService.getFcmToken();
+      
+      state = state.copyWith(
+        isInitialized: true,
+        fcmToken: fcmToken,
+        hasPermission: true,
+      );
     } catch (e) {
-      state = AsyncValue.error(e, StackTrace.current);
+      state = state.copyWith(
+        isInitialized: false,
+        error: e.toString(),
+      );
     }
   }
 } 

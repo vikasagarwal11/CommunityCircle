@@ -108,6 +108,16 @@ class NotificationService {
     }
   }
 
+  // Get FCM token (public method)
+  Future<String?> getFcmToken() async {
+    try {
+      return await _messaging.getToken();
+    } catch (e) {
+      _logger.e('Failed to get FCM token: $e');
+      return null;
+    }
+  }
+
   // Save FCM token to user's document in Firestore
   Future<void> _saveTokenToDatabase(String token) async {
     try {
