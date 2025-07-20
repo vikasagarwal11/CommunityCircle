@@ -8,6 +8,7 @@ import 'firebase_options.dart';
 import 'core/logger.dart';
 import 'core/navigation_service.dart';
 import 'core/theme.dart';
+import 'routes/app_routes.dart';
 import 'providers/auth_providers.dart';
 import 'providers/notification_providers.dart';
 import 'providers/offline_providers.dart';
@@ -44,6 +45,8 @@ class MyApp extends ConsumerWidget {
       title: 'MOJO',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
+      navigatorKey: NavigationService.navigatorKey,
+      onGenerateRoute: AppRoutes.onGenerateRoute,
       home: Consumer(
         builder: (context, ref, child) {
           final userAsync = ref.watch(authNotifierProvider);

@@ -94,6 +94,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final userRoleAsync = ref.watch(userRoleProvider);
     final paginatedCommunitiesState = ref.watch(paginatedCommunitiesProvider);
     final userCommunitiesAsync = ref.watch(userCommunitiesProvider);
+    final userInterestsAsync = ref.watch(userInterestsProvider); // Added for My Communities
     final offlineStatus = ref.watch(offlineStatusProvider);
 
     return Scaffold(
@@ -143,14 +144,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         // My Communities (top)
                         userRoleAsync.when(
                           data: (role) => role != 'anonymous'
-                              ? _buildMyCommunities(context, userCommunitiesAsync, ref)
+                              ? _buildMyCommunities(context, userCommunitiesAsync, ref, user, userInterestsAsync)
                               : const SizedBox(),
                           loading: () => const SizedBox(),
                           error: (_, __) => const SizedBox(),
                         ),
                         const SizedBox(height: AppConstants.largePadding),
                         // Enhanced Explore Communities with pagination
-                        _buildEnhancedExploreCommunities(context, paginatedCommunitiesState, ref),
+                        _buildEnhancedExploreCommunities(context, paginatedCommunitiesState, ref, user),
                       ],
                     ),
                   );
@@ -203,7 +204,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildMyCommunities(BuildContext context, AsyncValue<List<CommunityModel>> communitiesAsync, WidgetRef ref) {
+  Widget _buildMyCommunities(BuildContext context, AsyncValue<List<CommunityModel>> communitiesAsync, WidgetRef ref, UserModel? user, AsyncValue<Set<String>> userInterestsAsync) {
     final searchQuery = ref.watch(myCommunitiesSearchQueryProvider);
     final sort = ref.watch(myCommunitiesSortProvider);
     
@@ -363,20 +364,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             return Column(
               children: [
                 SizedBox(
-                  height: 250,  // Fixed height for horizontal scrolling
+                  height: 200,
                   child: ListView.builder(
                     scrollDirection: Axis.horizontal,
                     physics: const BouncingScrollPhysics(),
                     itemCount: displayedCommunities.length,
                     itemBuilder: (context, index) {
                       final community = displayedCommunities[index];
+                      final isInterestMatch = user != null && (userInterestsAsync.value ?? {}).any((interest) =>
+                        community.tags.contains(interest) ||
+                        community.name.toLowerCase().contains(interest.toLowerCase()) ||
+                        community.description.toLowerCase().contains(interest.toLowerCase()));
                       return Semantics(
-                        label: 'Community ${community.name} with ${community.memberCount} members',
+                        label: 'Community ${community.name} with ${community.memberCount} members${isInterestMatch ? ', interest match' : ''}',
                         child: SizedBox(
-                          width: 180,  // Fixed width for cards in horizontal list
+                          width: 150,
                           child: Animate(
                             effects: [FadeEffect(duration: 300.ms)],
-                            child: _buildEnhancedCommunityCard(context, community, true, false, false),
+                            child: _buildEnhancedCommunityCard(context, community, false, false, isInterestMatch),
                           ),
                         ),
                       );
@@ -451,7 +456,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _showInlineSearch(BuildContext context, WidgetRef ref, String type) {
-    final searchQuery = ref.read(type == 'my' ? myCommunitiesSearchQueryProvider : exploreCommunitiesSearchQueryProvider);
+    final searchQuery = ref.watch(type == 'my' ? myCommunitiesSearchQueryProvider : exploreCommunitiesSearchQueryProvider);
     if (searchQuery.isNotEmpty) {
       ref.read(type == 'my' ? myCommunitiesSearchQueryProvider.notifier : exploreCommunitiesSearchQueryProvider.notifier).state = '';
     } else {
@@ -513,31 +518,36 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildEnhancedExploreCommunities(BuildContext context, PaginatedCommunitiesState state, WidgetRef ref) {
+  Widget _buildEnhancedExploreCommunities(BuildContext context, PaginatedCommunitiesState state, WidgetRef ref, UserModel? user) {
     final searchQuery = ref.watch(exploreCommunitiesSearchQueryProvider);
     final recommendedAsync = ref.watch(recommendedCommunitiesProvider);
     final trendingAsync = ref.watch(trendingCommunitiesProvider);
     final userInterestsAsync = ref.watch(userInterestsProvider);
     final selectedFilter = ref.watch(exploreFilterProvider);
 
-    // Apply filter based on user interests or selected filter
-    List<CommunityModel> filteredCommunities = state.communities;
+    // Apply filter based on user interests or selected filter, excluding user's communities unless searched
+    List<CommunityModel> filteredCommunities = state.communities.where((community) {
+      final isMember = user != null && community.isMember(user.id);
+      if (searchQuery.isNotEmpty) return !isMember; // Allow all in search results
+      return !isMember; // Exclude user's communities by default
+    }).toList();
+
     if (selectedFilter != null) {
-      filteredCommunities = state.communities.where((community) {
+      filteredCommunities = filteredCommunities.where((community) {
         return community.tags.contains(selectedFilter) ||
                community.name.toLowerCase().contains(selectedFilter.toLowerCase()) ||
                community.description.toLowerCase().contains(selectedFilter.toLowerCase());
       }).toList();
     } else if (searchQuery.isEmpty && (userInterestsAsync.value?.isNotEmpty ?? false)) {
       final interests = userInterestsAsync.value!;
-      filteredCommunities = state.communities.where((community) {
+      filteredCommunities = filteredCommunities.where((community) {
         return interests.any((interest) =>
           community.tags.contains(interest) ||
           community.name.toLowerCase().contains(interest.toLowerCase()) ||
           community.description.toLowerCase().contains(interest.toLowerCase()));
       }).toList();
     } else if (searchQuery.isNotEmpty) {
-      filteredCommunities = state.communities.where((community) {
+      filteredCommunities = filteredCommunities.where((community) {
         return community.name.toLowerCase().contains(searchQuery.toLowerCase()) ||
                community.description.toLowerCase().contains(searchQuery.toLowerCase());
       }).toList();
@@ -709,9 +719,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             physics: const NeverScrollableScrollPhysics(),
             gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
               crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,
-              childAspectRatio: 0.8,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
+              childAspectRatio: 0.7,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
             ),
             itemCount: filteredCommunities.length + (state.hasMore && state.isLoadingMore ? 1 : 0),
             itemBuilder: (context, index) {
@@ -719,20 +729,16 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 final community = filteredCommunities[index];
                 final isRecommended = recommendedAsync.value?.contains(community) ?? false;
                 final isTrending = trendingAsync.value?.contains(community) ?? false;
-                final isInterestMatch = (userInterestsAsync.value ?? {}).any((interest) =>
-                  community.tags.contains(interest) ||
-                  community.name.toLowerCase().contains(interest.toLowerCase()) ||
-                  community.description.toLowerCase().contains(interest.toLowerCase()));
                 return GestureDetector(
                   onTap: () {
                     NavigationService.trackUserEngagement('community_tap', parameters: {'community_id': community.id});
                     NavigationService.navigateToCommunityDetails(community.id);
                   },
                   child: Semantics(
-                    label: 'Community ${community.name} with ${community.memberCount} members${isRecommended ? ', recommended' : ''}${isTrending ? ', trending' : ''}${isInterestMatch ? ', interest match' : ''}',
+                    label: 'Community ${community.name} with ${community.memberCount} members${isRecommended ? ', recommended' : ''}${isTrending ? ', trending' : ''}',
                     child: Animate(
                       effects: [FadeEffect(duration: 300.ms)],
-                      child: _buildEnhancedCommunityCard(context, community, isRecommended, isTrending, isInterestMatch),
+                      child: _buildEnhancedCommunityCard(context, community, isRecommended, isTrending, false),
                     ),
                   ),
                 );
@@ -756,10 +762,46 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   Widget _buildEnhancedCommunityCard(BuildContext context, CommunityModel community, bool isRecommended, bool isTrending, bool isInterestMatch) {
+    // Ignore isInterestMatch since it's handled by filters
+    Widget? primaryBadge;
+    if (isRecommended) {
+      primaryBadge = Positioned(
+        top: 8,
+        left: 8,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            'Recommended',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    } else if (isTrending) {
+      primaryBadge = Positioned(
+        top: 8,
+        right: 8,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.secondary.withOpacity(0.8),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Text(
+            'Trending',
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    }
+
     return Card(
-      elevation: 4,
+      elevation: 2,
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -767,10 +809,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           Stack(
             children: [
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
                 child: CachedNetworkImage(
                   imageUrl: community.coverImage.isNotEmpty ? community.coverImage : '',
-                  height: 100,
+                  height: 60,
                   width: double.infinity,
                   fit: BoxFit.cover,
                   placeholder: (context, url) => Container(
@@ -780,58 +822,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   errorWidget: (context, url, error) => _buildDefaultCover(context),
                 ),
               ),
-              if (isRecommended)
-                Positioned(
-                  top: 8,
-                  left: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Recommended',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              if (isTrending)
-                Positioned(
-                  top: 8,
-                  right: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.secondary.withOpacity(0.8),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Trending',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              if (isInterestMatch)
-                Positioned(
-                  bottom: 8,
-                  left: 8,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Theme.of(context).colorScheme.tertiary.withOpacity(0.8),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      'Interest Match',
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
+              if (primaryBadge != null) primaryBadge,
             ],
           ),
           Padding(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -843,24 +838,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   '${community.memberCount} members',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
-                if (community.description.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Text(
-                    community.description,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ],
               ],
             ),
           ),
@@ -874,7 +858,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
       child: Icon(
         Icons.group,
-        size: 40,
+        size: 30,
         color: Theme.of(context).colorScheme.primary,
       ),
     );

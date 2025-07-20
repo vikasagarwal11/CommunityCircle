@@ -71,7 +71,7 @@ class PaginatedCommunitiesState {
 // Paginated communities notifier for infinite scrolling
 class PaginatedCommunitiesNotifier extends StateNotifier<PaginatedCommunitiesState> {
   final CommunityService _communityService;
-  static const int _pageSize = 10;
+  static const int _pageSize = 20; // Batch size
   DocumentSnapshot? _lastDocument;
 
   PaginatedCommunitiesNotifier(this._communityService) : super(const PaginatedCommunitiesState());
@@ -87,7 +87,6 @@ class PaginatedCommunitiesNotifier extends StateNotifier<PaginatedCommunitiesSta
         lastDocument: null,
       );
       
-      // Get the last document for pagination
       if (communities.isNotEmpty) {
         final lastCommunity = communities.last;
         final lastDoc = await _communityService.getCommunityDocument(lastCommunity.id);
@@ -101,6 +100,7 @@ class PaginatedCommunitiesNotifier extends StateNotifier<PaginatedCommunitiesSta
         isLoading: false,
         hasMore: hasMore,
       );
+      print('Initial communities loaded: ${communities.length} (hasMore: $hasMore)'); // Debug print
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -123,7 +123,6 @@ class PaginatedCommunitiesNotifier extends StateNotifier<PaginatedCommunitiesSta
       if (newCommunities.isNotEmpty) {
         final allCommunities = [...state.communities, ...newCommunities];
         
-        // Get the last document for next pagination
         final lastCommunity = newCommunities.last;
         final lastDoc = await _communityService.getCommunityDocument(lastCommunity.id);
         _lastDocument = lastDoc;
@@ -135,6 +134,7 @@ class PaginatedCommunitiesNotifier extends StateNotifier<PaginatedCommunitiesSta
           hasMore: hasMore,
           isLoadingMore: false,
         );
+        print('Loaded more communities: ${newCommunities.length} (total: ${allCommunities.length}, hasMore: $hasMore)'); // Debug print
       } else {
         state = state.copyWith(hasMore: false, isLoadingMore: false);
       }
@@ -153,7 +153,6 @@ class PaginatedCommunitiesNotifier extends StateNotifier<PaginatedCommunitiesSta
         lastDocument: null,
       );
       
-      // Get the last document for pagination
       if (communities.isNotEmpty) {
         final lastCommunity = communities.last;
         final lastDoc = await _communityService.getCommunityDocument(lastCommunity.id);
