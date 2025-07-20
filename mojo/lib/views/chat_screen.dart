@@ -291,9 +291,50 @@ class ChatScreen extends HookConsumerWidget {
                 );
               },
               loading: () => const LoadingWidget(),
-              error: (error, _) => CustomErrorWidget(
-                message: 'Error loading messages: $error',
-              ),
+              error: (error, _) {
+                // Check if it's a permission error
+                if (error.toString().contains('permission-denied')) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.lock_outline,
+                          size: 64,
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        const SizedBox(height: AppConstants.defaultPadding),
+                        Text(
+                          'Access Denied',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            color: Theme.of(context).colorScheme.error,
+                          ),
+                        ),
+                        const SizedBox(height: AppConstants.smallPadding),
+                        Text(
+                          'You don\'t have permission to view messages in this community.',
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: AppConstants.defaultPadding),
+                        ElevatedButton(
+                          onPressed: () {
+                            // Try to refresh the data
+                            ref.invalidate(messagesProvider(communityId));
+                          },
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                
+                return CustomErrorWidget(
+                  message: 'Error loading messages: $error',
+                );
+              },
             ),
           ),
 

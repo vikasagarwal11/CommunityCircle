@@ -5,6 +5,7 @@ import '../models/community_model.dart';
 import '../models/user_model.dart';
 import '../providers/auth_providers.dart';
 import 'package:equatable/equatable.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CommunityQueryParams extends Equatable {
   final int limit;
@@ -29,6 +30,161 @@ class CommunitySearchParams extends Equatable {
   @override
   List<Object?> get props => [query, category, isBusiness, limit];
 }
+
+// Enhanced pagination state for communities
+class PaginatedCommunitiesState {
+  final List<CommunityModel> communities;
+  final bool isLoading;
+  final bool isLoadingMore;
+  final bool hasMore;
+  final String? error;
+  final bool isRefreshing;
+
+  const PaginatedCommunitiesState({
+    this.communities = const [],
+    this.isLoading = false,
+    this.isLoadingMore = false,
+    this.hasMore = true,
+    this.error,
+    this.isRefreshing = false,
+  });
+
+  PaginatedCommunitiesState copyWith({
+    List<CommunityModel>? communities,
+    bool? isLoading,
+    bool? isLoadingMore,
+    bool? hasMore,
+    String? error,
+    bool? isRefreshing,
+  }) {
+    return PaginatedCommunitiesState(
+      communities: communities ?? this.communities,
+      isLoading: isLoading ?? this.isLoading,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      hasMore: hasMore ?? this.hasMore,
+      error: error ?? this.error,
+      isRefreshing: isRefreshing ?? this.isRefreshing,
+    );
+  }
+}
+
+// Paginated communities notifier for infinite scrolling
+class PaginatedCommunitiesNotifier extends StateNotifier<PaginatedCommunitiesState> {
+  final CommunityService _communityService;
+  static const int _pageSize = 10;
+  DocumentSnapshot? _lastDocument;
+
+  PaginatedCommunitiesNotifier(this._communityService) : super(const PaginatedCommunitiesState());
+
+  Future<void> loadInitial() async {
+    if (state.isLoading) return;
+    
+    state = state.copyWith(isLoading: true, error: null);
+    
+    try {
+      final communities = await _communityService.getPublicCommunitiesPaginated(
+        limit: _pageSize,
+        lastDocument: null,
+      );
+      
+      // Get the last document for pagination
+      if (communities.isNotEmpty) {
+        final lastCommunity = communities.last;
+        final lastDoc = await _communityService.getCommunityDocument(lastCommunity.id);
+        _lastDocument = lastDoc;
+      }
+      
+      final hasMore = communities.length == _pageSize;
+      
+      state = state.copyWith(
+        communities: communities,
+        isLoading: false,
+        hasMore: hasMore,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  Future<void> loadMore() async {
+    if (!state.hasMore || state.isLoadingMore || state.isLoading) return;
+    
+    state = state.copyWith(isLoadingMore: true);
+    
+    try {
+      final newCommunities = await _communityService.getPublicCommunitiesPaginated(
+        limit: _pageSize,
+        lastDocument: _lastDocument,
+      );
+      
+      if (newCommunities.isNotEmpty) {
+        final allCommunities = [...state.communities, ...newCommunities];
+        
+        // Get the last document for next pagination
+        final lastCommunity = newCommunities.last;
+        final lastDoc = await _communityService.getCommunityDocument(lastCommunity.id);
+        _lastDocument = lastDoc;
+        
+        final hasMore = newCommunities.length == _pageSize;
+        
+        state = state.copyWith(
+          communities: allCommunities,
+          hasMore: hasMore,
+          isLoadingMore: false,
+        );
+      } else {
+        state = state.copyWith(hasMore: false, isLoadingMore: false);
+      }
+    } catch (e) {
+      state = state.copyWith(error: e.toString(), isLoadingMore: false);
+    }
+  }
+
+  Future<void> refresh() async {
+    _lastDocument = null;
+    state = state.copyWith(isRefreshing: true, error: null);
+    
+    try {
+      final communities = await _communityService.getPublicCommunitiesPaginated(
+        limit: _pageSize,
+        lastDocument: null,
+      );
+      
+      // Get the last document for pagination
+      if (communities.isNotEmpty) {
+        final lastCommunity = communities.last;
+        final lastDoc = await _communityService.getCommunityDocument(lastCommunity.id);
+        _lastDocument = lastDoc;
+      }
+      
+      final hasMore = communities.length == _pageSize;
+      
+      state = state.copyWith(
+        communities: communities,
+        isRefreshing: false,
+        hasMore: hasMore,
+      );
+    } catch (e) {
+      state = state.copyWith(
+        isRefreshing: false,
+        error: e.toString(),
+      );
+    }
+  }
+
+  void clearError() {
+    state = state.copyWith(error: null);
+  }
+}
+
+// Provider for paginated communities
+final paginatedCommunitiesProvider = StateNotifierProvider<PaginatedCommunitiesNotifier, PaginatedCommunitiesState>((ref) {
+  final communityService = ref.watch(communityServiceProvider);
+  return PaginatedCommunitiesNotifier(communityService);
+});
 
 // Community service provider
 final communityServiceProvider = Provider<CommunityService>((ref) {
@@ -680,4 +836,4 @@ final communityMembershipProvider = StreamProvider.family<String, String>((ref, 
     loading: () => Stream.value('none'),
     error: (_, __) => Stream.value('none'),
   );
-}); 
+});

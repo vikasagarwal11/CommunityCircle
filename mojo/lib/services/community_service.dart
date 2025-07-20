@@ -129,6 +129,42 @@ class CommunityService {
     }
   }
 
+  // Get community document snapshot for pagination
+  Future<DocumentSnapshot> getCommunityDocument(String communityId) async {
+    return await _firestore
+        .collection(AppConstants.communitiesCollection)
+        .doc(communityId)
+        .get();
+  }
+
+  // Get public communities with pagination (Future-based for better control)
+  Future<List<CommunityModel>> getPublicCommunitiesPaginated({
+    int limit = 10,
+    DocumentSnapshot? lastDocument,
+  }) async {
+    try {
+      Query query = _firestore
+          .collection(AppConstants.communitiesCollection)
+          .where('visibility', isEqualTo: 'public')
+          .orderBy('created_at', descending: true)
+          .limit(limit);
+
+      if (lastDocument != null) {
+        query = query.startAfterDocument(lastDocument);
+      }
+
+      final snapshot = await query.get();
+      _logger.i('getPublicCommunitiesPaginated: fetched ${snapshot.docs.length} communities');
+      
+      return snapshot.docs.map((doc) {
+        return CommunityModel.fromMap(doc.data() as Map<String, dynamic>, doc.id);
+      }).toList();
+    } catch (e) {
+      _logger.e('Error getting paginated public communities: $e');
+      throw Exception('Failed to get public communities: $e');
+    }
+  }
+
   // Get public communities with pagination
   Stream<List<CommunityModel>> getPublicCommunities({
     int limit = 10,
