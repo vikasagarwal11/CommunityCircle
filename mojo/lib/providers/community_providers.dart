@@ -234,6 +234,138 @@ final ownedCommunitiesProvider = StreamProvider.autoDispose<List<CommunityModel>
   );
 });
 
+// Enhanced personalization: Recommended communities provider
+final recommendedCommunitiesProvider = FutureProvider.autoDispose<List<CommunityModel>>((ref) async {
+  final userAsync = ref.watch(authNotifierProvider);
+  final communityService = ref.watch(communityServiceProvider);
+  
+  return userAsync.when(
+    data: (user) async {
+      if (user == null) return [];
+      
+      try {
+        // Get user's joined communities to understand their interests
+        final userCommunities = await ref.read(userCommunitiesProvider.future);
+        
+        // Extract tags from user's communities to understand preferences
+        final userTags = <String>{};
+        for (final community in userCommunities) {
+          userTags.addAll(community.tags);
+        }
+        
+        // If user has no communities or tags, return popular communities
+        if (userTags.isEmpty) {
+          final allCommunities = await communityService.getPublicCommunitiesPaginated(limit: 20);
+          // Sort by member count for popularity
+          allCommunities.sort((a, b) => b.memberCount.compareTo(a.memberCount));
+          return allCommunities.take(5).toList();
+        }
+        
+        // Get all public communities
+        final allCommunities = await communityService.getPublicCommunitiesPaginated(limit: 50);
+        
+        // Filter communities that match user's interests
+        final recommended = allCommunities.where((community) {
+          // Don't recommend communities user is already in
+          if (community.isMember(user.id)) return false;
+          
+          // Check if community tags match user's interests
+          final hasMatchingTags = community.tags.any((tag) => userTags.contains(tag));
+          
+          // Also check if community name/description contains user's interests
+          final hasMatchingContent = userTags.any((tag) =>
+            community.name.toLowerCase().contains(tag.toLowerCase()) ||
+            community.description.toLowerCase().contains(tag.toLowerCase())
+          );
+          
+          return hasMatchingTags || hasMatchingContent;
+        }).toList();
+        
+        // Sort by relevance (communities with more matching tags first)
+        recommended.sort((a, b) {
+          final aMatches = a.tags.where((tag) => userTags.contains(tag)).length;
+          final bMatches = b.tags.where((tag) => userTags.contains(tag)).length;
+          if (aMatches != bMatches) return bMatches.compareTo(aMatches);
+          // If same relevance, sort by member count
+          return b.memberCount.compareTo(a.memberCount);
+        });
+        
+        return recommended.take(10).toList();
+      } catch (e) {
+        // Fallback to popular communities
+        final allCommunities = await communityService.getPublicCommunitiesPaginated(limit: 20);
+        allCommunities.sort((a, b) => b.memberCount.compareTo(a.memberCount));
+        return allCommunities.take(5).toList();
+      }
+    },
+    loading: () async => [],
+    error: (_, __) async => [],
+  );
+});
+
+// Trending communities provider (based on member count and recent activity)
+final trendingCommunitiesProvider = FutureProvider.autoDispose<List<CommunityModel>>((ref) async {
+  final communityService = ref.watch(communityServiceProvider);
+  
+  try {
+    final allCommunities = await communityService.getPublicCommunitiesPaginated(limit: 30);
+    
+    // Sort by trending score (member count + recency)
+    allCommunities.sort((a, b) {
+      // Calculate trending score based on member count and recency
+      final aScore = a.memberCount + (DateTime.now().difference(a.createdAt).inDays < 7 ? 50 : 0);
+      final bScore = b.memberCount + (DateTime.now().difference(b.createdAt).inDays < 7 ? 50 : 0);
+      return bScore.compareTo(aScore);
+    });
+    
+    return allCommunities.take(5).toList();
+  } catch (e) {
+    return [];
+  }
+});
+
+// New communities provider (recently created)
+final newCommunitiesProvider = FutureProvider.autoDispose<List<CommunityModel>>((ref) async {
+  final communityService = ref.watch(communityServiceProvider);
+  
+  try {
+    final allCommunities = await communityService.getPublicCommunitiesPaginated(limit: 20);
+    
+    // Sort by creation date (newest first)
+    allCommunities.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+    
+    return allCommunities.take(5).toList();
+  } catch (e) {
+    return [];
+  }
+});
+
+// User interests provider (extracted from user's communities)
+final userInterestsProvider = FutureProvider.autoDispose<Set<String>>((ref) async {
+  final userAsync = ref.watch(authNotifierProvider);
+  
+  return userAsync.when(
+    data: (user) async {
+      if (user == null) return {};
+      
+      try {
+        final userCommunities = await ref.read(userCommunitiesProvider.future);
+        final interests = <String>{};
+        
+        for (final community in userCommunities) {
+          interests.addAll(community.tags);
+        }
+        
+        return interests;
+      } catch (e) {
+        return {};
+      }
+    },
+    loading: () async => {},
+    error: (_, __) async => {},
+  );
+});
+
 // Community details provider
 final communityDetailsProvider = StreamProvider.autoDispose.family<CommunityModel?, String>((ref, communityId) {
   final communityService = ref.watch(communityServiceProvider);
