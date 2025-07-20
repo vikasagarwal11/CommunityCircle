@@ -18,29 +18,6 @@ import 'views/chat_hub_screen.dart';
 import 'views/personal_chat_hub_screen.dart';
 import 'views/event_list_screen.dart';
 
-/*void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  if (kIsWeb) {
-    await Firebase.initializeApp(
-      options: const FirebaseOptions(
-        apiKey: "AIzaSyA1erxrq4I9_U3Z1fduNUSO6oFC10vnDGo",
-        authDomain: "mojo-b4260.firebaseapp.com",
-        projectId: "mojo-b4260",
-        storageBucket: "mojo-b4260.appspot.com",
-        messagingSenderId: "264754676317",
-        appId: "1:264754676317:web:38d5571e205f4b1fc783b4",
-        measurementId: "G-NP8HRGZ6RJ",
-      ),
-    );
-  } else {
-    await Firebase.initializeApp();
-  }
-  runApp(
-    const ProviderScope(
-      child: MyApp(),
-    ),
-  );
-}*/
 void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();

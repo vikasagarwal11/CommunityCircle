@@ -945,7 +945,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
         child: Container(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: isLoading.value ? null : () {
+            onPressed: isLoading.value ? null : () async {
               print('🔍 Create Community button pressed');
               print('🔍 Form data:');
               print('  - Name: ${nameController.text}');
@@ -957,12 +957,71 @@ class CreateCommunityScreen extends HookConsumerWidget {
               print('  - Tags: ${tags.value}');
               print('  - Is Form Valid: $isFormValid');
               
-              // TODO: Implement actual community creation logic
               if (isFormValid) {
-                print('🔍 Form is valid, would create community');
-                // Here we would call the community creation service
+                print('🔍 Form is valid, creating community...');
+                
+                try {
+                  // Set loading state
+                  isLoading.value = true;
+                  
+                  // Create community using the service
+                  final community = await ref.read(communityServiceProvider).createCommunity(
+                    name: nameController.text.trim(),
+                    description: descriptionController.text.trim(),
+                    welcomeMessage: welcomeMessageController.text.trim().isEmpty 
+                        ? null 
+                        : welcomeMessageController.text.trim(),
+                    visibility: visibility.value,
+                    approvalRequired: approvalRequired.value,
+                    isBusiness: isBusiness.value,
+                    tags: tags.value.isNotEmpty ? tags.value : null,
+                    // TODO: Add theme and image upload functionality
+                    theme: {'color': '#2196F3', 'banner_url': ''},
+                  );
+                  
+                  if (community != null) {
+                    print('🔍 Community created successfully: ${community.id}');
+                    
+                    // Show success message
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Community "${community.name}" created successfully!'),
+                        backgroundColor: Colors.green,
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                    
+                    // Navigate back to previous screen
+                    Navigator.of(context).pop();
+                  } else {
+                    throw Exception('Failed to create community');
+                  }
+                } catch (e) {
+                  print('🔍 Error creating community: $e');
+                  
+                  // Show error message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('Failed to create community: ${e.toString()}'),
+                      backgroundColor: Colors.red,
+                      duration: Duration(seconds: 5),
+                    ),
+                  );
+                } finally {
+                  // Reset loading state
+                  isLoading.value = false;
+                }
               } else {
                 print('🔍 Form is invalid, cannot create community');
+                
+                // Show validation error
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('Please complete all required fields'),
+                    backgroundColor: Colors.orange,
+                    duration: Duration(seconds: 3),
+                  ),
+                );
               }
             },
             style: ElevatedButton.styleFrom(
