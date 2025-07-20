@@ -48,34 +48,86 @@ class UserModel {
   });
 
   factory UserModel.fromMap(Map<String, dynamic> map) {
+    // Helper function to safely convert dynamic to String
+    String safeString(dynamic value) {
+      if (value == null) return '';
+      if (value is String) return value;
+      return value.toString();
+    }
+
+    // Helper function to safely convert dynamic to List<String>
+    List<String> safeStringList(dynamic value) {
+      if (value == null) return [];
+      if (value is List) {
+        return value.map((item) => safeString(item)).toList();
+      }
+      return [];
+    }
+
+    // Helper function to safely convert dynamic to Map<String, String>
+    Map<String, String> safeStringMap(dynamic value) {
+      if (value == null) return {};
+      if (value is Map) {
+        return Map<String, String>.fromEntries(
+          value.entries.map((entry) => MapEntry(
+            safeString(entry.key),
+            safeString(entry.value),
+          )),
+        );
+      }
+      return {};
+    }
+
+    // Helper function to safely convert dynamic to Map<String, List<String>>
+    Map<String, List<String>> safeStringListMap(dynamic value) {
+      if (value == null) return {};
+      if (value is Map) {
+        return Map<String, List<String>>.fromEntries(
+          value.entries.map((entry) => MapEntry(
+            safeString(entry.key),
+            safeStringList(entry.value),
+          )),
+        );
+      }
+      return {};
+    }
+
+    // Helper function to safely convert dynamic to Map<String, bool>
+    Map<String, bool> safeBoolMap(dynamic value) {
+      if (value == null) return {};
+      if (value is Map) {
+        return Map<String, bool>.fromEntries(
+          value.entries.map((entry) => MapEntry(
+            safeString(entry.key),
+            entry.value == true,
+          )),
+        );
+      }
+      return {};
+    }
+
     return UserModel(
-      id: map['id'] ?? '',
-      phoneNumber: map['phoneNumber'] ?? '',
+      id: safeString(map['id']),
+      phoneNumber: safeString(map['phoneNumber']),
       displayName: map['displayName'],
       email: map['email'],
       profilePictureUrl: map['profilePictureUrl'],
-      role: map['role'] ?? 'member',
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      lastSeen: (map['lastSeen'] as Timestamp).toDate(),
-      isOnline: map['isOnline'] ?? false,
-      communityIds: List<String>.from(map['communityIds'] ?? []),
-      communityRoles: Map<String, String>.from(map['communityRoles'] ?? {}),
-      ruleAcknowledgments: (map['ruleAcknowledgments'] as Map<String, dynamic>?)?.map(
-            (key, value) => MapEntry(key, List<String>.from(value)),
-          ) ?? {},
-      joinAnswers: (map['joinAnswers'] as Map<String, dynamic>?)?.map(
-            (key, value) => MapEntry(key, List<String>.from(value)),
-          ) ?? {},
-      onboardingCompleted: (map['onboardingCompleted'] as Map<String, dynamic>?)?.map(
-            (key, value) => MapEntry(key, value as bool),
-          ) ?? {},
+      role: safeString(map['role']),
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      lastSeen: (map['lastSeen'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      isOnline: map['isOnline'] == true,
+      communityIds: safeStringList(map['communityIds']),
+      communityRoles: safeStringMap(map['communityRoles']),
+      ruleAcknowledgments: safeStringListMap(map['ruleAcknowledgments']),
+      joinAnswers: safeStringListMap(map['joinAnswers']),
+      onboardingCompleted: safeBoolMap(map['onboardingCompleted']),
       preferences: map['preferences'],
       businessProfile: map['businessProfile'],
-      badges: List<String>.from(map['badges'] ?? []),
-      totalPoints: map['totalPoints'] ?? 0,
+      badges: safeStringList(map['badges']),
+      totalPoints: (map['totalPoints'] as int?) ?? 0,
       fcmToken: map['fcmToken'],
       lastTokenUpdate: map['lastTokenUpdate'] != null 
-          ? (map['lastTokenUpdate'] as Timestamp).toDate() 
+          ? (map['lastTokenUpdate'] as Timestamp?)?.toDate() 
           : null,
       metadata: map['metadata'],
     );

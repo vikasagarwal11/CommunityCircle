@@ -30,20 +30,48 @@ class ChallengeModel {
   });
 
   factory ChallengeModel.fromMap(Map<String, dynamic> map, String id) {
+    // Helper function to safely convert dynamic to String
+    String safeString(dynamic value) {
+      if (value == null) return '';
+      if (value is String) return value;
+      return value.toString();
+    }
+
+    // Helper function to safely convert dynamic to List<String>
+    List<String> safeStringList(dynamic value) {
+      if (value == null) return [];
+      if (value is List) {
+        return value.map((item) => safeString(item)).toList();
+      }
+      return [];
+    }
+
+    // Helper function to safely convert dynamic to Map<String, ChallengeParticipant>
+    Map<String, ChallengeParticipant> safeParticipantMap(dynamic value) {
+      if (value == null) return {};
+      if (value is Map) {
+        return Map<String, ChallengeParticipant>.fromEntries(
+          value.entries.map((entry) => MapEntry(
+            safeString(entry.key),
+            ChallengeParticipant.fromMap(entry.value),
+          )),
+        );
+      }
+      return {};
+    }
+
     return ChallengeModel(
       id: id,
-      communityId: map['communityId'] ?? '',
-      title: map['title'] ?? '',
-      description: map['description'] ?? '',
-      type: map['type'] ?? 'custom',
-      startDate: (map['startDate'] as Timestamp).toDate(),
-      endDate: (map['endDate'] as Timestamp).toDate(),
-      creatorUid: map['creatorUid'] ?? '',
-      participants: (map['participants'] as Map<String, dynamic>?)?.map(
-            (key, value) => MapEntry(key, ChallengeParticipant.fromMap(value)),
-          ) ?? {},
-      rewards: List<String>.from(map['rewards'] ?? []),
-      isActive: map['isActive'] ?? true,
+      communityId: safeString(map['communityId']),
+      title: safeString(map['title']),
+      description: safeString(map['description']),
+      type: safeString(map['type']),
+      startDate: (map['startDate'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      endDate: (map['endDate'] as Timestamp?)?.toDate() ?? DateTime.now().add(Duration(days: 7)),
+      creatorUid: safeString(map['creatorUid']),
+      participants: safeParticipantMap(map['participants']),
+      rewards: safeStringList(map['rewards']),
+      isActive: map['isActive'] == true,
       metadata: map['metadata'],
     );
   }
@@ -179,14 +207,21 @@ class ChallengeParticipant {
   });
 
   factory ChallengeParticipant.fromMap(Map<String, dynamic> map) {
+    // Helper function to safely convert dynamic to String
+    String safeString(dynamic value) {
+      if (value == null) return '';
+      if (value is String) return value;
+      return value.toString();
+    }
+
     return ChallengeParticipant(
-      userId: map['userId'] ?? '',
-      displayName: map['displayName'] ?? '',
+      userId: safeString(map['userId']),
+      displayName: safeString(map['displayName']),
       avatarUrl: map['avatarUrl'],
-      score: map['score'] ?? 0,
-      joinedAt: (map['joinedAt'] as Timestamp).toDate(),
+      score: (map['score'] as int?) ?? 0,
+      joinedAt: (map['joinedAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       lastActivity: map['lastActivity'] != null 
-          ? (map['lastActivity'] as Timestamp).toDate() 
+          ? (map['lastActivity'] as Timestamp?)?.toDate() 
           : null,
     );
   }

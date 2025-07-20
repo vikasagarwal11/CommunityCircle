@@ -26,7 +26,9 @@ class CommunityService {
     List<String>? rules,
     String? welcomeMessage, // NEW: Custom welcome message
     List<String>? tags, // NEW: Community tags
-    Map<String, String>? theme,
+    Map<String, dynamic>? theme, // Updated: More comprehensive theme data
+    bool enhancedPrivacy = false, // NEW: Enhanced privacy settings
+    List<String>? communityRules, // NEW: Community rules (alias for rules)
   }) async {
     try {
       final userId = currentUserId;
@@ -49,6 +51,9 @@ class CommunityService {
 
       _logger.i('Creating community: $name');
 
+      // Use communityRules if provided, otherwise use rules
+      final finalRules = communityRules ?? rules ?? [];
+
       final communityData = {
         'name': name,
         'description': description,
@@ -62,11 +67,12 @@ class CommunityService {
         'banned_users': [],
         'pinned_items': [],
         'join_questions': joinQuestions ?? [],
-        'rules': rules ?? [],
+        'rules': finalRules,
         'welcome_message': welcomeMessage ?? '', // NEW
         'tags': tags ?? [], // NEW
         'created_at': Timestamp.now(),
-        'theme': theme ?? {'color': '#2196F3', 'banner_url': ''},
+        'theme': theme ?? {'primaryColor': '#2196F3', 'banner_url': ''},
+        'enhanced_privacy': enhancedPrivacy, // NEW: Enhanced privacy settings
         'metadata': {
           'member_count': 1,
           'event_count': 0,

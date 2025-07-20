@@ -16,6 +16,7 @@ import 'community_details_screen_admin_tab.dart';
 import 'community_details_screen_actions.dart';
 import 'community_details_screen_dialogs.dart';
 import 'community_details_screen_logic.dart';
+import 'community_details_screen_widgets.dart';
 
 class CommunityDetailsScreen extends ConsumerWidget {
   final String communityId;
@@ -128,42 +129,47 @@ class CommunityDetailsScreen extends ConsumerWidget {
   }
 
   Widget _buildCommunityHeader(BuildContext context, CommunityModel community) {
-    return HookConsumer(
-      builder: (context, ref, child) {
-        final isExpanded = useState(false);
-        final showDescription = useState(false);
-        
-        return Container(
-          height: 80,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              begin: Alignment.topCenter,
-              end: Alignment.bottomCenter,
-              colors: [
-                Theme.of(context).colorScheme.primary.withValues(alpha: 0.8),
-                Theme.of(context).colorScheme.primary.withValues(alpha: 0.4),
-              ],
+    // Convert hex color string to Color object
+    Color getCommunityColor() {
+      try {
+        final hexColor = community.themeColor;
+        return Color(int.parse(hexColor.replaceAll('#', '0xFF')));
+      } catch (e) {
+        return Theme.of(context).colorScheme.primary;
+      }
+    }
+    
+    final communityColor = getCommunityColor();
+    
+    return Container(
+      height: 80,
+      width: double.infinity,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            communityColor.withValues(alpha: 0.8),
+            communityColor.withValues(alpha: 0.4),
+          ],
+        ),
+      ),
+      child: Align(
+        alignment: Alignment.bottomLeft,
+        child: Padding(
+          padding: const EdgeInsets.only(left: 20, bottom: 16, right: 20),
+          child: Text(
+            community.name,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 22,
             ),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
           ),
-          child: Align(
-            alignment: Alignment.bottomLeft,
-            child: Padding(
-              padding: const EdgeInsets.only(left: 20, bottom: 16, right: 20),
-              child: Text(
-                community.name,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 22,
-                ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ),
-        );
-      },
+        ),
+      ),
     );
   }
 
@@ -233,35 +239,15 @@ class CommunityDetailsScreen extends ConsumerWidget {
       EventsTab(community: community),
       MembersTab(community: community),
     ];
-    membershipAsync.when(
-      data: (membership) {
-        if (membership == 'admin') {
-          tabs.add(const Tab(text: 'Admin', icon: Icon(Icons.admin_panel_settings_outlined)));
-          views.addAll(_buildAdminTabs(context, ref, community, membershipAsync));
-        }
-      },
-      loading: () => null,
-      error: (_, __) => null,
-    );
+    
+    // Handle membership data properly
+    final membership = membershipAsync.value;
+    if (membership == 'admin') {
+      tabs.add(const Tab(text: 'Admin', icon: Icon(Icons.admin_panel_settings_outlined)));
+      views.add(AdminTab(community: community));
+    }
+    
     return forTabs ? tabs : views;
-  }
-
-  List<Widget> _buildAdminTabs(
-    BuildContext context,
-    WidgetRef ref,
-    CommunityModel community,
-    AsyncValue<String> membershipAsync,
-  ) {
-    return membershipAsync.when(
-      data: (membership) {
-        if (membership == 'admin') {
-          return [AdminTab(community: community)];
-        }
-        return [];
-      },
-      loading: () => [const Center(child: CircularProgressIndicator())],
-      error: (_, __) => [const Center(child: Text('Error loading admin tab'))],
-    );
   }
 
   int _getTabCount(AsyncValue<String> membershipAsync) {

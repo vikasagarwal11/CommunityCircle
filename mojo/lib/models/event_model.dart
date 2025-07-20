@@ -41,24 +41,57 @@ class EventModel {
   });
 
   factory EventModel.fromMap(Map<String, dynamic> map, String id) {
+    // Helper function to safely convert dynamic to String
+    String safeString(dynamic value) {
+      if (value == null) return '';
+      if (value is String) return value;
+      return value.toString();
+    }
+
+    // Helper function to safely convert dynamic to Map<String, String>
+    Map<String, String> safeStringMap(dynamic value) {
+      if (value == null) return {};
+      if (value is Map) {
+        return Map<String, String>.fromEntries(
+          value.entries.map((entry) => MapEntry(
+            safeString(entry.key),
+            safeString(entry.value),
+          )),
+        );
+      }
+      return {};
+    }
+
+    // Helper function to safely convert dynamic to Map<String, DateTime>
+    Map<String, DateTime> safeDateTimeMap(dynamic value) {
+      if (value == null) return {};
+      if (value is Map) {
+        return Map<String, DateTime>.fromEntries(
+          value.entries.map((entry) => MapEntry(
+            safeString(entry.key),
+            (entry.value as Timestamp?)?.toDate() ?? DateTime.now(),
+          )),
+        );
+      }
+      return {};
+    }
+
     return EventModel(
       id: id,
-      communityId: map['communityId'] ?? '',
-      title: map['title'] ?? '',
-      description: map['description'] ?? '',
-      date: (map['date'] as Timestamp).toDate(),
-      endDate: map['endDate'] != null ? (map['endDate'] as Timestamp).toDate() : null,
-      location: map['location'] ?? '',
-      creatorUid: map['creatorUid'] ?? '',
+      communityId: safeString(map['communityId']),
+      title: safeString(map['title']),
+      description: safeString(map['description']),
+      date: (map['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      endDate: map['endDate'] != null ? (map['endDate'] as Timestamp?)?.toDate() : null,
+      location: safeString(map['location']),
+      creatorUid: safeString(map['creatorUid']),
       posterUrl: map['posterUrl'],
-      visibility: map['visibility'] ?? 'public',
-      approvalRequired: map['approvalRequired'] ?? false,
+      visibility: safeString(map['visibility']),
+      approvalRequired: map['approvalRequired'] == true,
       maxSpots: map['maxSpots'],
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
-      rsvps: Map<String, String>.from(map['rsvps'] ?? {}),
-      checkIns: (map['checkIns'] as Map<String, dynamic>?)?.map(
-            (key, value) => MapEntry(key, (value as Timestamp).toDate()),
-          ) ?? {},
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      rsvps: safeStringMap(map['rsvps']),
+      checkIns: safeDateTimeMap(map['checkIns']),
       metadata: map['metadata'],
       category: map['category'],
     );

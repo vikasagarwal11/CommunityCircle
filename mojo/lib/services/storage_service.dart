@@ -198,19 +198,16 @@ class StorageService {
 
   // Upload event poster
   Future<String?> uploadEventPoster({
-    required String communityId,
+    required String eventId,
     required File imageFile,
-    String? eventId,
   }) async {
     try {
-      _logger.i('Uploading event poster for community: $communityId');
+      _logger.i('Uploading event poster for: $eventId');
       
       final fileName = 'poster_${DateTime.now().millisecondsSinceEpoch}.jpg';
       final ref = _storage.ref()
-          .child('communities')
-          .child(communityId)
           .child('events')
-          .child(eventId ?? 'temp')
+          .child(eventId)
           .child('posters')
           .child(fileName);
 
@@ -219,8 +216,7 @@ class StorageService {
         SettableMetadata(
           contentType: 'image/jpeg',
           customMetadata: {
-            'communityId': communityId,
-            'eventId': eventId ?? 'temp',
+            'eventId': eventId,
             'uploadedAt': DateTime.now().toIso8601String(),
           },
         ),
@@ -233,6 +229,62 @@ class StorageService {
       return downloadUrl;
     } catch (e) {
       _logger.e('Error uploading event poster: $e');
+      return null;
+    }
+  }
+
+  // Generic image picker method
+  Future<File?> pickImage() async {
+    try {
+      _logger.i('Opening image picker for local gallery');
+      
+      final XFile? image = await _picker.pickImage(
+        source: ImageSource.gallery, // Explicitly use local gallery
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+      
+      if (image != null) {
+        _logger.i('Image selected from local gallery: ${image.path}');
+        return File(image.path);
+      } else {
+        _logger.i('No image selected (user cancelled)');
+      }
+      return null;
+    } catch (e) {
+      _logger.e('Error picking image from local gallery: $e');
+      return null;
+    }
+  }
+
+  // Generic image upload method
+  Future<String?> uploadImage(File imageFile, String folderPath) async {
+    try {
+      _logger.i('Uploading image to folder: $folderPath');
+      
+      final fileName = 'image_${DateTime.now().millisecondsSinceEpoch}.jpg';
+      final ref = _storage.ref()
+          .child(folderPath)
+          .child(fileName);
+
+      final uploadTask = ref.putFile(
+        imageFile,
+        SettableMetadata(
+          contentType: 'image/jpeg',
+          customMetadata: {
+            'uploadedAt': DateTime.now().toIso8601String(),
+          },
+        ),
+      );
+
+      final snapshot = await uploadTask;
+      final downloadUrl = await snapshot.ref.getDownloadURL();
+      
+      _logger.i('Image uploaded successfully: $downloadUrl');
+      return downloadUrl;
+    } catch (e) {
+      _logger.e('Error uploading image: $e');
       return null;
     }
   }

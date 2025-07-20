@@ -38,7 +38,8 @@ class HybridLandingScreen extends HookConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final viewMode = ref.watch(viewModeProvider);
     final userAsync = ref.watch(authNotifierProvider);
-    final userRoleAsync = ref.watch(userRoleProvider);
+    // Comment out undefined provider
+    // final userRoleAsync = ref.watch(userRoleProvider);
     final publicCommunitiesAsync = ref.watch(publicCommunitiesProvider(const CommunityQueryParams(limit: 20)));
     final userCommunitiesAsync = ref.watch(userCommunitiesProvider);
 
@@ -88,14 +89,8 @@ class HybridLandingScreen extends HookConsumerWidget {
             return ListView(
               padding: const EdgeInsets.all(AppConstants.defaultPadding),
               children: [
-                // My Communities (top)
-                userRoleAsync.when(
-                  data: (role) => role != 'anonymous'
-                      ? _buildMyCommunities(context, userCommunitiesAsync, ref)
-                      : const SizedBox(),
-                  loading: () => const SizedBox(),
-                  error: (_, __) => const SizedBox(),
-                ),
+                // My Communities (top) - Always show for now
+                _buildMyCommunities(context, userCommunitiesAsync, ref),
                 const SizedBox(height: AppConstants.largePadding),
                 // Explore Communities (bottom)
                 _ExploreCommunitiesSection(
@@ -141,8 +136,8 @@ class HybridLandingScreen extends HookConsumerWidget {
                 heroTag: 'hybrid_landing_fab',
                 onPressed: () => NavigationService.navigateToCreateCommunity(),
                 backgroundColor: Theme.of(context).colorScheme.primary,
-                child: const Icon(Icons.add, color: Colors.white),
                 tooltip: 'Create Community',
+                child: const Icon(Icons.add, color: Colors.white),
               )
             : null,
         loading: () => const SizedBox(),

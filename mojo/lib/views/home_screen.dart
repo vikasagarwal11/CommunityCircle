@@ -131,8 +131,8 @@ class HomeScreen extends ConsumerWidget {
             ? FloatingActionButton(
                 heroTag: 'home_fab',
                 onPressed: () => NavigationService.navigateToCreateCommunity(),
-                child: const Icon(Icons.add),
                 tooltip: 'Create Community',
+                child: const Icon(Icons.add),
               )
             : null,
         loading: () => const SizedBox(),

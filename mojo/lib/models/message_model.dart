@@ -30,20 +30,48 @@ class MessageModel {
   });
 
   factory MessageModel.fromMap(Map<String, dynamic> map, String id) {
+    // Helper function to safely convert dynamic to String
+    String safeString(dynamic value) {
+      if (value == null) return '';
+      if (value is String) return value;
+      return value.toString();
+    }
+
+    // Helper function to safely convert dynamic to List<String>
+    List<String> safeStringList(dynamic value) {
+      if (value == null) return [];
+      if (value is List) {
+        return value.map((item) => safeString(item)).toList();
+      }
+      return [];
+    }
+
+    // Helper function to safely convert dynamic to Map<String, List<String>>
+    Map<String, List<String>> safeStringListMap(dynamic value) {
+      if (value == null) return {};
+      if (value is Map) {
+        return Map<String, List<String>>.fromEntries(
+          value.entries.map((entry) => MapEntry(
+            safeString(entry.key),
+            safeStringList(entry.value),
+          )),
+        );
+      }
+      return {};
+    }
+
     return MessageModel(
       id: id,
-      communityId: map['communityId'] ?? '',
-      userId: map['userId'] ?? '',
-      text: map['text'] ?? '',
+      communityId: safeString(map['communityId']),
+      userId: safeString(map['userId']),
+      text: safeString(map['text']),
       mediaUrl: map['mediaUrl'],
       mediaType: map['mediaType'],
       threadId: map['threadId'],
-      timestamp: (map['timestamp'] as Timestamp).toDate(),
-      reactions: (map['reactions'] as Map<String, dynamic>?)?.map(
-            (key, value) => MapEntry(key, List<String>.from(value)),
-          ) ?? {},
-      mentions: List<String>.from(map['mentions'] ?? []),
-      readBy: List<String>.from(map['readBy'] ?? []),
+      timestamp: (map['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      reactions: safeStringListMap(map['reactions']),
+      mentions: safeStringList(map['mentions']),
+      readBy: safeStringList(map['readBy']),
       metadata: map['metadata'],
     );
   }

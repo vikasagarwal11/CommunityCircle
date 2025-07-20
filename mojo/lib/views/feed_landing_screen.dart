@@ -15,8 +15,9 @@ class FeedLandingScreen extends HookConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final currentIndex = useState(0);
-    final eventsAsync = ref.watch(liveEventsProvider);
-    final communitiesAsync = ref.watch(trendingCommunitiesProvider);
+    // Remove unused variables that reference undefined providers
+    // final eventsAsync = ref.watch(liveEventsProvider);
+    // final communitiesAsync = ref.watch(trendingCommunitiesProvider);
 
     return Scaffold(
       body: Stack(
@@ -42,7 +43,7 @@ class FeedLandingScreen extends HookConsumerWidget {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
-                    Colors.black.withOpacity(0.7),
+                    Colors.black.withValues(alpha: 0.7),
                     Colors.transparent,
                   ],
                 ),
@@ -83,7 +84,7 @@ class FeedLandingScreen extends HookConsumerWidget {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    Colors.black.withOpacity(0.7),
+                    Colors.black.withValues(alpha: 0.7),
                   ],
                 ),
               ),
@@ -112,7 +113,7 @@ class FeedLandingScreen extends HookConsumerWidget {
                 decoration: BoxDecoration(
                   color: currentIndex.value == index 
                       ? Colors.white 
-                      : Colors.white.withOpacity(0.3),
+                      : Colors.white.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(2),
                 ),
               )),
@@ -154,8 +155,8 @@ class FeedLandingScreen extends HookConsumerWidget {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [
-                  Colors.blue.withOpacity(0.3),
-                  Colors.purple.withOpacity(0.3),
+                  Colors.blue.withValues(alpha: 0.3),
+                  Colors.purple.withValues(alpha: 0.3),
                 ],
               ),
             ),
@@ -163,7 +164,7 @@ class FeedLandingScreen extends HookConsumerWidget {
               child: Icon(
                 Icons.play_circle_filled,
                 size: 80,
-                color: Colors.white.withOpacity(0.7),
+                color: Colors.white.withValues(alpha: 0.7),
               ),
             ),
           ),
@@ -181,7 +182,7 @@ class FeedLandingScreen extends HookConsumerWidget {
                   children: [
                     CircleAvatar(
                       radius: 20,
-                      backgroundColor: Colors.white.withOpacity(0.2),
+                      backgroundColor: Colors.white.withValues(alpha: 0.2),
                       child: Text(
                         'C',
                         style: TextStyle(
@@ -225,7 +226,7 @@ class FeedLandingScreen extends HookConsumerWidget {
                 Text(
                   mockEvent.description,
                   style: TextStyle(
-                    color: Colors.white.withOpacity(0.9),
+                    color: Colors.white.withValues(alpha: 0.9),
                     fontSize: 14,
                   ),
                   maxLines: 2,
@@ -273,14 +274,14 @@ class FeedLandingScreen extends HookConsumerWidget {
       children: [
         Icon(
           icon,
-          color: isActive ? Colors.white : Colors.white.withOpacity(0.6),
+          color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.6),
           size: 24,
         ),
         const SizedBox(height: 4),
         Text(
           label,
           style: TextStyle(
-            color: isActive ? Colors.white : Colors.white.withOpacity(0.6),
+            color: isActive ? Colors.white : Colors.white.withValues(alpha: 0.6),
             fontSize: 12,
           ),
         ),

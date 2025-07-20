@@ -44,26 +44,56 @@ class CommunityModel {
   });
 
   factory CommunityModel.fromMap(Map<String, dynamic> data, String id) {
+    // Helper function to safely convert dynamic to String
+    String safeString(dynamic value) {
+      if (value == null) return '';
+      if (value is String) return value;
+      return value.toString();
+    }
+
+    // Helper function to safely convert dynamic to List<String>
+    List<String> safeStringList(dynamic value) {
+      if (value == null) return [];
+      if (value is List) {
+        return value.map((item) => safeString(item)).toList();
+      }
+      return [];
+    }
+
+    // Helper function to safely convert theme data
+    Map<String, String> safeThemeMap(dynamic value) {
+      if (value == null) return {};
+      if (value is Map) {
+        return Map<String, String>.fromEntries(
+          value.entries.map((entry) => MapEntry(
+            safeString(entry.key),
+            safeString(entry.value),
+          )),
+        );
+      }
+      return {};
+    }
+
     return CommunityModel(
       id: id,
-      name: data['name'] ?? '',
-      description: data['description'] ?? '',
-      coverImage: data['cover_image'] ?? '',
-      badgeUrl: data['badge_url'] ?? '', // NEW
-      adminUid: data['admin_uid'] ?? '',
-      visibility: data['visibility'] ?? 'public',
-      approvalRequired: data['approval_required'] ?? false,
-      isBusiness: data['is_business'] ?? false,
-      members: List<String>.from(data['members'] ?? []),
-      bannedUsers: List<String>.from(data['banned_users'] ?? []),
-      pinnedItems: List<String>.from(data['pinned_items'] ?? []),
-      joinQuestions: List<String>.from(data['join_questions'] ?? []), // NEW
-      rules: List<String>.from(data['rules'] ?? []), // NEW
-      welcomeMessage: data['welcome_message'] ?? '', // NEW
-      tags: List<String>.from(data['tags'] ?? []), // NEW
+      name: safeString(data['name']),
+      description: safeString(data['description']),
+      coverImage: safeString(data['cover_image']),
+      badgeUrl: safeString(data['badge_url']),
+      adminUid: safeString(data['admin_uid']),
+      visibility: safeString(data['visibility']),
+      approvalRequired: data['approval_required'] == true,
+      isBusiness: data['is_business'] == true,
+      members: safeStringList(data['members']),
+      bannedUsers: safeStringList(data['banned_users']),
+      pinnedItems: safeStringList(data['pinned_items']),
+      joinQuestions: safeStringList(data['join_questions']),
+      rules: safeStringList(data['rules']),
+      welcomeMessage: safeString(data['welcome_message']),
+      tags: safeStringList(data['tags']),
       createdAt: (data['created_at'] as Timestamp?)?.toDate() ?? DateTime.now(),
-      theme: Map<String, String>.from(data['theme'] ?? {}),
-      metadata: Map<String, dynamic>.from(data['metadata'] ?? {}),
+      theme: safeThemeMap(data['theme']),
+      metadata: data['metadata'] is Map ? Map<String, dynamic>.from(data['metadata']) : {},
     );
   }
 
@@ -173,7 +203,7 @@ class CommunityModel {
   }
 
   // Get theme color
-  String get themeColor => theme['color'] ?? '#2196F3';
+  String get themeColor => theme['primaryColor'] ?? theme['color'] ?? '#2196F3';
   String get bannerUrl => theme['banner_url'] ?? '';
 
   // Get event count from metadata

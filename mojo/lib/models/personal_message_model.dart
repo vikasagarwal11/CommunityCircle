@@ -32,15 +32,45 @@ class PersonalMessageModel {
   });
 
   factory PersonalMessageModel.fromMap(Map<String, dynamic> map, String id) {
+    // Helper function to safely convert dynamic to String
+    String safeString(dynamic value) {
+      if (value == null) return '';
+      if (value is String) return value;
+      return value.toString();
+    }
+
+    // Helper function to safely convert dynamic to List<String>
+    List<String> safeStringList(dynamic value) {
+      if (value == null) return [];
+      if (value is List) {
+        return value.map((item) => safeString(item)).toList();
+      }
+      return [];
+    }
+
+    // Helper function to safely convert dynamic to Map<String, String>
+    Map<String, String> safeStringMap(dynamic value) {
+      if (value == null) return {};
+      if (value is Map) {
+        return Map<String, String>.fromEntries(
+          value.entries.map((entry) => MapEntry(
+            safeString(entry.key),
+            safeString(entry.value),
+          )),
+        );
+      }
+      return {};
+    }
+
     return PersonalMessageModel(
       id: id,
-      senderId: map['senderId'] ?? '',
-      receiverId: map['receiverId'] ?? '',
-      text: map['text'] ?? '',
-      timestamp: (map['timestamp'] as Timestamp).toDate(),
+      senderId: safeString(map['senderId']),
+      receiverId: safeString(map['receiverId']),
+      text: safeString(map['text']),
+      timestamp: (map['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
       metadata: map['metadata'],
-      readBy: List<String>.from(map['readBy'] ?? []),
-      reactions: Map<String, String>.from(map['reactions'] ?? {}),
+      readBy: safeStringList(map['readBy']),
+      reactions: safeStringMap(map['reactions']),
       replyToMessageId: map['replyToMessageId'],
       replyToText: map['replyToText'],
       callType: map['callType'],
@@ -133,24 +163,49 @@ class PersonalChatModel {
   });
 
   factory PersonalChatModel.fromMap(Map<String, dynamic> map, String id) {
+    // Helper function to safely convert dynamic to String
+    String safeString(dynamic value) {
+      if (value == null) return '';
+      if (value is String) return value;
+      return value.toString();
+    }
+
+    // Helper function to safely convert dynamic to List<String>
+    List<String> safeStringList(dynamic value) {
+      if (value == null) return [];
+      if (value is List) {
+        return value.map((item) => safeString(item)).toList();
+      }
+      return [];
+    }
+
+    // Helper function to safely convert dynamic to Map<String, dynamic>
+    Map<String, dynamic> safeDynamicMap(dynamic value) {
+      if (value == null) return {};
+      if (value is Map) {
+        return Map<String, dynamic>.from(value);
+      }
+      return {};
+    }
+
     return PersonalChatModel(
       id: id,
-      user1Id: map['user1Id'] ?? '',
-      user2Id: map['user2Id'] ?? '',
-      participants: List<String>.from(map['participants'] ?? []),
-      isGroupChat: map['isGroupChat'] ?? false,
+      user1Id: safeString(map['user1Id']),
+      user2Id: safeString(map['user2Id']),
+      participants: safeStringList(map['participants']),
+      isGroupChat: map['isGroupChat'] == true,
       groupName: map['groupName'],
       groupDescription: map['groupDescription'],
       groupAvatarUrl: map['groupAvatarUrl'],
       lastMessage: map['lastMessage'] != null 
           ? PersonalMessageModel.fromMap(map['lastMessage'], '')
           : null,
-      lastMessageTime: (map['lastMessageTime'] as Timestamp).toDate(),
-      unreadCount: map['unreadCount'] ?? 0,
-      user1Data: Map<String, dynamic>.from(map['user1Data'] ?? {}),
-      user2Data: Map<String, dynamic>.from(map['user2Data'] ?? {}),
+      lastMessageTime: (map['lastMessageTime'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      unreadCount: (map['unreadCount'] as int?) ?? 0,
+      user1Data: safeDynamicMap(map['user1Data']),
+      user2Data: safeDynamicMap(map['user2Data']),
       participantData: map['participantData'] != null 
-          ? Map<String, dynamic>.from(map['participantData'])
+          ? safeDynamicMap(map['participantData'])
           : null,
     );
   }

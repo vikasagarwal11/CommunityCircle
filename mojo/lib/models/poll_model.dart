@@ -26,20 +26,48 @@ class PollModel {
   });
 
   factory PollModel.fromMap(Map<String, dynamic> map, String id) {
+    // Helper function to safely convert dynamic to String
+    String safeString(dynamic value) {
+      if (value == null) return '';
+      if (value is String) return value;
+      return value.toString();
+    }
+
+    // Helper function to safely convert dynamic to List<PollOption>
+    List<PollOption> safeOptionList(dynamic value) {
+      if (value == null) return [];
+      if (value is List) {
+        return value.map((item) => PollOption.fromMap(item)).toList();
+      }
+      return [];
+    }
+
+    // Helper function to safely convert dynamic to Map<String, String>
+    Map<String, String> safeStringMap(dynamic value) {
+      if (value == null) return {};
+      if (value is Map) {
+        return Map<String, String>.fromEntries(
+          value.entries.map((entry) => MapEntry(
+            safeString(entry.key),
+            safeString(entry.value),
+          )),
+        );
+      }
+      return {};
+    }
+
     return PollModel(
       id: id,
-      communityId: map['communityId'] ?? '',
-      question: map['question'] ?? '',
-      options: (map['options'] as List<dynamic>?)?.map(
-            (option) => PollOption.fromMap(option),
-          ).toList() ?? [],
-      creatorUid: map['creatorUid'] ?? '',
-      createdAt: (map['createdAt'] as Timestamp).toDate(),
+      communityId: safeString(map['communityId']),
+      question: safeString(map['question']),
+      options: safeOptionList(map['options']),
+      creatorUid: safeString(map['creatorUid']),
+      createdAt: (map['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       expiresAt: map['expiresAt'] != null 
-          ? (map['expiresAt'] as Timestamp).toDate() 
+          ? (map['expiresAt'] as Timestamp?)?.toDate() 
           : null,
-      votes: Map<String, String>.from(map['votes'] ?? {}),
-      isActive: map['isActive'] ?? true,
+      votes: safeStringMap(map['votes']),
+      isActive: map['isActive'] == true,
       metadata: map['metadata'],
     );
   }
@@ -156,9 +184,16 @@ class PollOption {
   });
 
   factory PollOption.fromMap(Map<String, dynamic> map) {
+    // Helper function to safely convert dynamic to String
+    String safeString(dynamic value) {
+      if (value == null) return '';
+      if (value is String) return value;
+      return value.toString();
+    }
+
     return PollOption(
-      id: map['id'] ?? '',
-      text: map['text'] ?? '',
+      id: safeString(map['id']),
+      text: safeString(map['text']),
       imageUrl: map['imageUrl'],
     );
   }

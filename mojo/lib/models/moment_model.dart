@@ -30,21 +30,56 @@ class MomentModel {
   });
 
   factory MomentModel.fromMap(Map<String, dynamic> map, String id) {
+    // Helper function to safely convert dynamic to String
+    String safeString(dynamic value) {
+      if (value == null) return '';
+      if (value is String) return value;
+      return value.toString();
+    }
+
+    // Helper function to safely convert dynamic to List<String>
+    List<String> safeStringList(dynamic value) {
+      if (value == null) return [];
+      if (value is List) {
+        return value.map((item) => safeString(item)).toList();
+      }
+      return [];
+    }
+
+    // Helper function to safely convert dynamic to Map<String, List<String>>
+    Map<String, List<String>> safeStringListMap(dynamic value) {
+      if (value == null) return {};
+      if (value is Map) {
+        return Map<String, List<String>>.fromEntries(
+          value.entries.map((entry) => MapEntry(
+            safeString(entry.key),
+            safeStringList(entry.value),
+          )),
+        );
+      }
+      return {};
+    }
+
+    // Helper function to safely convert dynamic to List<MomentComment>
+    List<MomentComment> safeCommentList(dynamic value) {
+      if (value == null) return [];
+      if (value is List) {
+        return value.map((item) => MomentComment.fromMap(item)).toList();
+      }
+      return [];
+    }
+
     return MomentModel(
       id: id,
-      communityId: map['communityId'] ?? '',
-      userId: map['userId'] ?? '',
+      communityId: safeString(map['communityId']),
+      userId: safeString(map['userId']),
       mediaId: map['mediaId'],
       mediaUrl: map['mediaUrl'],
-      mediaType: map['mediaType'] ?? 'image',
-      timestamp: (map['timestamp'] as Timestamp).toDate(),
-      expiresAt: (map['expiresAt'] as Timestamp).toDate(),
-      reactions: (map['reactions'] as Map<String, dynamic>?)?.map(
-            (key, value) => MapEntry(key, List<String>.from(value)),
-          ) ?? {},
-      comments: (map['comments'] as List<dynamic>?)?.map(
-            (comment) => MomentComment.fromMap(comment),
-          ).toList() ?? [],
+      mediaType: safeString(map['mediaType']),
+      timestamp: (map['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      expiresAt: (map['expiresAt'] as Timestamp?)?.toDate() ?? DateTime.now().add(Duration(hours: 24)),
+      reactions: safeStringListMap(map['reactions']),
+      comments: safeCommentList(map['comments']),
       pollData: map['pollData'],
       metadata: map['metadata'],
     );
@@ -166,11 +201,18 @@ class MomentComment {
   });
 
   factory MomentComment.fromMap(Map<String, dynamic> map) {
+    // Helper function to safely convert dynamic to String
+    String safeString(dynamic value) {
+      if (value == null) return '';
+      if (value is String) return value;
+      return value.toString();
+    }
+
     return MomentComment(
-      id: map['id'] ?? '',
-      userId: map['userId'] ?? '',
-      text: map['text'] ?? '',
-      timestamp: (map['timestamp'] as Timestamp).toDate(),
+      id: safeString(map['id']),
+      userId: safeString(map['userId']),
+      text: safeString(map['text']),
+      timestamp: (map['timestamp'] as Timestamp?)?.toDate() ?? DateTime.now(),
     );
   }
 

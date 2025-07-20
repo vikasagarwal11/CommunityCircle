@@ -412,7 +412,7 @@ class _CreateEventScreenState extends ConsumerState<CreateEventScreen>
         _logger.i('🎬 Uploading event poster image');
         final storageService = StorageService();
         posterUrl = await storageService.uploadEventPoster(
-          communityId: widget.communityId,
+          eventId: 'temp_${DateTime.now().millisecondsSinceEpoch}', // Temporary ID for upload
           imageFile: _posterImage!,
         );
         _logger.i('🎬 Event poster uploaded: $posterUrl');
