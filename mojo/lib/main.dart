@@ -1,47 +1,40 @@
 import 'package:flutter/material.dart';
-import 'firebase_options.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'core/theme.dart';
-import 'core/constants.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_analytics/firebase_analytics.dart';
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'firebase_options.dart';
+import 'core/logger.dart';
 import 'core/navigation_service.dart';
+import 'core/theme.dart';
 import 'providers/auth_providers.dart';
 import 'providers/notification_providers.dart';
-import 'routes/app_routes.dart';
+import 'providers/offline_providers.dart';
 import 'views/phone_auth_screen.dart';
 import 'views/home_screen.dart';
-import 'views/public_home_screen.dart';
-import 'views/profile_screen.dart';
-import 'views/challenge_hub_screen.dart';
-import 'views/chat_hub_screen.dart';
-import 'views/personal_chat_hub_screen.dart';
-import 'views/event_list_screen.dart';
+import 'widgets/welcome_flash_screen.dart';
 
 void main() async {
-  try {
-    WidgetsFlutterBinding.ensureInitialized();
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    
-    // Initialize NavigationService with analytics
-    await NavigationService.initialize();
-    
-    runApp(
-      const ProviderScope(
-        child: MyApp(),
-      ),
-    );
-  } catch (e) {
-    // Fallback to basic app without Firebase
-    runApp(
-      const ProviderScope(
-        child: MyApp(),
-      ),
-    );
-  }
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Initialize Hive for local storage
+  await Hive.initFlutter();
+  
+  // Initialize Firebase
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  // Initialize Crashlytics
+  await FirebaseCrashlytics.instance.setCrashlyticsCollectionEnabled(true);
+  
+  // Initialize NavigationService
+  NavigationService.initialize();
+  
+  runApp(const ProviderScope(child: MyApp()));
 }
+
 class MyApp extends ConsumerWidget {
   const MyApp({super.key});
 
@@ -49,186 +42,68 @@ class MyApp extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp(
       title: 'MOJO',
+      debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.system,
-      navigatorKey: NavigationService.navigatorKey,
-      onGenerateRoute: AppRoutes.generateRoute,
-      home: const AuthWrapper(),
-    );
-  }
-}
-
-class MainScaffold extends StatefulWidget {
-  const MainScaffold({Key? key}) : super(key: key);
-
-  @override
-  State<MainScaffold> createState() => _MainScaffoldState();
-}
-
-class _MainScaffoldState extends State<MainScaffold> {
-  int _selectedIndex = 0;
-
-  static final List<Widget> _screens = <Widget>[
-    HomeScreen(),
-    ChatHubScreen(),
-    EventListScreen(isTab: true), // Use as tab
-    ChallengeHubScreen(), // Use the real Challenge Hub here
-    ProfileScreen(),
-  ];
-
-  void _onItemTapped(int index) {
-    if (index != _selectedIndex) {
-      setState(() {
-        _selectedIndex = index;
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _screens,
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
-        onTap: _onItemTapped,
-        showSelectedLabels: false,
-        showUnselectedLabels: false,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: Colors.grey,
-        backgroundColor: Colors.white,
-        elevation: 8,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.message),
-            label: 'Chat',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.event),
-            label: 'Events',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.emoji_events),
-            label: 'Challenges',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.account_circle),
-            label: 'Profile',
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SimplePlaceholder extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  const _SimplePlaceholder({required this.icon, required this.label});
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 64, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(height: 16),
-          Text(label, style: Theme.of(context).textTheme.headlineSmall),
-        ],
-      ),
-    );
-  }
-}
-
-class AuthWrapper extends ConsumerWidget {
-  const AuthWrapper({super.key});
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authStateProvider);
-    final userAsync = ref.watch(authNotifierProvider);
-    
-    return authState.when(
-      data: (state) {
-        switch (state) {
-          case AuthState.authenticated:
-            return userAsync.when(
-              data: (user) {
-                if (user == null) {
-                  // Track anonymous session
-                  NavigationService.trackAppSessionStart();
-                  NavigationService.trackUserEngagement('anonymous_session_start');
-                  return const PhoneAuthScreen();
-                }
-                // Track authenticated session
-                NavigationService.trackAppSessionStart();
-                NavigationService.trackUserEngagement('authenticated_session_start', parameters: {
-                  'user_role': user.role,
-                  'user_id': user.id,
-                });
-                // Initialize notifications for authenticated users
-                WidgetsBinding.instance.addPostFrameCallback((_) {
-                  ref.read(notificationStateProvider.notifier).initialize(
-                    onNotificationTap: (navigationData) {
-                      // Handle notification navigation
-                      NavigationService.navigateTo(navigationData);
-                    },
-                  );
-                });
-                // Role-based routing
-                switch (user.role) {
-                  case 'anonymous':
-                    return const PublicHomeScreen();
-                  case 'member':
-                  case 'admin':
-                  case 'business':
-                    return const MainScaffold();
-                  default:
-                    return const PhoneAuthScreen();
-                }
-              },
-              loading: () => const Scaffold(
-                body: Center(
-                  child: CircularProgressIndicator(),
-                ),
-              ),
-              error: (error, stack) {
-                // Track error state
-                NavigationService.trackError('auth_error', error.toString(), parameters: {'error_type': 'user_load_failed'});
+      home: Consumer(
+        builder: (context, ref, child) {
+          final userAsync = ref.watch(authNotifierProvider);
+          
+          return userAsync.when(
+            data: (user) {
+              // Initialize services in background to prevent ANR
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _initializeServicesInBackground(ref);
+              });
+              
+              if (user == null) {
                 return const PhoneAuthScreen();
-              },
-            );
-          case AuthState.unauthenticated:
-            // Track unauthenticated session
-            NavigationService.trackAppSessionStart();
-            NavigationService.trackUserEngagement('unauthenticated_session_start');
-            return const PhoneAuthScreen();
-          case AuthState.loading:
-            return const Scaffold(
+              }
+              
+              return const HomeScreen();
+            },
+            loading: () => const Scaffold(
               body: Center(
                 child: CircularProgressIndicator(),
               ),
-            );
-        }
-      },
-      loading: () => const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
+            ),
+            error: (error, stack) => const PhoneAuthScreen(),
+          );
+        },
       ),
-      error: (error, stack) {
-        // Track error state
-        NavigationService.trackError('auth_state_error', error.toString(), parameters: {'error_type': 'auth_state_failed'});
-        return const PhoneAuthScreen();
-      },
     );
+  }
+
+  // Move heavy initialization to background
+  void _initializeServicesInBackground(WidgetRef ref) {
+    // Use compute or isolate for heavy operations
+    Future.microtask(() async {
+      try {
+        // Add a small delay to ensure UI is ready
+        await Future.delayed(const Duration(milliseconds: 100));
+        
+        // Initialize local storage service first
+        final localStorage = ref.read(localStorageServiceProvider);
+        await localStorage.initialize();
+        
+        // Add a small delay between initializations
+        await Future.delayed(const Duration(milliseconds: 50));
+        
+        // Initialize offline sync service
+        await ref.read(offlineSyncNotifierProvider.notifier).initialize();
+        
+        // Initialize notification service in background
+        await ref.read(notificationNotifierProvider.notifier).initialize();
+        
+        // Track app session in background
+        // ref.read(analyticsServiceProvider).trackAppSessionStart();
+        
+        if (ref.read(authNotifierProvider).value != null) {
+          // ref.read(analyticsServiceProvider).trackUserEngagement('authenticated_session_start');
+        }
+      } catch (e) {
+        // Log error but don't crash the app
+        print('Background initialization error: $e');
+      }
+    });
   }
 }

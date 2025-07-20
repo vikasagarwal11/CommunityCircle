@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
+import 'package:cached_network_image/cached_network_image.dart'; // New import for performance
+import 'package:flutter_animate/flutter_animate.dart'; // New import for animations
+import 'package:connectivity_plus/connectivity_plus.dart'; // New import for offline handling
 import '../models/community_model.dart';
 import '../models/user_model.dart';
 import '../providers/community_providers.dart';
 import '../providers/user_providers.dart';
 import '../providers/auth_providers.dart';
+import '../providers/offline_providers.dart';
 import '../core/navigation_service.dart';
 import '../core/theme.dart';
 import '../core/logger.dart';
@@ -18,6 +22,7 @@ import '../services/notification_service.dart';
 import '../services/export_service.dart';
 import '../widgets/welcome_flash_screen.dart';
 import '../widgets/welcome_onboarding_dialog.dart';
+import '../widgets/offline_status_widget.dart';
 import 'community_details_screen.dart';
 import 'create_community_screen.dart';
 import 'search_screen.dart';
@@ -37,6 +42,14 @@ final myCommunitiesSearchQueryProvider = StateProvider<String>((ref) => '');
 
 // Add a StateProvider for the Explore Communities search query
 final exploreCommunitiesSearchQueryProvider = StateProvider<String>((ref) => '');
+
+// New: Connectivity provider for offline detection
+final connectivityProvider = StreamProvider<ConnectivityResult>((ref) {
+  return Connectivity().onConnectivityChanged;
+});
+
+// New: Sorting provider for My Communities (personalization)
+final myCommunitiesSortProvider = StateProvider<String>((ref) => 'name'); // Options: 'name', 'members'
 
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -78,12 +91,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final userRoleAsync = ref.watch(userRoleProvider);
     final paginatedCommunitiesState = ref.watch(paginatedCommunitiesProvider);
     final userCommunitiesAsync = ref.watch(userCommunitiesProvider);
+    final offlineStatus = ref.watch(offlineStatusProvider);
 
     return Scaffold(
       appBar: AppBar(
         title: const Text(AppConstants.appName),
         backgroundColor: Theme.of(context).colorScheme.surface,
         actions: [
+          // Offline indicator in app bar
+          const OfflineIndicator(),
           IconButton(
             icon: const Icon(Icons.search),
             onPressed: () {
@@ -99,63 +115,74 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         ],
       ),
       body: SafeArea(
-        child: userAsync.when(
-          data: (user) {
-            if (user == null) {
-              return const Center(
-                child: Text('No user data available'),
-              );
-            }
+        child: Column(
+          children: [
+            // Offline banner at the top
+            const OfflineBanner(),
+            // Offline status widget
+            const OfflineStatusWidget(),
+            // Main content
+            Expanded(
+              child: userAsync.when(
+                data: (user) {
+                  if (user == null) {
+                    return const Center(
+                      child: Text('No user data available'),
+                    );
+                  }
 
-            return RefreshIndicator(
-              onRefresh: () => ref.read(paginatedCommunitiesProvider.notifier).refresh(),
-              child: ListView(
-                controller: _scrollController,
-                padding: const EdgeInsets.all(AppConstants.defaultPadding),
-                children: [
-                  // My Communities (top)
-                  userRoleAsync.when(
-                    data: (role) => role != 'anonymous'
-                        ? _buildMyCommunities(context, userCommunitiesAsync, ref)
-                        : const SizedBox(),
-                    loading: () => const SizedBox(),
-                    error: (_, __) => const SizedBox(),
+                  return RefreshIndicator(
+                    onRefresh: () => ref.read(paginatedCommunitiesProvider.notifier).refresh(),
+                    child: ListView(
+                      controller: _scrollController,
+                      padding: const EdgeInsets.all(AppConstants.defaultPadding),
+                      children: [
+                        // My Communities (top)
+                        userRoleAsync.when(
+                          data: (role) => role != 'anonymous'
+                              ? _buildMyCommunities(context, userCommunitiesAsync, ref)
+                              : const SizedBox(),
+                          loading: () => const SizedBox(),
+                          error: (_, __) => const SizedBox(),
+                        ),
+                        const SizedBox(height: AppConstants.largePadding),
+                        // Enhanced Explore Communities with pagination
+                        _buildEnhancedExploreCommunities(context, paginatedCommunitiesState),
+                      ],
+                    ),
+                  );
+                },
+                loading: () => const Center(
+                  child: CircularProgressIndicator(),
+                ),
+                error: (error, stack) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        size: 64,
+                        color: Colors.red,
+                      ),
+                      const SizedBox(height: AppConstants.defaultPadding),
+                      Text(
+                        'Error loading user data',
+                        style: Theme.of(context).textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: AppConstants.smallPadding),
+                      Text(
+                        error.toString(),
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: Theme.of(context).colorScheme.error,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: AppConstants.largePadding),
-                  // Enhanced Explore Communities with pagination
-                  _buildEnhancedExploreCommunities(context, paginatedCommunitiesState, ref),
-                ],
+                ),
               ),
-            );
-          },
-          loading: () => const Center(
-            child: CircularProgressIndicator(),
-          ),
-          error: (error, stack) => Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red,
-                ),
-                const SizedBox(height: AppConstants.defaultPadding),
-                Text(
-                  'Error loading user data',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: AppConstants.smallPadding),
-                Text(
-                  error.toString(),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
             ),
-          ),
+          ],
         ),
       ),
       floatingActionButton: ref.watch(canCreateCommunityProvider).when(
@@ -175,11 +202,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Widget _buildMyCommunities(BuildContext context, AsyncValue<List<CommunityModel>> communitiesAsync, WidgetRef ref) {
     final searchQuery = ref.watch(myCommunitiesSearchQueryProvider);
+    final sort = ref.watch(myCommunitiesSortProvider);
     
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header with search icon
+        // Header with search icon and sorting dropdown
         Row(
           children: [
             Expanded(
@@ -189,6 +217,14 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+            ),
+            DropdownButton<String>(
+              value: sort,
+              items: const [
+                DropdownMenuItem(value: 'name', child: Text('Sort by Name')),
+                DropdownMenuItem(value: 'members', child: Text('Sort by Members')),
+              ],
+              onChanged: (value) => ref.read(myCommunitiesSortProvider.notifier).state = value!,
             ),
             IconButton(
               icon: Icon(
@@ -249,7 +285,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         const SizedBox(height: AppConstants.smallPadding),
         communitiesAsync.when(
           data: (communities) {
-            if (communities.isEmpty) {
+            var sortedCommunities = List.from(communities);
+            if (sort == 'name') {
+              sortedCommunities.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+            } else if (sort == 'members') {
+              sortedCommunities.sort((a, b) => b.memberCount.compareTo(a.memberCount));
+            }
+
+            final filteredCommunities = searchQuery.isEmpty 
+                ? sortedCommunities 
+                : sortedCommunities.where((c) => c.name.toLowerCase().contains(searchQuery.toLowerCase()) || c.description.toLowerCase().contains(searchQuery.toLowerCase())).toList();
+            
+            if (filteredCommunities.isEmpty) {
               return Container(
                 padding: const EdgeInsets.all(AppConstants.defaultPadding),
                 decoration: BoxDecoration(
@@ -309,7 +356,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             }
 
             // Horizontal list for compact view (limit to first 8 for UX)
-            final displayedCommunities = communities.take(8).toList();
+            final displayedCommunities = filteredCommunities.take(8).toList();
             return Column(
               children: [
                 SizedBox(
@@ -320,14 +367,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     itemCount: displayedCommunities.length,
                     itemBuilder: (context, index) {
                       final community = displayedCommunities[index];
-                      return SizedBox(
-                        width: 180,  // Fixed width for cards in horizontal list
-                        child: _buildEnhancedCommunityCard(context, community),  // Use same card as Explore
+                      return Semantics(
+                        label: 'Community ${community.name} with ${community.memberCount} members',
+                        child: SizedBox(
+                          width: 180,  // Fixed width for cards in horizontal list
+                          child: Animate(
+                            effects: [FadeEffect(duration: 300.ms)],
+                            child: _buildEnhancedCommunityCard(context, community),  // Use same card as Explore
+                          ),
+                        ),
                       );
                     },
                   ),
                 ),
-                if (communities.length > 8) TextButton(
+                if (filteredCommunities.length > 8) TextButton(
                   onPressed: () {
                     // Navigate to full My Communities screen (add this route if not existing)
                     Navigator.pushNamed(context, '/my-communities');
@@ -396,10 +449,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _showInlineSearch(BuildContext context, WidgetRef ref, String type) {
-    final searchQueryProvider = type == 'my' ? myCommunitiesSearchQueryProvider : exploreCommunitiesSearchQueryProvider;
-    final searchQuery = ref.read(searchQueryProvider);
+    final searchQuery = ref.read(type == 'my' ? myCommunitiesSearchQueryProvider : exploreCommunitiesSearchQueryProvider);
     if (searchQuery.isNotEmpty) {
-      ref.read(searchQueryProvider.notifier).state = '';
+      ref.read(type == 'my' ? myCommunitiesSearchQueryProvider.notifier : exploreCommunitiesSearchQueryProvider.notifier).state = '';
     } else {
       Navigator.of(context).push(
         MaterialPageRoute(
@@ -411,79 +463,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
-  Widget _buildEnhancedExploreCommunities(BuildContext context, PaginatedCommunitiesState state, WidgetRef ref) {
-    final searchQuery = ref.watch(exploreCommunitiesSearchQueryProvider);
-    
+  Widget _buildEnhancedExploreCommunities(BuildContext context, PaginatedCommunitiesState state) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Header with search icon
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Explore Communities',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            IconButton(
-              icon: Icon(
-                searchQuery.isEmpty ? Icons.search_outlined : Icons.search,
-                color: searchQuery.isEmpty 
-                    ? Theme.of(context).colorScheme.onSurface.withOpacity(0.6)
-                    : Theme.of(context).colorScheme.primary,
-              ),
-              onPressed: () => _showInlineSearch(context, ref, 'explore'),
-            ),
-          ],
-        ),
-        
-        // Inline search bar (appears when search is active)
-        if (searchQuery.isNotEmpty) ...[
-          const SizedBox(height: AppConstants.smallPadding),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
-                width: 1,
-              ),
-            ),
-            child: Row(
-              children: [
-                Icon(
-                  Icons.search,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      hintText: 'Search explore communities...',
-                      border: InputBorder.none,
-                      isDense: true,
-                    ),
-                    onChanged: (value) {
-                      ref.read(exploreCommunitiesSearchQueryProvider.notifier).state = value;
-                    },
-                  ),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.clear, size: 16),
-                  onPressed: () {
-                    ref.read(exploreCommunitiesSearchQueryProvider.notifier).state = '';
-                  },
-                ),
-              ],
-            ),
+        // Header
+        Text(
+          'Explore Communities',
+          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
           ),
-        ],
-        
+        ),
         const SizedBox(height: AppConstants.smallPadding),
         
         // Error state
@@ -560,8 +550,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: MediaQuery.of(context).size.width > 600 ? 3 : 2,  // Responsive
               childAspectRatio: 0.8,
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
@@ -569,7 +559,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             itemCount: state.communities.length + (state.hasMore && state.isLoadingMore ? 1 : 0),
             itemBuilder: (context, index) {
               if (index < state.communities.length) {
-                return _buildEnhancedCommunityCard(context, state.communities[index]);
+                final community = state.communities[index];
+                return GestureDetector(
+                  onTap: () {
+                    NavigationService.trackUserEngagement('community_tap', parameters: {'community_id': community.id});
+                    NavigationService.navigateToCommunityDetails(community.id);
+                  },
+                  child: Semantics(
+                    label: 'Community ${community.name} with ${community.memberCount} members',
+                    child: Animate(
+                      effects: [FadeEffect(duration: 300.ms)],
+                      child: _buildEnhancedCommunityCard(context, community),
+                    ),
+                  ),
+                );
               } else {
                 // Loading indicator at the bottom
                 return Container(
@@ -600,75 +603,61 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
       ),
-      child: InkWell(
-        onTap: () => NavigationService.navigateToCommunityDetails(community.id),
-        borderRadius: BorderRadius.circular(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Community image/cover
-            ClipRRect(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
-              child: Container(
-                height: 100,
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      Theme.of(context).colorScheme.primary.withOpacity(0.8),
-                      Theme.of(context).colorScheme.secondary.withOpacity(0.6),
-                    ],
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Community image/cover with caching
+          ClipRRect(
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+            child: CachedNetworkImage(
+              imageUrl: community.coverImage.isNotEmpty ? community.coverImage : '',
+              height: 100,
+              width: double.infinity,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                child: const Center(child: CircularProgressIndicator()),
+              ),
+              errorWidget: (context, url, error) => _buildDefaultCover(context),
+            ),
+          ),
+          
+          // Community info
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  community.name,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${community.memberCount} members',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                   ),
                 ),
-                child: community.coverImage.isNotEmpty
-                    ? Image.network(
-                        community.coverImage,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) => _buildDefaultCover(context),
-                      )
-                    : _buildDefaultCover(context),
-              ),
-            ),
-            
-            // Community info
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    community.name,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                if (community.description.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Text(
-                    '${community.memberCount} members',
+                    community.description,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                      color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                     ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  if (community.description.isNotEmpty) ...[
-                    const SizedBox(height: 4),
-                    Text(
-                      community.description,
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                      ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
                 ],
-              ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

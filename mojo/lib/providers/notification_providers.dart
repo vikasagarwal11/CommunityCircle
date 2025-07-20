@@ -11,9 +11,13 @@ final notificationServiceProvider = Provider<NotificationService>((ref) {
 });
 
 // Notification state provider
-final notificationStateProvider = StateNotifierProvider<NotificationStateNotifier, NotificationState>((ref) {
-  return NotificationStateNotifier();
+final notificationStateProvider = StateNotifierProvider<NotificationStateNotifier, AsyncValue<void>>((ref) {
+  final notificationService = ref.watch(notificationServiceProvider);
+  return NotificationStateNotifier(notificationService);
 });
+
+// Notification notifier provider (alias for easier access)
+final notificationNotifierProvider = notificationStateProvider;
 
 // Badge count provider (unread messages)
 final badgeCountProvider = StateNotifierProvider<BadgeCountNotifier, Map<String, int>>((ref) {
@@ -192,79 +196,34 @@ class InAppNotificationNotifier extends StateNotifier<InAppNotification?> {
 }
 
 // Notification state notifier
-class NotificationStateNotifier extends StateNotifier<NotificationState> {
-  NotificationStateNotifier() : super(const NotificationState());
+class NotificationStateNotifier extends StateNotifier<AsyncValue<void>> {
+  final NotificationService _notificationService;
+  bool _isInitialized = false; // Add guard to prevent multiple initializations
 
-  Future<void> initialize({
-    required Function(String) onNotificationTap,
-  }) async {
+  NotificationStateNotifier(this._notificationService) : super(const AsyncValue.data(null));
+
+  Future<void> initialize() async {
+    // Prevent multiple initializations
+    if (_isInitialized) return;
+    
     try {
-      _logger.i('Initializing notification service');
+      state = const AsyncValue.loading();
       
-      final notificationService = NotificationService();
-      await notificationService.initialize(onNotificationTap: onNotificationTap);
+      // Add delay to prevent blocking main thread
+      await Future.delayed(const Duration(milliseconds: 100));
       
-      state = state.copyWith(
-        isInitialized: true,
-        hasPermission: true, // We'll get actual permission status later
+      // Initialize with a simple callback
+      await _notificationService.initialize(
+        onNotificationTap: (data) {
+          // Handle notification tap
+          print('Notification tapped: $data');
+        },
       );
+      _isInitialized = true;
       
-      _logger.i('Notification service initialized successfully');
+      state = const AsyncValue.data(null);
     } catch (e) {
-      _logger.e('Failed to initialize notification service: $e');
-      state = state.copyWith(error: e.toString());
-    }
-  }
-
-  Future<void> refreshToken() async {
-    try {
-      final notificationService = NotificationService();
-      await notificationService.refreshToken();
-      
-      // Update state with new token (you might want to get it from the service)
-      state = state.copyWith(error: null);
-      _logger.i('FCM token refreshed');
-    } catch (e) {
-      _logger.e('Failed to refresh FCM token: $e');
-      state = state.copyWith(error: e.toString());
-    }
-  }
-
-  Future<void> clearToken() async {
-    try {
-      final notificationService = NotificationService();
-      await notificationService.clearToken();
-      
-      state = state.copyWith(
-        fcmToken: null,
-        error: null,
-      );
-      _logger.i('FCM token cleared');
-    } catch (e) {
-      _logger.e('Failed to clear FCM token: $e');
-      state = state.copyWith(error: e.toString());
-    }
-  }
-
-  Future<void> subscribeToTopic(String topic) async {
-    try {
-      final notificationService = NotificationService();
-      await notificationService.subscribeToTopic(topic);
-      _logger.i('Subscribed to topic: $topic');
-    } catch (e) {
-      _logger.e('Failed to subscribe to topic $topic: $e');
-      state = state.copyWith(error: e.toString());
-    }
-  }
-
-  Future<void> unsubscribeFromTopic(String topic) async {
-    try {
-      final notificationService = NotificationService();
-      await notificationService.unsubscribeFromTopic(topic);
-      _logger.i('Unsubscribed from topic: $topic');
-    } catch (e) {
-      _logger.e('Failed to unsubscribe from topic $topic: $e');
-      state = state.copyWith(error: e.toString());
+      state = AsyncValue.error(e, StackTrace.current);
     }
   }
 } 

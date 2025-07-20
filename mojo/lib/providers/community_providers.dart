@@ -180,8 +180,8 @@ class PaginatedCommunitiesNotifier extends StateNotifier<PaginatedCommunitiesSta
   }
 }
 
-// Provider for paginated communities
-final paginatedCommunitiesProvider = StateNotifierProvider<PaginatedCommunitiesNotifier, PaginatedCommunitiesState>((ref) {
+// Provider for paginated communities (added autoDispose for performance)
+final paginatedCommunitiesProvider = StateNotifierProvider.autoDispose<PaginatedCommunitiesNotifier, PaginatedCommunitiesState>((ref) {
   final communityService = ref.watch(communityServiceProvider);
   return PaginatedCommunitiesNotifier(communityService);
 });
@@ -197,7 +197,7 @@ final storageServiceProvider = Provider<StorageService>((ref) {
 });
 
 // Public communities provider with pagination
-final publicCommunitiesProvider = StreamProvider.family<List<CommunityModel>, CommunityQueryParams>((ref, params) {
+final publicCommunitiesProvider = StreamProvider.autoDispose.family<List<CommunityModel>, CommunityQueryParams>((ref, params) {
   final communityService = ref.watch(communityServiceProvider);
   return communityService.getPublicCommunities(
     limit: params.limit,
@@ -205,7 +205,7 @@ final publicCommunitiesProvider = StreamProvider.family<List<CommunityModel>, Co
 });
 
 // User's communities provider
-final userCommunitiesProvider = StreamProvider<List<CommunityModel>>((ref) {
+final userCommunitiesProvider = StreamProvider.autoDispose<List<CommunityModel>>((ref) {
   final communityService = ref.watch(communityServiceProvider);
   final userAsync = ref.watch(authNotifierProvider);
   
@@ -220,7 +220,7 @@ final userCommunitiesProvider = StreamProvider<List<CommunityModel>>((ref) {
 });
 
 // User's owned communities provider
-final ownedCommunitiesProvider = StreamProvider<List<CommunityModel>>((ref) {
+final ownedCommunitiesProvider = StreamProvider.autoDispose<List<CommunityModel>>((ref) {
   final communityService = ref.watch(communityServiceProvider);
   final userAsync = ref.watch(authNotifierProvider);
   
@@ -235,13 +235,13 @@ final ownedCommunitiesProvider = StreamProvider<List<CommunityModel>>((ref) {
 });
 
 // Community details provider
-final communityDetailsProvider = StreamProvider.family<CommunityModel?, String>((ref, communityId) {
+final communityDetailsProvider = StreamProvider.autoDispose.family<CommunityModel?, String>((ref, communityId) {
   final communityService = ref.watch(communityServiceProvider);
   return communityService.getCommunityStream(communityId);
 });
 
 // Search communities provider
-final searchCommunitiesProvider = StreamProvider.family<List<CommunityModel>, CommunitySearchParams>((ref, params) {
+final searchCommunitiesProvider = StreamProvider.autoDispose.family<List<CommunityModel>, CommunitySearchParams>((ref, params) {
   final communityService = ref.watch(communityServiceProvider);
   final query = params.query;
   final category = params.category;
@@ -265,31 +265,31 @@ final searchCommunitiesProvider = StreamProvider.family<List<CommunityModel>, Co
 });
 
 // Community statistics provider
-final communityStatsProvider = FutureProvider.family<Map<String, dynamic>, String>((ref, communityId) async {
+final communityStatsProvider = FutureProvider.autoDispose.family<Map<String, dynamic>, String>((ref, communityId) async {
   final communityService = ref.watch(communityServiceProvider);
   return await communityService.getCommunityStats(communityId);
 });
 
 // Community members provider with real-time updates
-final communityMembersProvider = StreamProvider.family<List<UserModel>, String>((ref, communityId) {
+final communityMembersProvider = StreamProvider.autoDispose.family<List<UserModel>, String>((ref, communityId) {
   final communityService = ref.watch(communityServiceProvider);
   return communityService.getCommunityMembersStream(communityId);
 });
 
 // Community banned users provider
-final communityBannedUsersProvider = StreamProvider.family<List<UserModel>, String>((ref, communityId) {
+final communityBannedUsersProvider = StreamProvider.autoDispose.family<List<UserModel>, String>((ref, communityId) {
   final communityService = ref.watch(communityServiceProvider);
   return communityService.getCommunityBannedUsersStream(communityId);
 });
 
 // Member search provider with debouncing
-final memberSearchProvider = StateProvider.family<String, String>((ref, communityId) => '');
+final memberSearchProvider = StateProvider.autoDispose.family<String, String>((ref, communityId) => '');
 
 // Debounced search provider for better performance
-final debouncedSearchProvider = StateProvider.family<String, String>((ref, communityId) => '');
+final debouncedSearchProvider = StateProvider.autoDispose.family<String, String>((ref, communityId) => '');
 
 // Filtered members provider with enhanced search
-final filteredMembersProvider = Provider.family<List<UserModel>, String>((ref, communityId) {
+final filteredMembersProvider = Provider.autoDispose.family<List<UserModel>, String>((ref, communityId) {
   final membersAsync = ref.watch(communityMembersProvider(communityId));
   final searchQuery = ref.watch(debouncedSearchProvider(communityId));
   
