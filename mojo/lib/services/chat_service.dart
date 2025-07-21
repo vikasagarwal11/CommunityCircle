@@ -1,11 +1,11 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:logger/logger.dart';
+import '../core/logger.dart';
 import '../models/message_model.dart';
 import '../core/constants.dart';
 
 class ChatService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final Logger _logger = Logger();
+  final Logger _logger = Logger('ChatService');
 
   // Get messages stream for a community
   Stream<List<MessageModel>> getMessagesStream(String communityId) {

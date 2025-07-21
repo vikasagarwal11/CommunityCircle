@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:logger/logger.dart';
+import '../core/logger.dart';
 
 import '../services/notification_service.dart';
 
-final Logger _logger = Logger();
+final Logger _logger = Logger('NotificationProviders');
 
 // Notification service provider
 final notificationServiceProvider = Provider<NotificationService>((ref) {

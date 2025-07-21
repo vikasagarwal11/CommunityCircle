@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import '../core/theme.dart';
+import '../core/logger.dart';
 import '../models/community_model.dart';
 import '../models/user_model.dart';
 import '../core/constants.dart';
-import 'package:logger/logger.dart';
 
 class WelcomeFlashScreen extends HookWidget {
   final CommunityModel community;
@@ -20,7 +22,7 @@ class WelcomeFlashScreen extends HookWidget {
 
   @override
   Widget build(BuildContext context) {
-    final logger = Logger();
+    final logger = Logger('WelcomeFlashScreen');
     final isVisible = useState(true);
     final opacity = useAnimationController(
       duration: const Duration(milliseconds: 300),

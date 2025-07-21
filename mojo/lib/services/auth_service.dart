@@ -1,19 +1,37 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:logger/logger.dart';
 import '../models/user_model.dart';
 import '../core/constants.dart';
+import '../core/logger.dart';
+import 'package:flutter/foundation.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final Logger _logger = Logger();
+  final Logger _logger = Logger('AuthService');
+
+  // Get auth state changes stream
+  Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   // Get current user
   User? get currentUser => _auth.currentUser;
 
-  // Stream of auth state changes
-  Stream<User?> get authStateChanges => _auth.authStateChanges();
+  // Get user role
+  Future<String> getUserRole() async {
+    try {
+      final user = _auth.currentUser;
+      if (user == null) return 'anonymous';
+
+      final doc = await _firestore.collection(AppConstants.usersCollection).doc(user.uid).get();
+      if (doc.exists) {
+        return doc.data()?['role'] ?? 'member';
+      }
+      return 'member';
+    } catch (e) {
+      _logger.e('Error getting user role: $e');
+      return 'anonymous';
+    }
+  }
 
   // Send OTP to phone number
   Future<void> sendOtp({
@@ -21,31 +39,59 @@ class AuthService {
     required Function(String) onCodeSent,
     required Function(String) onError,
   }) async {
+    phoneAuthDebug('AuthService: sendOtp called');
     try {
       _logger.i('Sending OTP to: $phoneNumber');
+      
+      // In development, allow test numbers for Firebase Auth testing
+      // Firebase Auth automatically handles test OTPs for configured test numbers
+      if (!kDebugMode && (phoneNumber.contains('0000000000') || phoneNumber.contains('1234567890'))) {
+        onError('Please enter a valid phone number');
+        return;
+      }
       
       await _auth.verifyPhoneNumber(
         phoneNumber: phoneNumber,
         verificationCompleted: (PhoneAuthCredential credential) async {
           _logger.i('Auto verification completed');
-          await _signInWithCredential(credential);
+          try {
+            await _signInWithCredential(credential);
+          } catch (e) {
+            _logger.e('Auto verification error: $e');
+          }
         },
         verificationFailed: (FirebaseAuthException e) {
           _logger.e('Verification failed: ${e.message}');
-          onError(e.message ?? AppConstants.authError);
+          
+          // Provide more specific error messages
+          String errorMessage = e.message ?? AppConstants.authError;
+          if (e.code == 'invalid-phone-number') {
+            errorMessage = 'Invalid phone number. Please check and try again.';
+          } else if (e.code == 'too-many-requests') {
+            errorMessage = 'Too many attempts. Please try again later.';
+          } else if (e.code == 'quota-exceeded') {
+            errorMessage = 'SMS quota exceeded. Please try again later.';
+          }
+          
+          onError(errorMessage);
+          phoneAuthDebug('AuthService: sendOtp verificationFailed: ${e.message}');
         },
         codeSent: (String verificationId, int? resendToken) {
           _logger.i('OTP code sent successfully');
           onCodeSent(verificationId);
+          phoneAuthDebug('AuthService: sendOtp codeSent');
         },
         codeAutoRetrievalTimeout: (String verificationId) {
-          _logger.w('OTP auto retrieval timeout');
+          _logger.w('OTP auto retrieval timeout - user will need to enter manually');
+          // Don't call onError here as this is expected behavior
         },
         timeout: const Duration(seconds: 60),
       );
+      phoneAuthDebug('AuthService: sendOtp success');
     } catch (e) {
       _logger.e('Error sending OTP: $e');
-      onError(AppConstants.generalError);
+      onError('Failed to send OTP. Please try again.');
+      phoneAuthDebug('AuthService: sendOtp exception: $e');
     }
   }
 
@@ -55,6 +101,7 @@ class AuthService {
     required String otp,
     required Function(String) onError,
   }) async {
+    phoneAuthDebug('AuthService: verifyOtp called');
     try {
       _logger.i('Verifying OTP');
       
@@ -63,10 +110,26 @@ class AuthService {
         smsCode: otp,
       );
 
-      return await _signInWithCredential(credential);
+      final result = await _signInWithCredential(credential);
+      phoneAuthDebug('AuthService: verifyOtp success');
+      return result;
     } catch (e) {
       _logger.e('Error verifying OTP: $e');
-      onError(AppConstants.invalidOtp);
+      
+      // Provide more specific error messages based on Firebase error codes
+      String errorMessage = AppConstants.invalidOtp;
+      if (e.toString().contains('invalid-verification-code')) {
+        errorMessage = 'Invalid OTP code. Please check and try again.';
+      } else if (e.toString().contains('invalid-verification-id')) {
+        errorMessage = 'Verification session expired. Please request a new OTP.';
+      } else if (e.toString().contains('quota-exceeded')) {
+        errorMessage = 'Too many attempts. Please try again later.';
+      } else if (e.toString().contains('network')) {
+        errorMessage = 'Network error. Please check your connection and try again.';
+      }
+      
+      onError(errorMessage);
+      phoneAuthDebug('AuthService: verifyOtp exception: $e');
       return null;
     }
   }
@@ -249,28 +312,6 @@ class AuthService {
     } catch (e) {
       _logger.e('Error creating anonymous user: $e');
       return null;
-    }
-  }
-
-  // Get user role
-  Future<String> getUserRole() async {
-    try {
-      User? user = _auth.currentUser;
-      if (user != null) {
-        DocumentSnapshot doc = await _firestore
-            .collection(AppConstants.usersCollection)
-            .doc(user.uid)
-            .get();
-        
-        if (doc.exists) {
-          final data = doc.data() as Map<String, dynamic>;
-          return data['role'] ?? 'member';
-        }
-      }
-      return 'anonymous';
-    } catch (e) {
-      _logger.e('Error getting user role: $e');
-      return 'anonymous';
     }
   }
 

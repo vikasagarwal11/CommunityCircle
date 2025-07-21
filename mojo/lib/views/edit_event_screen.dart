@@ -428,12 +428,12 @@ class _EditEventScreenState extends ConsumerState<EditEventScreen> {
       }
     } catch (e) {
       Logger('EditEventScreen').e('Error updating event: $e');
-      if (mounted) {
-        NavigationService.showSnackBar(
-          message: 'Failed to update event. Please try again.',
-          backgroundColor: Colors.red,
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update event: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {

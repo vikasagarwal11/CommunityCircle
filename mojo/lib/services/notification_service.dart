@@ -2,9 +2,9 @@ import 'dart:convert';
 
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:logger/logger.dart';
-
-import '../services/database_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import '../core/logger.dart';
 import '../models/event_model.dart';
 import '../models/user_model.dart';
 
@@ -13,8 +13,10 @@ class NotificationService {
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final Logger _logger = Logger();
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final Logger _logger = Logger('NotificationService');
   final FlutterLocalNotificationsPlugin _localNotifications = 
       FlutterLocalNotificationsPlugin();
 
@@ -121,9 +123,11 @@ class NotificationService {
   // Save FCM token to user's document in Firestore
   Future<void> _saveTokenToDatabase(String token) async {
     try {
-      final currentUser = await DatabaseService().getCurrentUser();
+      final currentUser = await _auth.currentUser;
       if (currentUser != null) {
-        await DatabaseService().updateUserFCMToken(currentUser.id, token);
+        await _firestore.collection('users').doc(currentUser.uid).update({
+          'fcmToken': token,
+        });
       }
     } catch (e) {
       _logger.e('Failed to save FCM token to database: $e');
@@ -242,9 +246,11 @@ class NotificationService {
   // Clear FCM token (call this when user logs out)
   Future<void> clearToken() async {
     try {
-      final currentUser = await DatabaseService().getCurrentUser();
+      final currentUser = await _auth.currentUser;
       if (currentUser != null) {
-        await DatabaseService().updateUserFCMToken(currentUser.id, null);
+        await _firestore.collection('users').doc(currentUser.uid).update({
+          'fcmToken': null,
+        });
       }
       _logger.i('FCM token cleared');
     } catch (e) {
@@ -512,7 +518,7 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Initialize Firebase if needed
   // await Firebase.initializeApp();
   
-  Logger().i('Handling background message: ${message.messageId}');
+  Logger('NotificationService').i('Handling background message: ${message.messageId}');
   
   // You can perform background tasks here
   // For now, just log the message

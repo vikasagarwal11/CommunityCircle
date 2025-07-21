@@ -64,4 +64,14 @@ class AppConstants {
   static bool isLargeScreen(double width) => width >= tabletBreakpoint;
   static bool isTablet(double width) => width >= tabletBreakpoint;
   static bool isPhone(double width) => width < tabletBreakpoint;
+
+  // Debug flag for phone auth flow
+  static const bool kEnablePhoneAuthDebug = true;
+}
+
+void phoneAuthDebug(String message) {
+  if (AppConstants.kEnablePhoneAuthDebug) {
+    // ignore: avoid_print
+    print('[PHONE_AUTH_DEBUG] $message');
+  }
 } 

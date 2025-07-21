@@ -285,14 +285,12 @@ class _EditCommunityScreenState extends ConsumerState<EditCommunityScreen> {
       }
     } catch (e) {
       Logger('EditCommunityScreen').e('Error updating community: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error updating community: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to update community: $e'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {

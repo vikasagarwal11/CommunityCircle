@@ -1,8 +1,9 @@
 import 'dart:async';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:hive/hive.dart';
-import 'package:logger/logger.dart';
+import '../core/logger.dart';
 import '../models/message_model.dart';
 import '../models/community_model.dart';
 import '../models/user_model.dart';
@@ -15,7 +16,7 @@ class OfflineSyncService {
   final ChatService _chatService = ChatService();
   final CommunityService _communityService = CommunityService();
   final LocalStorageService _localStorage = LocalStorageService();
-  final Logger _logger = Logger();
+  final Logger _logger = Logger('OfflineSyncService');
 
   StreamSubscription<ConnectivityResult>? _connectivitySubscription;
   Timer? _syncTimer;

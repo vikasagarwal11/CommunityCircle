@@ -1,8 +1,8 @@
-import 'dart:convert';
 import 'dart:io';
+import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:logger/logger.dart';
+import '../core/logger.dart';
 import '../models/event_model.dart';
 import '../models/user_model.dart';
 import '../models/community_model.dart';
@@ -12,7 +12,7 @@ class ExportService {
   factory ExportService() => _instance;
   ExportService._internal();
 
-  final Logger _logger = Logger();
+  final Logger _logger = Logger('ExportService');
 
   // Export attendance data for an event
   Future<String?> exportEventAttendance(EventModel event, List<UserModel> attendees) async {

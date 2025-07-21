@@ -1,14 +1,14 @@
 import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:logger/logger.dart';
+import '../core/logger.dart';
 import 'dart:ui' as ui;
 import 'dart:async';
 
 class StorageService {
   final FirebaseStorage _storage = FirebaseStorage.instance;
   final ImagePicker _picker = ImagePicker();
-  final Logger _logger = Logger();
+  final Logger _logger = Logger('StorageService');
 
   // Upload community cover image
   Future<String?> uploadCommunityCoverImage({

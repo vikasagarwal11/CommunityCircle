@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:hive/hive.dart';
-import 'package:logger/logger.dart';
+import '../core/logger.dart';
 import '../models/community_model.dart';
 import '../models/message_model.dart';
 import '../models/user_model.dart';
@@ -12,7 +12,9 @@ class LocalStorageService {
   static const String _offlineActionsBox = 'offline_actions';
   static const String _settingsBox = 'settings';
 
-  final Logger _logger = Logger();
+  static LocalStorageService? _instance;
+  static Box? _box;
+  final Logger _logger = Logger('LocalStorageService');
 
   // Initialize Hive boxes
   Future<void> initialize() async {

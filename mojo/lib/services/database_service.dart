@@ -1,6 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:logger/logger.dart';
+import '../core/logger.dart';
 import '../models/user_model.dart';
 import '../models/community_model.dart';
 import '../models/event_model.dart';
@@ -12,7 +12,8 @@ import '../core/constants.dart';
 
 class DatabaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final Logger _logger = Logger();
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final Logger _logger = Logger('DatabaseService');
 
   // Collections
   CollectionReference get _users => _firestore.collection('users');

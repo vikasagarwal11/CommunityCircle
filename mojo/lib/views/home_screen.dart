@@ -189,18 +189,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ],
         ),
       ),
-      floatingActionButton: ref.watch(canCreateCommunityProvider).when(
-        data: (canCreate) => canCreate
-            ? FloatingActionButton(
-                heroTag: 'home_fab',
-                onPressed: () => NavigationService.navigateToCreateCommunity(),
-                tooltip: 'Create Community',
-                child: const Icon(Icons.add),
-              )
-            : null,
-        loading: () => const SizedBox(),
-        error: (_, __) => null,
-      ),
+
     );
   }
 
@@ -375,13 +364,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         community.tags.contains(interest) ||
                         community.name.toLowerCase().contains(interest.toLowerCase()) ||
                         community.description.toLowerCase().contains(interest.toLowerCase()));
-                      return Semantics(
-                        label: 'Community ${community.name} with ${community.memberCount} members${isInterestMatch ? ', interest match' : ''}',
-                        child: SizedBox(
-                          width: 150,
-                          child: Animate(
-                            effects: [FadeEffect(duration: 300.ms)],
-                            child: _buildEnhancedCommunityCard(context, community, false, false, isInterestMatch),
+                      return GestureDetector(
+                        onTap: () {
+                          NavigationService.trackUserEngagement('recommended_community_tap', parameters: {'community_id': community.id});
+                          NavigationService.navigateToCommunityDetails(community.id);
+                        },
+                        child: Semantics(
+                          label: 'Community ${community.name} with ${community.memberCount} members${isInterestMatch ? ', interest match' : ''}',
+                          child: SizedBox(
+                            width: 150,
+                            child: Animate(
+                              effects: [FadeEffect(duration: 300.ms)],
+                              child: _buildEnhancedCommunityCard(context, community, false, false, isInterestMatch),
+                            ),
                           ),
                         ),
                       );
@@ -810,17 +805,19 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             children: [
               ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                child: CachedNetworkImage(
-                  imageUrl: community.coverImage.isNotEmpty ? community.coverImage : '',
-                  height: 60,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                    child: const Center(child: CircularProgressIndicator()),
-                  ),
-                  errorWidget: (context, url, error) => _buildDefaultCover(context),
-                ),
+                child: community.coverImage.isNotEmpty 
+                    ? CachedNetworkImage(
+                        imageUrl: community.coverImage,
+                        height: 60,
+                        width: double.infinity,
+                        fit: BoxFit.cover,
+                        placeholder: (context, url) => Container(
+                          color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                          child: const Center(child: CircularProgressIndicator()),
+                        ),
+                        errorWidget: (context, url, error) => _buildDefaultCover(context),
+                      )
+                    : _buildDefaultCover(context),
               ),
               if (primaryBadge != null) primaryBadge,
             ],

@@ -35,7 +35,7 @@ final offlineActionsCountProvider = StreamProvider<int>((ref) async* {
   final offlineService = ref.watch(offlineSyncServiceProvider);
   while (true) {
     yield await offlineService.getOfflineActionsCount();
-    await Future.delayed(const Duration(seconds: 5));
+    await Future.delayed(const Duration(seconds: 30)); // Reduced from 5 to 30 seconds
   }
 });
 

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart' as material;
 import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
-import 'package:logger/logger.dart';
+import '../core/logger.dart';
 import 'package:firebase_analytics/firebase_analytics.dart';
 import '../models/community_model.dart';
 import '../models/user_model.dart';
@@ -17,16 +17,7 @@ class NavigationService {
   static material.BuildContext? get context => navigatorKey.currentContext;
 
   // Logger instance for navigation events
-  static final Logger _logger = Logger(
-    printer: PrettyPrinter(
-      methodCount: 0,
-      errorMethodCount: 8,
-      lineLength: 120,
-      colors: true,
-      printEmojis: true,
-      printTime: true,
-    ),
-  );
+  static final Logger _logger = Logger('NavigationService');
 
   // Analytics instance
   static final FirebaseAnalytics _analytics = FirebaseAnalytics.instance;

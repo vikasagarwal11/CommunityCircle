@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/user_model.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
-import 'package:logger/logger.dart';
+import '../core/logger.dart';
 import 'package:flutter/foundation.dart';
 import '../models/community_model.dart';
 import '../services/community_service.dart';

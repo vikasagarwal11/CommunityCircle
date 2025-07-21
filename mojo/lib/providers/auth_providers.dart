@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../models/user_model.dart';
+import '../core/constants.dart'; // for phoneAuthDebug
 
 // Auth service provider
 final authServiceProvider = Provider<AuthService>((ref) {
@@ -46,6 +47,9 @@ final authLoadingProvider = StateProvider<bool>((ref) => false);
 // Error state provider
 final authErrorProvider = StateProvider<String?>((ref) => null);
 
+// OTP sent state provider
+final otpSentProvider = StateProvider<bool>((ref) => false);
+
 // Auth state enum
 enum AuthState {
   loading,
@@ -74,7 +78,8 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
   }
 
   Future<void> sendOtp(String phoneNumber) async {
-    state = const AsyncValue.loading();
+    phoneAuthDebug('AuthNotifier: sendOtp called');
+    // Do NOT set state = AsyncValue.loading();
     _ref.read(authLoadingProvider.notifier).state = true;
     _ref.read(authErrorProvider.notifier).state = null;
 
@@ -84,24 +89,34 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
         onCodeSent: (verificationId) {
           _ref.read(verificationIdProvider.notifier).state = verificationId;
           _ref.read(authLoadingProvider.notifier).state = false;
+          phoneAuthDebug('AuthNotifier: sendOtp success, code sent');
+          _ref.read(otpSentProvider.notifier).state = true;
+          phoneAuthDebug('AuthNotifier: otpSentProvider set to true (from provider)');
+          state = const AsyncValue.data(null); // Ensure phone auth screen is shown after OTP sent
         },
         onError: (error) {
           _ref.read(authErrorProvider.notifier).state = error;
           _ref.read(authLoadingProvider.notifier).state = false;
           state = AsyncValue.error(error, StackTrace.current);
+          phoneAuthDebug('AuthNotifier: sendOtp error: $error');
+          _ref.read(otpSentProvider.notifier).state = false;
         },
       );
     } catch (e) {
       _ref.read(authErrorProvider.notifier).state = e.toString();
       _ref.read(authLoadingProvider.notifier).state = false;
       state = AsyncValue.error(e, StackTrace.current);
+      phoneAuthDebug('AuthNotifier: sendOtp exception: $e');
+      _ref.read(otpSentProvider.notifier).state = false;
     }
   }
 
   Future<void> verifyOtp(String otp) async {
+    phoneAuthDebug('AuthNotifier: verifyOtp called');
     final verificationId = _ref.read(verificationIdProvider);
     if (verificationId == null) {
       _ref.read(authErrorProvider.notifier).state = 'Verification ID not found';
+      phoneAuthDebug('AuthNotifier: verifyOtp error: Verification ID not found');
       return;
     }
 
@@ -115,6 +130,7 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
         onError: (error) {
           _ref.read(authErrorProvider.notifier).state = error;
           _ref.read(authLoadingProvider.notifier).state = false;
+          phoneAuthDebug('AuthNotifier: verifyOtp error: $error');
         },
       );
 
@@ -122,10 +138,12 @@ class AuthNotifier extends StateNotifier<AsyncValue<UserModel?>> {
         state = AsyncValue.data(userModel);
         _ref.read(authLoadingProvider.notifier).state = false;
         _ref.read(verificationIdProvider.notifier).state = null;
+        phoneAuthDebug('AuthNotifier: verifyOtp success');
       }
     } catch (e) {
       _ref.read(authErrorProvider.notifier).state = e.toString();
       _ref.read(authLoadingProvider.notifier).state = false;
+      phoneAuthDebug('AuthNotifier: verifyOtp exception: $e');
     }
   }
 

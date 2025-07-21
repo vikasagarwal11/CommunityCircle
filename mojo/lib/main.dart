@@ -13,8 +13,109 @@ import 'providers/auth_providers.dart';
 import 'providers/notification_providers.dart';
 import 'providers/offline_providers.dart';
 import 'views/phone_auth_screen.dart';
-import 'views/home_screen.dart';
+import 'views/main_navigation_screen.dart';
 import 'widgets/welcome_flash_screen.dart';
+
+// Error boundary widget to catch ValueNotifier disposal errors
+class ErrorBoundary extends StatefulWidget {
+  final Widget child;
+  
+  const ErrorBoundary({super.key, required this.child});
+
+  @override
+  State<ErrorBoundary> createState() => _ErrorBoundaryState();
+}
+
+class _ErrorBoundaryState extends State<ErrorBoundary> {
+  bool _hasError = false;
+  String _errorMessage = '';
+
+  @override
+  Widget build(BuildContext context) {
+    if (_hasError) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(
+                Icons.error_outline,
+                size: 64,
+                color: Colors.red,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Something went wrong',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _errorMessage,
+                style: Theme.of(context).textTheme.bodyMedium,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _hasError = false;
+                        _errorMessage = '';
+                      });
+                    },
+                    child: const Text('Try Again'),
+                  ),
+                  const SizedBox(width: 16),
+                  OutlinedButton(
+                    onPressed: () {
+                      // Force restart by navigating to auth screen
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (context) => const PhoneAuthScreen(),
+                        ),
+                        (route) => false,
+                      );
+                    },
+                    child: const Text('Restart App'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return widget.child;
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    
+    // Catch Flutter errors
+    FlutterError.onError = (FlutterErrorDetails details) {
+      if (details.exception.toString().contains('ValueNotifier') && 
+          details.exception.toString().contains('disposed')) {
+        if (mounted) {
+          setState(() {
+            _hasError = true;
+            _errorMessage = 'App state error. Please restart the app.';
+          });
+        }
+      }
+    };
+  }
+
+  @override
+  void dispose() {
+    // Reset the error handler
+    FlutterError.onError = FlutterError.presentError;
+    super.dispose();
+  }
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -47,31 +148,36 @@ class MyApp extends ConsumerWidget {
       theme: AppTheme.lightTheme,
       navigatorKey: NavigationService.navigatorKey,
       onGenerateRoute: AppRoutes.generateRoute,
-      home: Consumer(
-        builder: (context, ref, child) {
-          final userAsync = ref.watch(authNotifierProvider);
-          
-          return userAsync.when(
-            data: (user) {
-              // Initialize services in background to prevent ANR
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _initializeServicesInBackground(ref);
-              });
-              
-              if (user == null) {
-                return const PhoneAuthScreen();
-              }
-              
-              return const HomeScreen();
-            },
-            loading: () => const Scaffold(
-              body: Center(
-                child: CircularProgressIndicator(),
+      home: ErrorBoundary(
+        child: Consumer(
+          builder: (context, ref, child) {
+            final userAsync = ref.watch(authNotifierProvider);
+            
+            return userAsync.when(
+              data: (user) {
+                // Initialize services in background to prevent ANR
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  // Add a longer delay to ensure UI is fully built
+                  Future.delayed(const Duration(milliseconds: 500), () {
+                    _initializeServicesInBackground(ref);
+                  });
+                });
+                
+                if (user == null) {
+                  return const PhoneAuthScreen();
+                }
+                
+                return const MainNavigationScreen();
+              },
+              loading: () => const Scaffold(
+                body: Center(
+                  child: CircularProgressIndicator(),
+                ),
               ),
-            ),
-            error: (error, stack) => const PhoneAuthScreen(),
-          );
-        },
+              error: (error, stack) => const PhoneAuthScreen(),
+            );
+          },
+        ),
       ),
     );
   }
@@ -82,20 +188,35 @@ class MyApp extends ConsumerWidget {
     Future.microtask(() async {
       try {
         // Add a small delay to ensure UI is ready
-        await Future.delayed(const Duration(milliseconds: 100));
+        await Future.delayed(const Duration(milliseconds: 200));
         
         // Initialize local storage service first
-        final localStorage = ref.read(localStorageServiceProvider);
-        await localStorage.initialize();
+        try {
+          final localStorage = ref.read(localStorageServiceProvider);
+          await localStorage.initialize();
+        } catch (e) {
+          print('Local storage initialization error: $e');
+        }
         
         // Add a small delay between initializations
-        await Future.delayed(const Duration(milliseconds: 50));
+        await Future.delayed(const Duration(milliseconds: 100));
         
         // Initialize offline sync service
-        await ref.read(offlineSyncNotifierProvider.notifier).initialize();
+        try {
+          await ref.read(offlineSyncNotifierProvider.notifier).initialize();
+        } catch (e) {
+          print('Offline sync initialization error: $e');
+        }
+        
+        // Add a small delay
+        await Future.delayed(const Duration(milliseconds: 100));
         
         // Initialize notification service in background
-        await ref.read(notificationNotifierProvider.notifier).initialize();
+        try {
+          await ref.read(notificationNotifierProvider.notifier).initialize();
+        } catch (e) {
+          print('Notification service initialization error: $e');
+        }
         
         // Track app session in background
         // ref.read(analyticsServiceProvider).trackAppSessionStart();
