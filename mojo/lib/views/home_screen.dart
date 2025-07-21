@@ -54,42 +54,12 @@ final myCommunitiesSortProvider = StateProvider<String>((ref) => 'name'); // Opt
 // StateProvider for selected filter (e.g., interests, trending)
 final exploreFilterProvider = StateProvider<String?>((ref) => null);
 
-class HomeScreen extends ConsumerStatefulWidget {
+class HomeScreen extends HookConsumerWidget {
   const HomeScreen({super.key});
 
   @override
-  ConsumerState<HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends ConsumerState<HomeScreen> {
-  final ScrollController _scrollController = ScrollController();
-  final Logger _logger = Logger('HomeScreen');
-
-  @override
-  void initState() {
-    super.initState();
-    // Load initial data
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(paginatedCommunitiesProvider.notifier).loadInitial();
-    });
-    
-    // Add scroll listener for infinite scrolling
-    _scrollController.addListener(() {
-      if (_scrollController.position.pixels >= 
-          _scrollController.position.maxScrollExtent - 200) {
-        ref.read(paginatedCommunitiesProvider.notifier).loadMore();
-      }
-    });
-  }
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final _scrollController = useScrollController();
     final userAsync = ref.watch(authNotifierProvider);
     final userRoleAsync = ref.watch(userRoleProvider);
     final paginatedCommunitiesState = ref.watch(paginatedCommunitiesProvider);
@@ -114,6 +84,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             icon: const Icon(Icons.logout),
             onPressed: () async {
               await ref.read(authNotifierProvider.notifier).signOut();
+              ref.read(otpSentProvider.notifier).state = false;
+              ref.read(authErrorProvider.notifier).state = null;
+              ref.read(authLoadingProvider.notifier).state = false;
+              ref.read(phoneNumberProvider.notifier).state = '';
+              ref.read(verificationIdProvider.notifier).state = null;
             },
           ),
         ],
@@ -130,9 +105,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               child: userAsync.when(
                 data: (user) {
                   if (user == null) {
-                    return const Center(
-                      child: Text('No user data available'),
-                    );
+                    // Navigate to phone auth screen if user is null
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      NavigationService.navigateToPhoneAuth();
+                    });
+                    return const SizedBox.shrink();
                   }
 
                   return RefreshIndicator(
