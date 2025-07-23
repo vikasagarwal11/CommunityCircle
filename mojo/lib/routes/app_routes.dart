@@ -29,6 +29,7 @@ import '../models/community_model.dart';
 import '../models/event_model.dart';
 import '../views/edit_event_screen.dart';
 import '../widgets/error_widget.dart';
+import '../views/main_navigation_screen.dart';
 
 
 class AppRoutes {
@@ -175,19 +176,19 @@ class AppRoutes {
         );
       case home:
         return MaterialPageRoute(
-          builder: (_) => const HomeScreen(),
+          builder: (_) => const MainNavigationScreen(),
         );
       case adminHome:
         return MaterialPageRoute(
-          builder: (_) => const HomeScreen(),
+          builder: (_) => const MainNavigationScreen(),
         );
       case businessHome:
         return MaterialPageRoute(
-          builder: (_) => const HomeScreen(),
+          builder: (_) => const MainNavigationScreen(),
         );
       case moderatorHome:
         return MaterialPageRoute(
-          builder: (_) => const HomeScreen(),
+          builder: (_) => const MainNavigationScreen(),
         );
       case publicHome:
         return MaterialPageRoute(

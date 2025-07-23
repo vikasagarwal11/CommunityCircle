@@ -12,7 +12,7 @@ import '../providers/user_providers.dart';
 import '../providers/auth_providers.dart';
 import '../providers/offline_providers.dart';
 import '../core/navigation_service.dart';
-import '../core/theme.dart';
+import '../core/theme.dart'; // Updated import
 import '../core/logger.dart';
 import '../core/constants.dart';
 import '../routes/app_routes.dart';
@@ -166,7 +166,6 @@ class HomeScreen extends HookConsumerWidget {
           ],
         ),
       ),
-
     );
   }
 
@@ -743,7 +742,11 @@ class HomeScreen extends HookConsumerWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
+            gradient: LinearGradient(
+              colors: [Theme.of(context).colorScheme.primary, Theme.of(context).colorScheme.primary.withOpacity(0.7)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
@@ -759,7 +762,11 @@ class HomeScreen extends HookConsumerWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.secondary.withOpacity(0.8),
+            gradient: LinearGradient(
+              colors: [Theme.of(context).colorScheme.secondary, Theme.of(context).colorScheme.secondary.withOpacity(0.7)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Text(
@@ -771,17 +778,19 @@ class HomeScreen extends HookConsumerWidget {
     }
 
     return Card(
-      elevation: 2,
+      elevation: 6, // Increased for better shadow
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Theme.of(context).colorScheme.outline.withOpacity(0.2), width: 1), // Subtle border
+        borderRadius: BorderRadius.circular(16),
       ),
+      color: Theme.of(context).colorScheme.surfaceVariant, // Colored background
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Stack(
             children: [
               ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                 child: community.coverImage.isNotEmpty 
                     ? CachedNetworkImage(
                         imageUrl: community.coverImage,
@@ -789,6 +798,7 @@ class HomeScreen extends HookConsumerWidget {
                         width: double.infinity,
                         fit: BoxFit.cover,
                         placeholder: (context, url) => Container(
+                          height: 60,
                           color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                           child: const Center(child: CircularProgressIndicator()),
                         ),
@@ -800,7 +810,7 @@ class HomeScreen extends HookConsumerWidget {
             ],
           ),
           Padding(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(10), // Increased padding
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -808,15 +818,16 @@ class HomeScreen extends HookConsumerWidget {
                   community.name,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 2),
+                const SizedBox(height: 4),
                 Text(
                   '${community.memberCount} members',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
                 ),
               ],
@@ -829,7 +840,14 @@ class HomeScreen extends HookConsumerWidget {
 
   Widget _buildDefaultCover(BuildContext context) {
     return Container(
-      color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+      height: 60,
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Theme.of(context).colorScheme.primary.withOpacity(0.2), Theme.of(context).colorScheme.primary.withOpacity(0.1)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
       child: Icon(
         Icons.group,
         size: 30,

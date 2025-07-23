@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'constants.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 // Material 3 Design Tokens
 class AppColors {
@@ -465,7 +466,7 @@ class AppTheme {
     final isDark = brightness == Brightness.dark;
     final baseTextColor = isDark ? AppColors.darkOnSurface : AppColors.onSurface;
     
-    return TextTheme(
+    final baseTextTheme = TextTheme(
       displayLarge: TextStyle(
         fontSize: 57,
         fontWeight: FontWeight.w400,
@@ -557,6 +558,11 @@ class AppTheme {
         letterSpacing: 0.5,
       ),
     );
+
+    // Apply Poppins font to all text styles
+    return baseTextTheme.apply(
+      fontFamily: GoogleFonts.poppins().fontFamily,
+    );
   }
 
   // Accessibility helpers
@@ -575,4 +581,4 @@ class AppTheme {
   static const highContrastOnPrimary = Color(0xFFFFFFFF);
   static const highContrastError = Color(0xFFD32F2F);
   static const highContrastOnError = Color(0xFFFFFFFF);
-} 
+}
