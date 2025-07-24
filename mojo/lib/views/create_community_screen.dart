@@ -20,7 +20,7 @@ class CreateCommunityScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    print('🔍 CreateCommunityScreen: build() called');
+    print('🔍 [DEBUG] CreateCommunityScreen: build() called');
     print('🔍 CreateCommunityScreen: eventTemplate = $eventTemplate');
     
     // Check if user is authenticated
@@ -164,7 +164,16 @@ class CreateCommunityScreen extends HookConsumerWidget {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
-          onPressed: () => NavigationService.goBack(),
+          onPressed: () {
+            print('🔙 Back button pressed on CreateCommunityScreen');
+            if (Navigator.of(context).canPop()) {
+              print('🔙 Navigator can pop, popping...');
+              NavigationService.goBack();
+            } else {
+              print('🔙 Navigator cannot pop, navigating to MainNavigationScreen');
+              NavigationService.navigateToHome();
+            }
+          },
         ),
       ),
       body: SafeArea(

@@ -59,6 +59,7 @@ class HomeScreen extends HookConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    print('🔍 [DEBUG] HomeScreen: build() called');
     final _scrollController = useScrollController();
     final userAsync = ref.watch(authNotifierProvider);
     final userRoleAsync = ref.watch(userRoleProvider);
@@ -170,6 +171,7 @@ class HomeScreen extends HookConsumerWidget {
   }
 
   Widget _buildMyCommunities(BuildContext context, AsyncValue<List<CommunityModel>> communitiesAsync, WidgetRef ref, UserModel? user, AsyncValue<Set<String>> userInterestsAsync) {
+    print('🔍 [DEBUG] HomeScreen: _buildMyCommunities called');
     final searchQuery = ref.watch(myCommunitiesSearchQueryProvider);
     final sort = ref.watch(myCommunitiesSortProvider);
     
@@ -254,6 +256,7 @@ class HomeScreen extends HookConsumerWidget {
         const SizedBox(height: AppConstants.smallPadding),
         communitiesAsync.when(
           data: (communities) {
+            print('🔍 [DEBUG] MyCommunities: Fetched ${communities.length} communities');
             var sortedCommunities = List.from(communities);
             if (sort == 'name') {
               sortedCommunities.sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
@@ -368,59 +371,14 @@ class HomeScreen extends HookConsumerWidget {
               ],
             );
           },
-          loading: () => const Center(
-            child: CircularProgressIndicator(),
-          ),
-          error: (error, stack) => Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  Icons.error_outline,
-                  size: 64,
-                  color: Colors.red,
-                ),
-                const SizedBox(height: AppConstants.defaultPadding),
-                Text(
-                  'Error loading communities',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                const SizedBox(height: AppConstants.smallPadding),
-                Text(
-                  error.toString(),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.error,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppConstants.defaultPadding),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    ElevatedButton.icon(
-                      onPressed: () => NavigationService.navigateToSearch(),
-                      icon: const Icon(Icons.search),
-                      label: const Text('Explore'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(width: AppConstants.smallPadding),
-                    ElevatedButton.icon(
-                      onPressed: () => NavigationService.navigateToCreateCommunity(),
-                      icon: const Icon(Icons.add),
-                      label: const Text('Create'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Theme.of(context).colorScheme.secondary,
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          loading: () {
+            print('🔍 [DEBUG] MyCommunities: Loading...');
+            return const Center(child: CircularProgressIndicator());
+          },
+          error: (error, stack) {
+            print('🔍 [DEBUG] MyCommunities: Error: $error');
+            return Center(child: Text('Error loading communities: $error'));
+          },
         ),
       ],
     );
@@ -490,6 +448,7 @@ class HomeScreen extends HookConsumerWidget {
   }
 
   Widget _buildEnhancedExploreCommunities(BuildContext context, PaginatedCommunitiesState state, WidgetRef ref, UserModel? user) {
+    print('🔍 [DEBUG] HomeScreen: _buildEnhancedExploreCommunities called');
     final searchQuery = ref.watch(exploreCommunitiesSearchQueryProvider);
     final recommendedAsync = ref.watch(recommendedCommunitiesProvider);
     final trendingAsync = ref.watch(trendingCommunitiesProvider);
@@ -667,19 +626,25 @@ class HomeScreen extends HookConsumerWidget {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'No communities found',
+                    'You’ve joined all available communities!',
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
                     ),
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Be the first to create a community!',
+                    'Check back later for new ones or start your own to bring others together.',
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
                     ),
                     textAlign: TextAlign.center,
                   ),
+                  const SizedBox(height: AppConstants.defaultPadding),
+ElevatedButton.icon(
+  onPressed: () => NavigationService.navigateToCreateCommunity(),
+  icon: const Icon(Icons.add),
+  label: const Text('Create a Community'),
+),
                 ],
               ),
             ),

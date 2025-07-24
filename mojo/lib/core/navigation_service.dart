@@ -215,8 +215,23 @@ class NavigationService {
     }
   }
 
+  // Debug utility: Print current navigation stack
+  static void printNavigationStack() {
+    final ctx = context;
+    if (ctx == null) {
+      _logger.d('🔍 [DEBUG] No context available to print navigation stack');
+      return;
+    }
+    _logger.d('🔍 [DEBUG] Printing navigation stack:');
+    material.Navigator.of(ctx).popUntil((route) {
+      _logger.d('🔍 [DEBUG] Route: ${route.settings.name}');
+      return true;
+    });
+  }
+
   // Push named route with logging and analytics
   static Future<T?> pushNamed<T>(String routeName, {Object? arguments}) async {
+    printNavigationStack();
     final ctx = context;
     if (ctx == null) {
       _logger.e('❌ Navigation failed: No context available for route $routeName');
@@ -226,6 +241,7 @@ class NavigationService {
     
     try {
       _logger.i('🚀 Navigating to: $routeName');
+      _logger.d('🔍 [DEBUG] Arguments: $arguments');
       await _trackNavigationEvent(routeName, parameters: {
         'navigation_type': 'push_named',
         'has_arguments': arguments != null ? 'true' : 'false',
@@ -233,6 +249,7 @@ class NavigationService {
       
       final result = await material.Navigator.of(ctx).pushNamed<T>(routeName, arguments: arguments);
       _logger.i('✅ Navigation completed: $routeName');
+      printNavigationStack();
       return result;
     } catch (e) {
       _logger.e('❌ Navigation error: $routeName - $e');
@@ -333,6 +350,7 @@ class NavigationService {
 
   // Go back with logging
   static void goBack<T>([T? result]) {
+    printNavigationStack();
     final ctx = context;
     if (ctx == null) {
       _logger.e('❌ Cannot go back: No context available');
@@ -343,6 +361,7 @@ class NavigationService {
       _logger.i('⬅️ Going back');
       material.Navigator.of(ctx).pop<T>(result);
       _logger.i('✅ Successfully went back');
+      printNavigationStack();
     } catch (e) {
       _logger.e('❌ Error going back: $e');
     }
@@ -1075,12 +1094,14 @@ class NavigationService {
 
   // Navigate to create community with logging and analytics
   static Future<T?> navigateToCreateCommunity<T>({Map<String, dynamic>? eventTemplate}) async {
+    _logger.d('🔍 Called navigateToCreateCommunity with eventTemplate: $eventTemplate');
     try {
       _logger.i('➕ Navigating to create community${eventTemplate != null ? ' with event template' : ''}');
       
       // Check user authentication and role
       final authService = AuthService();
       final userRole = await authService.getUserRole();
+      _logger.d('🔍 User role for create community: $userRole');
       
       if (userRole == 'anonymous') {
         _logger.w('🚫 Anonymous user attempted to create community - access denied');
@@ -1092,6 +1113,7 @@ class NavigationService {
         
         // Show access denied dialog
         if (context != null) {
+          _logger.d('🔍 Showing access denied dialog for anonymous user');
           material.showDialog(
             context: context!,
             builder: (context) => material.AlertDialog(
@@ -1114,6 +1136,8 @@ class NavigationService {
               ],
             ),
           );
+        } else {
+          _logger.e('❌ Context is null when trying to show access denied dialog');
         }
         
         return Future.value(null);
@@ -1124,6 +1148,7 @@ class NavigationService {
         'user_role': userRole,
         'has_event_template': (eventTemplate != null).toString(),
       });
+      _logger.d('🔍 Pushing named route for create community');
       return await pushNamed<T>(AppRoutes.createCommunity, arguments: eventTemplate);
     } catch (e) {
       _logger.e('❌ Error navigating to create community: $e');

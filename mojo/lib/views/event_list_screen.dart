@@ -1256,7 +1256,10 @@ class _EventListScreenState extends ConsumerState<EventListScreen> {
                 ),
                 const Spacer(),
                 IconButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: () {
+                    print('🔍 [DEBUG] X (close) button pressed in event type selection modal');
+                    Navigator.pop(context);
+                  },
                   icon: const Icon(Icons.close),
                 ),
               ],
